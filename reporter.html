@@ -50,8 +50,7 @@ button{cursor:pointer;font-family:inherit}
 .kpi-label{font-size:.75rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem}
 .kpi-value{font-size:1.6rem;font-weight:700;color:var(--primary);line-height:1}
 .kpi-sub{font-size:.75rem;color:var(--faint);margin-top:.2rem}
-.section-title{font-size:1rem;font-weight:700;margin:1.5rem 0 1rem;color:var(--text);display:flex;align-items:center;gap:.5rem}
-.section-title span{font-size:.78rem;font-weight:500;color:var(--muted);background:var(--surface);border:1px solid var(--divider);padding:.1rem .5rem;border-radius:99px}
+.section-title{font-size:1rem;font-weight:700;margin:1.5rem 0 1rem;color:var(--text)}
 .charts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:1.5rem;margin-bottom:2rem}
 .chart-card{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);padding:1.25rem}
 .chart-card h4{font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.04em}
@@ -67,9 +66,9 @@ select:focus{outline:none;border-color:var(--primary)}
 .btn-primary:hover{background:var(--primary-h)}
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.75rem}
 .tabs-bar{display:flex;gap:.25rem;overflow-x:auto;border-bottom:2px solid var(--divider);margin-bottom:1.5rem}
-.tab-btn{background:none;border:none;padding:.55rem 1rem;font-size:.82rem;font-weight:600;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;transition:all .18s}
-.tab-btn:hover{color:var(--text);background:var(--surface)}
-.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);background:var(--surface)}
+.tab-btn{background:none;border:none;padding:.55rem 1rem;font-size:.82rem;font-weight:600;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;transition:all .18s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
 .tab-badge{display:inline-block;background:var(--primary-hi);color:var(--primary);font-size:.7rem;font-weight:700;padding:.1rem .4rem;border-radius:99px;margin-left:.3rem}
 .tab-btn.active .tab-badge{background:var(--primary);color:#fff}
 .table-wrap{overflow-x:auto;border:1px solid var(--divider);border-radius:var(--radius-lg);background:var(--surface);margin-bottom:2rem}
@@ -81,9 +80,6 @@ select:focus{outline:none;border-color:var(--primary)}
 .badge{display:inline-block;padding:.1rem .5rem;border-radius:99px;font-size:.72rem;font-weight:700}
 .badge-ok{background:#d1f0d8;color:#1a6b32}
 .badge-excl{background:#fde3e3;color:#9b1c1c}
-.badge-aos{background:#fff3cd;color:#856404}
-.badge-yes{background:#d1f0d8;color:#1a6b32}
-.badge-no{background:#f0d1d1;color:#6b1a1a}
 .empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
 .status-bar{background:var(--success);color:#fff;padding:.5rem 1.5rem;font-size:.85rem;font-weight:500}
 .status-bar.error{background:var(--error)}
@@ -91,7 +87,7 @@ select:focus{outline:none;border-color:var(--primary)}
 .month-badge{background:var(--primary-hi);color:var(--primary);border:1px solid var(--primary);border-radius:99px;padding:.2rem .75rem;font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:.4rem}
 .month-badge button{background:none;border:none;color:var(--primary);font-size:.9rem;padding:0;cursor:pointer}
 .aos-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.875rem;margin-bottom:1.5rem}
-.aos-kpi{background:oklch(from var(--warn) l c h / .08);border:1px solid oklch(from var(--warn) l c h / .3);border-radius:var(--radius-lg);padding:.75rem 1rem}
+.aos-kpi{background:rgba(150,66,25,.08);border:1px solid rgba(150,66,25,.3);border-radius:var(--radius-lg);padding:.75rem 1rem}
 .aos-kpi .lbl{font-size:.72rem;color:var(--warn);font-weight:600;text-transform:uppercase}
 .aos-kpi .val{font-size:1.5rem;font-weight:700;color:var(--warn)}
 @media(max-width:640px){.main{padding:1rem}.charts-grid{grid-template-columns:1fr}}
@@ -99,25 +95,13 @@ select:focus{outline:none;border-color:var(--primary)}
 </head>
 <body>
 <nav class="app-nav">
-  <a href="index.html">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 14h4l3-7 4 14 3-7h3"/></svg>
-    Breaches Tracker
-  </a>
-  <a href="reporter.html" class="active">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-    Reporter
-  </a>
-  <a href="agent-tracker.html">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
-    Agent Tracker
-  </a>
+  <a href="index.html"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 14h4l3-7 4 14 3-7h3"/></svg>Breaches Tracker</a>
+  <a href="reporter.html" class="active"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Reporter</a>
+  <a href="agent-tracker.html"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>Agent Tracker</a>
 </nav>
 <header class="header">
   <div class="logo">
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <rect width="26" height="26" rx="6" fill="currentColor" opacity=".12"/>
-      <path d="M5 18l4-5 4 3 4-7 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect width="26" height="26" rx="6" fill="currentColor" opacity=".12"/><path d="M5 18l4-5 4 3 4-7 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Breaches Reporter
   </div>
   <div class="header-right">
@@ -142,7 +126,6 @@ select:focus{outline:none;border-color:var(--primary)}
   <div id="months-area" class="hidden"><div class="section-title">Loaded months</div><div class="months-list" id="months-list"></div></div>
   <div class="kpis hidden" id="kpi-area"></div>
 
-  <!-- Report tabs -->
   <div id="report-tabs-area" class="hidden">
     <div class="tabs-bar">
       <button class="tab-btn active" onclick="switchTab('overview')" id="tab-overview">Overview</button>
@@ -152,8 +135,6 @@ select:focus{outline:none;border-color:var(--primary)}
       <button class="tab-btn" onclick="switchTab('km1')" id="tab-km1">KM-1 Detail</button>
       <button class="tab-btn" onclick="switchTab('all')" id="tab-all">All Records</button>
     </div>
-
-    <!-- Global filters -->
     <div class="filters" id="filters-area">
       <div class="filter-group"><label>Week</label><select id="f-week" onchange="applyFilters()"><option value="">All</option></select></div>
       <div class="filter-group"><label>SLA Category</label><select id="f-sla" onchange="applyFilters()"><option value="">All</option></select></div>
@@ -161,7 +142,7 @@ select:focus{outline:none;border-color:var(--primary)}
       <div class="filter-group"><label>Excluded</label><select id="f-excl" onchange="applyFilters()"><option value="">All</option><option value="0">Counted</option><option value="1">Excluded</option></select></div>
     </div>
 
-    <!-- OVERVIEW TAB -->
+    <!-- OVERVIEW -->
     <div id="pane-overview">
       <div class="charts-grid">
         <div class="chart-card"><h4>Breaches per Week</h4><canvas id="chart-week"></canvas></div>
@@ -171,7 +152,7 @@ select:focus{outline:none;border-color:var(--primary)}
       </div>
     </div>
 
-    <!-- REASONS TAB -->
+    <!-- REASONS -->
     <div id="pane-reasons" class="hidden">
       <div class="charts-grid">
         <div class="chart-card"><h4>Top Breach Reasons</h4><canvas id="chart-reasons"></canvas></div>
@@ -181,7 +162,7 @@ select:focus{outline:none;border-color:var(--primary)}
       <div class="table-wrap"><table class="data-table" id="reasons-table"></table></div>
     </div>
 
-    <!-- APPS TAB -->
+    <!-- APPS -->
     <div id="pane-apps" class="hidden">
       <div class="charts-grid">
         <div class="chart-card"><h4>Top Affected Applications</h4><canvas id="chart-apps"></canvas></div>
@@ -191,7 +172,7 @@ select:focus{outline:none;border-color:var(--primary)}
       <div class="table-wrap"><table class="data-table" id="apps-table"></table></div>
     </div>
 
-    <!-- AOS TAB -->
+    <!-- AOS -->
     <div id="pane-aos" class="hidden">
       <div class="aos-kpis" id="aos-kpis"></div>
       <div class="charts-grid">
@@ -202,17 +183,17 @@ select:focus{outline:none;border-color:var(--primary)}
       <div class="table-wrap"><table class="data-table" id="aos-table"></table></div>
     </div>
 
-    <!-- KM-1 TAB -->
+    <!-- KM-1 -->
     <div id="pane-km1" class="hidden">
       <div class="charts-grid">
         <div class="chart-card"><h4>Remote/Callback could have helped</h4><canvas id="chart-km1-remote"></canvas></div>
-        <div class="chart-card"><h4>KM-1 Reasons</h4><canvas id="chart-km1-reasons"></canvas></div>
+        <div class="chart-card"><h4>KM-1 Top Reasons</h4><canvas id="chart-km1-reasons"></canvas></div>
       </div>
       <div class="toolbar"><span id="km1-count" style="font-size:.85rem;color:var(--muted)"></span><button class="btn-outline" onclick="exportTable(km1TableData,'KM1_Detail')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button></div>
       <div class="table-wrap"><table class="data-table" id="km1-table"></table></div>
     </div>
 
-    <!-- ALL RECORDS TAB -->
+    <!-- ALL -->
     <div id="pane-all" class="hidden">
       <div class="toolbar"><span id="tbl-count" style="font-size:.85rem;color:var(--muted)"></span><button class="btn-outline" onclick="exportFiltered()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export filtered</button></div>
       <div class="table-wrap"><table class="data-table" id="report-table"></table></div>
@@ -247,6 +228,7 @@ function resolveLabel(name){
   return null;
 }
 function fg(row,keys){for(const k of keys){const v=row[k];if(v!==undefined&&v!==null&&String(v).trim()!=='')return String(v).trim();}return '';}
+isExcl=v=>{const s=String(v).toLowerCase().trim();return s==='1'||s==='yes'||s==='x';};
 
 function loadFile(file){
   if(!file)return;
@@ -264,20 +246,21 @@ function loadFile(file){
         XLSX.utils.sheet_to_json(wb.Sheets[name],{raw:false,dateNF:'yyyy-mm-dd'}).forEach(r=>{
           const ticket=fg(r,['Incident Ticket','Ticket']);
           if(!ticket)return;
-          const exclRaw=fg(r,['Excluded','excluded']).toLowerCase();
-          const excl=exclRaw==='1'||exclRaw==='yes'||exclRaw==='x'?'1':'0';
-          const week=fg(r,['Week','Week ','week']).replace(/\.0$/,'');
+          const exclRaw=fg(r,['Excluded','excluded']);
+          const excl=isExcl(exclRaw)?'1':'0';
+          const week=fg(r,['Week','Week ']).replace(/\.0$/,'');
           const reason=fg(r,['Reason','reason']);
-          const comment=fg(r,['Comment','comment','Comment if excluded']);
+          const comment=fg(r,['Comment','comment','Comment if excluded','Additional comment']);
           const topic=fg(r,['Topic','TOPIC','topic']);
-          const remote=isKM1?fg(r,['Addtion','Addition','Remote/Callback','remote_callback']):'';
-          const isAOS=reason.toLowerCase().includes('aos');
+          const remote=isKM1?fg(r,['Addtion','Addition','Remote/Callback']):'';
+          // AOS = reason contains 'aos' OR topic contains '#SW#AOS'
+          const isAOS=reason.toLowerCase().includes('aos')||topic.toUpperCase().includes('#SW#AOS');
           allData.push({ticket,date:fg(r,['DATE_CLOSE','Date Close']),lang:fg(r,['ISO_Language','Language']),sla_tab:label,sla_grp:SLA_GROUP[label]||label,week,agent:fg(r,['Agent','agent']),bms:fg(r,['BMS ID','BMS']),excluded:excl,reason,comment,topic,remote,isAOS,month});
           n++;
         });
       });
       if(n===0){showStatus('No rows loaded. Sheets: '+wb.SheetNames.join(', '),'error');return;}
-      showStatus((skipped.length?`Loaded ${n} rows (skipped: ${skipped.join(', ')})`:`Loaded ${n} rows from ${file.name}`));
+      showStatus(`Loaded ${n} rows from ${file.name}`+(skipped.length?` (skipped: ${skipped.join(', ')})`:''));
       setTimeout(()=>document.getElementById('status').classList.add('hidden'),4000);
       save();render();
     }catch(err){showStatus('Error: '+err.message,'error');}
@@ -302,13 +285,33 @@ function fillSel(id,opts){const el=document.getElementById(id),cur=el.value;el.i
 function applyFilters(){
   const wk=document.getElementById('f-week').value,sl=document.getElementById('f-sla').value,la=document.getElementById('f-lang').value,ex=document.getElementById('f-excl').value;
   filtered=allData.filter(r=>(!wk||r.week===wk)&&(!sl||r.sla_grp===sl)&&(!la||r.lang===la)&&(!ex||r.excluded===ex));
-  renderKPIs();renderAllTabs();
+  renderKPIs();
+  renderActiveTab();
 }
 function renderKPIs(){
   const t=filtered.length,ex=filtered.filter(r=>r.excluded==='1').length,ag=new Set(filtered.map(r=>r.agent).filter(Boolean)).size,wk=new Set(filtered.map(r=>r.week).filter(Boolean)).size,aos=filtered.filter(r=>r.isAOS).length;
   document.getElementById('aos-badge').textContent=aos;
-  document.getElementById('kpi-area').innerHTML=`<div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value">${t}</div><div class="kpi-sub">all breaches</div></div><div class="kpi"><div class="kpi-label">Counted</div><div class="kpi-value">${t-ex}</div><div class="kpi-sub">not excluded</div></div><div class="kpi"><div class="kpi-label">Excluded</div><div class="kpi-value">${ex}</div><div class="kpi-sub">flagged out</div></div><div class="kpi"><div class="kpi-label">AOS Issues</div><div class="kpi-value" style="color:var(--warn)">${aos}</div><div class="kpi-sub">portal breaches</div></div><div class="kpi"><div class="kpi-label">Agents</div><div class="kpi-value">${ag}</div><div class="kpi-sub">with breaches</div></div><div class="kpi"><div class="kpi-label">Weeks</div><div class="kpi-value">${wk}</div><div class="kpi-sub">covered</div></div>`;
+  document.getElementById('kpi-area').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value">${t}</div><div class="kpi-sub">all breaches</div></div>
+    <div class="kpi"><div class="kpi-label">Counted</div><div class="kpi-value">${t-ex}</div><div class="kpi-sub">not excluded</div></div>
+    <div class="kpi"><div class="kpi-label">Excluded</div><div class="kpi-value">${ex}</div><div class="kpi-sub">flagged out</div></div>
+    <div class="kpi"><div class="kpi-label">AOS Issues</div><div class="kpi-value" style="color:var(--warn)">${aos}</div><div class="kpi-sub">portal breaches</div></div>
+    <div class="kpi"><div class="kpi-label">Agents</div><div class="kpi-value">${ag}</div><div class="kpi-sub">with breaches</div></div>
+    <div class="kpi"><div class="kpi-label">Weeks</div><div class="kpi-value">${wk}</div><div class="kpi-sub">covered</div></div>`;
 }
+
+// LAZY render: only render the currently active tab
+function renderActiveTab(){
+  switch(activeTab){
+    case 'overview': renderOverview(); break;
+    case 'reasons':  prepareReasons(); renderReasons(); break;
+    case 'apps':     prepareApps(); renderApps(); break;
+    case 'aos':      prepareAOS(); renderAOS(); break;
+    case 'km1':      prepareKM1(); renderKM1(); break;
+    case 'all':      renderAllRecords(); break;
+  }
+}
+
 function cnt(arr,key,topN){
   const m={};
   arr.forEach(r=>{const v=String(r[key]||'(blank)');m[v]=(m[v]||0)+1;});
@@ -316,26 +319,19 @@ function cnt(arr,key,topN){
   if(topN&&entries.length>topN){const rest=entries.slice(topN).reduce((s,e)=>s+e[1],0);entries=entries.slice(0,topN);if(rest)entries.push(['Other',rest]);}
   return entries;
 }
-function mkChart(id,type,labels,datasets,opts){
+function mkChart(id,type,labels,datasets,extra){
   if(charts[id])charts[id].destroy();
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
   const gc=isDark?'#393836':'#dcd9d5',tc=isDark?'#cdccca':'#7a7974';
   Chart.defaults.color=tc;Chart.defaults.font={family:'Satoshi,sans-serif',size:12};
-  const baseOpts={responsive:true,maintainAspectRatio:true,plugins:{legend:{display:type==='doughnut'||(opts&&opts.legend),position:'right',labels:{boxWidth:12,padding:10}}},scales:type==='bar'?{x:{grid:{color:gc},ticks:{color:tc,maxRotation:35}},y:{grid:{color:gc},ticks:{color:tc}}}:{}};
-  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type,data:{labels,datasets},options:{...baseOpts,...(opts||{})}});
+  const scalesCfg=type==='bar'?{x:{grid:{color:gc},ticks:{color:tc,maxRotation:35}},y:{grid:{color:gc},ticks:{color:tc}}}:{};
+  const cfg={responsive:true,maintainAspectRatio:true,plugins:{legend:{display:type==='doughnut',position:'right',labels:{boxWidth:12,padding:10}}},scales:scalesCfg,...(extra||{})};
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type,data:{labels,datasets},options:cfg});
 }
-function renderAllTabs(){
-  renderOverview();
-  renderReasons();
-  renderApps();
-  renderAOS();
-  renderKM1();
-  renderAllRecords();
-}
+
 function renderOverview(){
   const wkE=cnt(filtered,'week');const wkK=wkE.map(e=>e[0]).sort((a,b)=>+a-+b);
-  const wkV=wkK.map(k=>wkE.find(e=>e[0]===k)[1]);
-  mkChart('chart-week','bar',wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),[{data:wkV,backgroundColor:PALETTE[0]}]);
+  mkChart('chart-week','bar',wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),[{data:wkK.map(k=>(wkE.find(e=>e[0]===k)||[,0])[1]),backgroundColor:PALETTE[0]}]);
   const slaE=cnt(filtered,'sla_grp');
   mkChart('chart-sla','doughnut',slaE.map(e=>e[0]),[{data:slaE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
   const lE=cnt(filtered,'lang');
@@ -343,57 +339,74 @@ function renderOverview(){
   const counted=filtered.filter(r=>r.excluded!=='1').length,excl=filtered.filter(r=>r.excluded==='1').length;
   mkChart('chart-excl','doughnut',['Counted','Excluded'],[{data:[counted,excl],backgroundColor:['#437a22','#a12c7b'],borderWidth:2}]);
 }
+
+function prepareReasons(){
+  reasonsTableData=filtered.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent||'',Reason:r.reason,Comment:r.comment,Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
+  document.getElementById('reasons-count').textContent=reasonsTableData.length+' records';
+  renderGenericTable('reasons-table',reasonsTableData,['Ticket','Date','SLA','Week','Agent','Reason','Comment','Excluded','Month']);
+}
 function renderReasons(){
   const rE=cnt(filtered,'reason',9);
   mkChart('chart-reasons','bar',rE.map(e=>e[0]),[{data:rE.map(e=>e[1]),backgroundColor:PALETTE[0]}]);
-  // reasons by sla (stacked)
   const slas=[...new Set(filtered.map(r=>r.sla_grp))].sort();
-  const reasons=[...new Set(filtered.map(r=>r.reason||'(blank)'))].filter(r=>r!=='(blank)').slice(0,6);
-  const datasets=reasons.map((r,i)=>({label:r,data:slas.map(s=>filtered.filter(x=>x.sla_grp===s&&x.reason===r).length),backgroundColor:PALETTE[i]||PALETTE[i%PALETTE.length]}));
-  mkChart('chart-reasons-sla','bar',slas,datasets,{scales:{x:{stacked:true},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,padding:8}}}});
-  // table
-  const rows=filtered.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent,Reason:r.reason,Comment:r.comment,Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
-  reasonsTableData=rows;
-  document.getElementById('reasons-count').textContent=rows.length+' records';
-  renderGenericTable('reasons-table',rows,['Ticket','Date','SLA','Week','Agent','Reason','Comment','Excluded','Month']);
+  const reasons=cnt(filtered,'reason',6).map(e=>e[0]).filter(r=>r!=='(blank)');
+  const datasets=reasons.map((r,i)=>({label:r,data:slas.map(s=>filtered.filter(x=>x.sla_grp===s&&x.reason===r).length),backgroundColor:PALETTE[i%PALETTE.length]}));
+  mkChart('chart-reasons-sla','bar',slas,datasets,{scales:{x:{stacked:true,grid:{color:'transparent'}},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:11,padding:8}}}});
+}
+
+function prepareApps(){
+  const cleaned=filtered.map(r=>({...r,app:(r.topic||'').replace(/^#[A-Z]+#/,'').split('/')[0].split('-')[0]||'(unknown)'}));
+  appsTableData=cleaned.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent||'',Application:r.app,'Raw Topic':r.topic,Reason:r.reason,Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
+  document.getElementById('apps-count').textContent=appsTableData.length+' records';
+  renderGenericTable('apps-table',appsTableData,['Ticket','Date','SLA','Week','Agent','Application','Reason','Excluded','Month']);
+  return cleaned;
 }
 function renderApps(){
-  const cleaned=filtered.map(r=>({...r,app:(r.topic||'').replace(/^#[A-Z]+#/,'').split('/')[0]||'(unknown)'}));
+  const cleaned=prepareApps();
   const appE=cnt(cleaned,'app',10);
   mkChart('chart-apps','bar',appE.map(e=>e[0]),[{data:appE.map(e=>e[1]),backgroundColor:PALETTE[1]}]);
   const slas=[...new Set(cleaned.map(r=>r.sla_grp))].sort();
   const topApps=appE.slice(0,5).map(e=>e[0]);
-  const datasets=topApps.map((a,i)=>({label:a,data:slas.map(s=>cleaned.filter(x=>x.sla_grp===s&&x.app===a).length),backgroundColor:PALETTE[i]||PALETTE[i%PALETTE.length]}));
-  mkChart('chart-apps-sla','bar',slas,datasets,{scales:{x:{stacked:true},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,padding:8}}}});
-  const rows=cleaned.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent,Application:r.app,'Raw Topic':r.topic,Reason:r.reason,Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
-  appsTableData=rows;
-  document.getElementById('apps-count').textContent=rows.length+' records';
-  renderGenericTable('apps-table',rows,['Ticket','Date','SLA','Week','Agent','Application','Reason','Excluded','Month']);
+  const datasets=topApps.map((a,i)=>({label:a,data:slas.map(s=>cleaned.filter(x=>x.sla_grp===s&&x.app===a).length),backgroundColor:PALETTE[i%PALETTE.length]}));
+  mkChart('chart-apps-sla','bar',slas,datasets,{scales:{x:{stacked:true,grid:{color:'transparent'}},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:11,padding:8}}}});
 }
-function renderAOS(){
+
+function prepareAOS(){
   const aos=filtered.filter(r=>r.isAOS);
   const tot=aos.length,excl=aos.filter(r=>r.excluded==='1').length,ag=new Set(aos.map(r=>r.agent).filter(Boolean)).size;
-  document.getElementById('aos-kpis').innerHTML=`<div class="aos-kpi"><div class="lbl">AOS Total</div><div class="val">${tot}</div></div><div class="aos-kpi"><div class="lbl">Counted</div><div class="val">${tot-excl}</div></div><div class="aos-kpi"><div class="lbl">Excluded</div><div class="val">${excl}</div></div><div class="aos-kpi"><div class="lbl">Agents</div><div class="val">${ag}</div></div>`;
+  document.getElementById('aos-kpis').innerHTML=`
+    <div class="aos-kpi"><div class="lbl">AOS Total</div><div class="val">${tot}</div></div>
+    <div class="aos-kpi"><div class="lbl">Counted</div><div class="val">${tot-excl}</div></div>
+    <div class="aos-kpi"><div class="lbl">Excluded</div><div class="val">${excl}</div></div>
+    <div class="aos-kpi"><div class="lbl">Agents</div><div class="val">${ag}</div></div>`;
+  aosTableData=aos.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent||'',Topic:r.topic,Reason:r.reason,Comment:r.comment,Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
+  document.getElementById('aos-count').textContent=aosTableData.length+' AOS Portal records';
+  renderGenericTable('aos-table',aosTableData,['Ticket','Date','SLA','Week','Agent','Topic','Reason','Comment','Excluded','Month']);
+  return aos;
+}
+function renderAOS(){
+  const aos=prepareAOS();
   const wkE=cnt(aos,'week');const wkK=wkE.map(e=>e[0]).sort((a,b)=>+a-+b);
-  mkChart('chart-aos-week','bar',wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),[{data:wkK.map(k=>wkE.find(e=>e[0]===k)[1]),backgroundColor:'#964219'}]);
+  mkChart('chart-aos-week','bar',wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),[{data:wkK.map(k=>(wkE.find(e=>e[0]===k)||[,0])[1]),backgroundColor:'#964219'}]);
   const slaE=cnt(aos,'sla_grp');
   mkChart('chart-aos-sla','doughnut',slaE.map(e=>e[0]),[{data:slaE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
-  const rows=aos.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent,Reason:r.reason,Comment:r.comment,Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
-  aosTableData=rows;
-  document.getElementById('aos-count').textContent=rows.length+' AOS Portal breach records';
-  renderGenericTable('aos-table',rows,['Ticket','Date','SLA','Week','Agent','Reason','Comment','Excluded','Month']);
+}
+
+function prepareKM1(){
+  const km1=filtered.filter(r=>r.sla_grp==='KM-1');
+  km1TableData=km1.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent||'',Reason:r.reason,Comment:r.comment,'Remote\/Callback could help':r.remote||'',Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
+  document.getElementById('km1-count').textContent=km1TableData.length+' KM-1 records';
+  renderGenericTable('km1-table',km1TableData,['Ticket','Date','SLA','Week','Agent','Reason','Comment','Remote/Callback could help','Excluded','Month']);
+  return km1;
 }
 function renderKM1(){
-  const km1=filtered.filter(r=>r.sla_grp==='KM-1');
+  const km1=prepareKM1();
   const remoteE=cnt(km1,'remote');
-  mkChart('chart-km1-remote','doughnut',remoteE.map(e=>e[0]||'(blank)'),[{data:remoteE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
+  mkChart('chart-km1-remote','doughnut',remoteE.map(e=>e[0]||'(not filled)'),[{data:remoteE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
   const rE=cnt(km1,'reason',8);
   mkChart('chart-km1-reasons','bar',rE.map(e=>e[0]),[{data:rE.map(e=>e[1]),backgroundColor:PALETTE[2]}]);
-  const rows=km1.map(r=>({Ticket:r.ticket,Date:r.date,SLA:r.sla_tab,Week:r.week,Agent:r.agent,Reason:r.reason,Comment:r.comment,'Remote/Callback could help':r.remote,Excluded:r.excluded==='1'?'Yes':'No',Month:r.month}));
-  km1TableData=rows;
-  document.getElementById('km1-count').textContent=rows.length+' KM-1 records';
-  renderGenericTable('km1-table',rows,['Ticket','Date','SLA','Week','Agent','Reason','Comment','Remote/Callback could help','Excluded','Month']);
 }
+
 function renderAllRecords(){
   const cols=['ticket','date','lang','sla_tab','week','agent','bms','reason','comment','topic','excluded','month'];
   const heads=['Ticket','Date','Lang','SLA','Week','Agent','BMS','Reason','Comment','Topic','Excluded','Month'];
@@ -402,17 +415,18 @@ function renderAllRecords(){
   if(!filtered.length){tbl.innerHTML='<tr><td style="padding:2rem;text-align:center;color:var(--muted)">No records</td></tr>';return;}
   let h='<thead><tr>'+heads.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
   filtered.slice(0,500).forEach(r=>{h+='<tr>'+cols.map(c=>{if(c==='excluded')return `<td><span class="badge ${r[c]==='1'?'badge-excl':'badge-ok'}">${r[c]==='1'?'Excl':'OK'}</span></td>`;return `<td title="${String(r[c]||'').replace(/"/g,'&quot;')}">${r[c]||''}</td>`;}).join('')+'</tr>';});
-  if(filtered.length>500)h+=`<tr><td colspan="${cols.length}" style="text-align:center;padding:.75rem;color:var(--muted);font-size:.8rem">Showing 500 of ${filtered.length} — export for full data</td></tr>`;
+  if(filtered.length>500)h+=`<tr><td colspan="${cols.length}" style="text-align:center;padding:.75rem;color:var(--muted);font-size:.8rem">Showing 500 of ${filtered.length}</td></tr>`;
   tbl.innerHTML=h+'</tbody>';
 }
 function renderGenericTable(id,rows,cols){
   const tbl=document.getElementById(id);
-  if(!rows.length){tbl.innerHTML='<tr><td style="padding:2rem;text-align:center;color:var(--muted)">No records</td></tr>';return;}
+  if(!rows.length){tbl.innerHTML='<tr><td style="padding:2rem;text-align:center;color:var(--muted)">No records match filters</td></tr>';return;}
   let h='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
   rows.slice(0,500).forEach(r=>{h+='<tr>'+cols.map(c=>`<td title="${String(r[c]||'').replace(/"/g,'&quot;')}">${r[c]||''}</td>`).join('')+'</tr>';});
   if(rows.length>500)h+=`<tr><td colspan="${cols.length}" style="text-align:center;padding:.75rem;color:var(--muted);font-size:.8rem">Showing 500 of ${rows.length}</td></tr>`;
   tbl.innerHTML=h+'</tbody>';
 }
+
 function switchTab(id){
   activeTab=id;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -421,18 +435,20 @@ function switchTab(id){
     const p=document.getElementById('pane-'+t);
     if(p)p.classList.toggle('hidden',t!==id);
   });
+  // render charts now that canvas is visible
+  renderActiveTab();
 }
 function removeMonth(m){allData=allData.filter(r=>r.month!==m);save();if(!allData.length){location.reload();return;}render();}
 function exportFiltered(){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(filtered),'Report');XLSX.writeFile(wb,'Breaches_Report_'+today()+'.xlsx');}
-function exportTable(data,name){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),name.slice(0,31));XLSX.writeFile(wb,'Breaches_'+name+'_'+today()+'.xlsx');}
-function exportReport(){const wb=XLSX.utils.book_new();[{d:filtered,n:'All Records'},{d:reasonsTableData,n:'Reasons'},{d:appsTableData,n:'Applications'},{d:aosTableData,n:'AOS Portal'},{d:km1TableData,n:'KM-1 Detail'}].forEach(({d,n})=>{if(d.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d),n);});XLSX.writeFile(wb,'Breaches_FullReport_'+today()+'.xlsx');}
+function exportTable(data,name){if(!data||!data.length){alert('No data to export');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),name.slice(0,31));XLSX.writeFile(wb,'Breaches_'+name+'_'+today()+'.xlsx');}
+function exportReport(){const wb=XLSX.utils.book_new();[{d:filtered,n:'All Records'},{d:reasonsTableData,n:'Reasons'},{d:appsTableData,n:'Applications'},{d:aosTableData,n:'AOS Portal'},{d:km1TableData,n:'KM-1 Detail'}].forEach(({d,n})=>{if(d&&d.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d),n);});XLSX.writeFile(wb,'Breaches_FullReport_'+today()+'.xlsx');}
 function today(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
 function showStatus(msg,type='ok'){const el=document.getElementById('status');el.textContent=msg;el.className='status-bar'+(type==='error'?' error':'');el.classList.remove('hidden');}
 const dz=document.getElementById('drop-zone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
-(function(){const btn=document.querySelector('[data-theme-toggle]');const root=document.documentElement;let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';root.setAttribute('data-theme',d);if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);if(filtered.length)renderAllTabs();});})();
+(function(){const btn=document.querySelector('[data-theme-toggle]');const root=document.documentElement;let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';root.setAttribute('data-theme',d);if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);if(filtered.length)renderActiveTab();});})();
 loadSaved();
 </script>
 </body>
