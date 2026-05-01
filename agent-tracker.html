@@ -25,7 +25,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh;font-size:15px;line-height:1.6}
 button{cursor:pointer;font-family:inherit}
-.app-nav{background:var(--surface-2);border-bottom:2px solid var(--divider);padding:0 1.5rem;display:flex;align-items:center;gap:0;overflow-x:auto;position:sticky;top:0;z-index:200}
+.app-nav{background:var(--surface-2);border-bottom:2px solid var(--divider);padding:0 1.5rem;display:flex;align-items:center;overflow-x:auto;position:sticky;top:0;z-index:200}
 .app-nav a{display:flex;align-items:center;gap:.4rem;padding:.55rem 1rem;font-size:.82rem;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .18s}
 .app-nav a:hover{color:var(--text)}
 .app-nav a.active{color:var(--primary);border-bottom-color:var(--primary)}
@@ -131,7 +131,7 @@ select:focus{outline:none;border-color:var(--primary)}
   <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-in').click()">
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
     <h4>Upload filled Breaches file</h4>
-    <p>Upload a .xlsx with <strong>Agent</strong> and <strong>BMS ID</strong> columns filled in</p>
+    <p>Upload a .xlsx with <strong>Agent</strong> column filled in — rows without an agent are skipped</p>
     <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-in').click()">Choose file</button>
     <input type="file" id="file-in" class="hidden" accept=".xlsx,.xls" onchange="loadFile(this.files[0])">
   </div>
@@ -165,9 +165,27 @@ select:focus{outline:none;border-color:var(--primary)}
 </main>
 <script>
 let allData=[],agentStats={},charts={},selectedAgent=null;
-const TAB_MAP={'KSL-4 |WRI':'KSL-4 WRI','KSL-4 | DE':'KSL-4 DE','KM-1 | Reopen':'KM-1 GR','KM-1 DE':'KM-1 DE','KSL-5a GR':'KSL-5a GR','KSL-5a DE':'KSL-5a DE','KM-2 GR':'KM-2 GR','KM-2 DE':'KM-2 DE'};
+
+function normSheet(n){return n.toLowerCase().replace(/[\s|_\-\.]+/g,'');}
+const SHEET_LABELS={'ksl4wri':'KSL-4 WRI','ksl4de':'KSL-4 DE','km1reopen':'KM-1 GR','km1gr':'KM-1 GR','km1de':'KM-1 DE','ksl5agr':'KSL-5a GR','ksl5ade':'KSL-5a DE','km2gr':'KM-2 GR','km2de':'KM-2 DE'};
 const SLA_GROUP={'KSL-4 WRI':'KSL-4','KSL-4 DE':'KSL-4','KM-1 GR':'KM-1','KM-1 DE':'KM-1','KSL-5a GR':'KSL-5a','KSL-5a DE':'KSL-5a','KM-2 GR':'KM-2','KM-2 DE':'KM-2'};
 const PALETTE=['#01696f','#4f98a3','#964219','#a12c7b','#437a22','#6d5fbb','#bb5f3b','#3b8abb','#6daa45','#d163a7'];
+
+function resolveLabel(name){
+  const n=normSheet(name);
+  if(SHEET_LABELS[n])return SHEET_LABELS[n];
+  if(n.includes('ksl4')&&n.includes('de'))return 'KSL-4 DE';
+  if(n.includes('ksl4'))return 'KSL-4 WRI';
+  if(n.includes('km1')&&n.includes('de'))return 'KM-1 DE';
+  if(n.includes('km1'))return 'KM-1 GR';
+  if(n.includes('ksl5')&&n.includes('de'))return 'KSL-5a DE';
+  if(n.includes('ksl5'))return 'KSL-5a GR';
+  if(n.includes('km2')&&n.includes('de'))return 'KM-2 DE';
+  if(n.includes('km2'))return 'KM-2 GR';
+  return null;
+}
+function fg(row,keys){for(const k of keys){const v=row[k];if(v!==undefined&&v!==null&&String(v).trim()!=='')return String(v).trim();}return '';}
+
 function loadFile(file){
   if(!file)return;
   showStatus('Reading '+file.name+'...');
@@ -176,18 +194,38 @@ function loadFile(file){
     try{
       const wb=XLSX.read(e.target.result,{type:'array',cellDates:true,dateNF:'yyyy-mm-dd'});
       const month=file.name.replace(/\.xlsx?$/i,'');
-      let n=0;
+      let n=0,skipped=[];
       wb.SheetNames.forEach(name=>{
-        const label=TAB_MAP[name];if(!label)return;
+        const label=resolveLabel(name);
+        if(!label){skipped.push(name);return;}
         XLSX.utils.sheet_to_json(wb.Sheets[name],{raw:false,dateNF:'yyyy-mm-dd'}).forEach(r=>{
-          if(!r['Incident Ticket'])return;
-          const agent=(r['Agent']||'').trim();if(!agent)return;
-          allData.push({ticket:r['Incident Ticket']||'',date:r['DATE_CLOSE']||'',queue:r['Queue']||r['Ticket Gruppe']||'',lang:r['ISO_Language']||'',sla_tab:label,sla_grp:SLA_GROUP[label]||label,week:String(r['Week']||r['Week ']||''),agent,bms:String(r['BMS ID']||''),excluded:String(r['Excluded']||'0'),month});
+          const ticket=fg(r,['Incident Ticket','Ticket']);
+          if(!ticket)return;
+          const agent=fg(r,['Agent','agent']);
+          if(!agent)return; // skip rows with no agent
+          const exclRaw=fg(r,['Excluded','excluded']).toLowerCase();
+          const excl=exclRaw==='1'||exclRaw==='yes'||exclRaw==='x'?'1':'0';
+          allData.push({
+            ticket,
+            date:fg(r,['DATE_CLOSE','Date Close']),
+            lang:fg(r,['ISO_Language','Language']),
+            sla_tab:label,
+            sla_grp:SLA_GROUP[label]||label,
+            week:fg(r,['Week','Week ']).replace(/\.0$/,''),
+            agent,
+            bms:fg(r,['BMS ID','BMS']),
+            excluded:excl,
+            month
+          });
           n++;
         });
       });
-      showStatus('Loaded '+n+' agent rows from '+file.name);
-      setTimeout(()=>document.getElementById('status').classList.add('hidden'),3000);
+      if(n===0){
+        showStatus('No agent rows loaded. Make sure the Agent column is filled in. Sheets: '+wb.SheetNames.join(', '),'error');
+        return;
+      }
+      showStatus(`Loaded ${n} rows with agents from ${file.name}`+(skipped.length?` (skipped: ${skipped.join(', ')})`:''));
+      setTimeout(()=>document.getElementById('status').classList.add('hidden'),4000);
       save();render();
     }catch(err){showStatus('Error: '+err.message,'error');}
   };
@@ -201,7 +239,7 @@ function render(){
   ['kpi-area','filters-area','main-area','months-area'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
   document.getElementById('export-btn').classList.remove('hidden');
   const months=[...new Set(allData.map(r=>r.month))];
-  document.getElementById('months-list').innerHTML=months.map(m=>`<div class="month-badge">${m}<button onclick="removeMonth('${m}')">x</button></div>`).join('');
+  document.getElementById('months-list').innerHTML=months.map(m=>`<div class="month-badge">${m}<button onclick="removeMonth('${m.replace(/'/g,"\\'")}')">&#x2715;</button></div>`).join('');
   fillSel('f-week',[...new Set(allData.map(r=>r.week).filter(Boolean))].sort((a,b)=>+a-+b));
   fillSel('f-sla',[...new Set(allData.map(r=>r.sla_grp))].sort());
   applyFilters();
@@ -209,7 +247,7 @@ function render(){
 function fillSel(id,opts){const el=document.getElementById(id),cur=el.value;el.innerHTML='<option value="">All</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');if(opts.includes(cur))el.value=cur;}
 function applyFilters(){
   const week=document.getElementById('f-week').value,sla=document.getElementById('f-sla').value,sort=document.getElementById('f-sort').value;
-  let fd=allData.filter(r=>(!week||r.week===week)&&(!sla||r.sla_grp===sla));
+  const fd=allData.filter(r=>(!week||r.week===week)&&(!sla||r.sla_grp===sla));
   agentStats={};
   fd.forEach(r=>{
     if(!agentStats[r.agent])agentStats[r.agent]={name:r.agent,bms:r.bms,total:0,counted:0,excl:0,'KSL-4':0,'KM-1':0,'KSL-5a':0,'KM-2':0,rows:[]};
@@ -226,8 +264,8 @@ function applyFilters(){
 const mx=()=>Math.max(1,...Object.values(agentStats).map(a=>a.total));
 function renderLeaderboard(agents){
   document.getElementById('lb-body').innerHTML=agents.map((a,i)=>`
-    <div class="lb-row${selectedAgent===a.name?' selected':''}" onclick="selectAgent('${a.name.replace(/'/g,"\\'")}')"> 
-      <div class="rank ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':''} ">${i+1}</div>
+    <div class="lb-row${selectedAgent===a.name?' selected':''}" onclick="selectAgent('${a.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+      <div class="rank ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':''}">${i+1}</div>
       <div><div class="agent-name">${a.name}</div><div class="agent-bms">${a.bms?'BMS: '+a.bms:''}</div><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(a.total/mx()*100)}%"></div></div></div>
       <div class="lb-num total">${a.total}</div>
       <div class="lb-num lb-hide">${a.counted}</div>
