@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Tracker</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fff;--border:#d4d1ca;--divider:#dcd9d5;
+  --text:#28251d;--muted:#7a7974;--faint:#bab9b4;
+  --primary:#01696f;--primary-h:#0c4e54;--primary-hi:#cedcd8;
+  --success:#437a22;--warn:#964219;--error:#a12c7b;
+  --shadow:0 4px 16px oklch(0.2 0.01 80/.08);
+  --radius:.5rem;--radius-lg:.75rem;--font:'Satoshi',sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#171614;--surface:#1c1b19;--surface-2:#201f1d;--border:#393836;--divider:#262523;
+  --text:#cdccca;--muted:#797876;--faint:#5a5957;
+  --primary:#4f98a3;--primary-h:#227f8b;--primary-hi:#313b3b;
+  --success:#6daa45;--warn:#bb653b;--error:#d163a7;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh;font-size:15px;line-height:1.6}
+button{cursor:pointer;font-family:inherit}
+.app-nav{background:var(--surface-2);border-bottom:2px solid var(--divider);padding:0 1.5rem;display:flex;align-items:center;gap:0;overflow-x:auto;position:sticky;top:0;z-index:200}
+.app-nav a{display:flex;align-items:center;gap:.4rem;padding:.55rem 1rem;font-size:.82rem;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .18s}
+.app-nav a:hover{color:var(--text)}
+.app-nav a.active{color:var(--primary);border-bottom-color:var(--primary)}
+.app-nav svg{flex-shrink:0}
+.header{background:var(--surface);border-bottom:1px solid var(--divider);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:2.4rem;z-index:100;box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.05rem}
+.logo svg{color:var(--primary)}
+.header-right{display:flex;gap:.75rem;align-items:center}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:.35rem .6rem;color:var(--muted);display:flex;align-items:center}
+.theme-btn:hover{border-color:var(--primary);color:var(--primary)}
+.main{max-width:1300px;margin:0 auto;padding:2rem 1.5rem}
+.upload-card{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:1.5rem 2rem;text-align:center;background:var(--surface);cursor:pointer;transition:all .2s;margin-bottom:2rem}
+.upload-card:hover,.upload-card.drag{border-color:var(--primary);background:var(--primary-hi)}
+.upload-card svg{margin:0 auto .5rem;color:var(--primary);opacity:.7}
+.upload-card h4{font-size:.95rem;font-weight:600;margin-bottom:.25rem}
+.upload-card p{color:var(--muted);font-size:.82rem}
+.upload-btn{margin-top:.75rem;background:var(--primary);color:#fff;border:none;padding:.4rem 1rem;border-radius:var(--radius);font-size:.82rem;font-weight:500}
+.upload-btn:hover{background:var(--primary-h)}
+.hidden{display:none}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
+.kpi{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);padding:.875rem 1.1rem}
+.kpi-label{font-size:.75rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem}
+.kpi-value{font-size:1.6rem;font-weight:700;color:var(--primary);line-height:1}
+.kpi-sub{font-size:.75rem;color:var(--faint);margin-top:.2rem}
+.section-title{font-size:1rem;font-weight:700;margin:.5rem 0 1rem;color:var(--text)}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem}
+.chart-card{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);padding:1.25rem}
+.chart-card h4{font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.04em}
+.chart-card canvas{max-height:280px}
+.leaderboard{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:2rem}
+.lb-header{display:grid;grid-template-columns:2rem 1fr repeat(7,5rem);gap:.5rem;padding:.5rem 1rem;background:var(--surface-2);font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--divider)}
+.lb-row{display:grid;grid-template-columns:2rem 1fr repeat(7,5rem);gap:.5rem;padding:.6rem 1rem;border-bottom:1px solid var(--divider);align-items:center;cursor:pointer;transition:background .15s}
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{background:var(--primary-hi)}
+.lb-row.selected{background:var(--primary-hi);border-left:3px solid var(--primary)}
+.rank{font-weight:700;color:var(--muted);font-size:.85rem}
+.rank-1{color:#c9a227}.rank-2{color:#9a9a9a}.rank-3{color:#a0522d}
+.agent-name{font-weight:600;font-size:.9rem}
+.agent-bms{font-size:.75rem;color:var(--muted)}
+.lb-num{text-align:right;font-size:.875rem;font-weight:500}
+.lb-num.total{font-weight:700;color:var(--primary)}
+.lb-num.excl{color:var(--warn)}
+.bar-bg{height:6px;background:var(--divider);border-radius:3px;overflow:hidden;margin-top:2px}
+.bar-fill{height:100%;background:var(--primary);border-radius:3px;transition:width .4s}
+.agent-detail{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:2rem}
+.agent-detail h3{font-size:1.1rem;font-weight:700;margin-bottom:1rem}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.875rem;margin-bottom:1.25rem}
+.detail-kpi{background:var(--surface-2);border:1px solid var(--divider);border-radius:var(--radius);padding:.75rem}
+.detail-kpi .lbl{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase}
+.detail-kpi .val{font-size:1.4rem;font-weight:700;color:var(--primary)}
+.filters{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:.25rem}
+.filter-group label{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+select{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.375rem .625rem;font-family:var(--font);font-size:.82rem;color:var(--text);cursor:pointer}
+select:focus{outline:none;border-color:var(--primary)}
+.btn-primary{background:var(--primary);color:#fff;border:none;padding:.4rem .875rem;border-radius:var(--radius);font-size:.82rem;font-weight:500;display:flex;align-items:center;gap:.375rem}
+.btn-primary:hover{background:var(--primary-h)}
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+.status-bar{background:var(--success);color:#fff;padding:.5rem 1.5rem;font-size:.85rem;font-weight:500}
+.status-bar.error{background:var(--error)}
+.months-list{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.month-badge{background:var(--primary-hi);color:var(--primary);border:1px solid var(--primary);border-radius:99px;padding:.2rem .75rem;font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:.4rem}
+.month-badge button{background:none;border:none;color:var(--primary);font-size:.9rem;padding:0;cursor:pointer}
+@media(max-width:768px){.charts-row{grid-template-columns:1fr}.lb-header,.lb-row{grid-template-columns:2rem 1fr repeat(3,4rem)}.lb-hide{display:none}.main{padding:1rem}}
+</style>
+</head>
+<body>
+<nav class="app-nav">
+  <a href="index.html">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 14h4l3-7 4 14 3-7h3"/></svg>
+    Breaches Tracker
+  </a>
+  <a href="reporter.html">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Reporter
+  </a>
+  <a href="agent-tracker.html" class="active">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
+    Agent Tracker
+  </a>
+</nav>
+<header class="header">
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <rect width="26" height="26" rx="6" fill="currentColor" opacity=".12"/>
+      <circle cx="13" cy="10" r="4" stroke="currentColor" stroke-width="2"/>
+      <path d="M5 22c0-4 3.58-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    Agent Tracker
+  </div>
+  <div class="header-right">
+    <button class="btn-primary hidden" id="export-btn" onclick="exportAll()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <button class="theme-btn" data-theme-toggle>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
+</header>
+<div id="status" class="status-bar hidden"></div>
+<main class="main">
+  <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-in').click()">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    <h4>Upload filled Breaches file</h4>
+    <p>Upload a .xlsx with <strong>Agent</strong> and <strong>BMS ID</strong> columns filled in</p>
+    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-in').click()">Choose file</button>
+    <input type="file" id="file-in" class="hidden" accept=".xlsx,.xls" onchange="loadFile(this.files[0])">
+  </div>
+  <div id="months-area" class="hidden"><div class="section-title">Loaded months</div><div class="months-list" id="months-list"></div></div>
+  <div class="kpis hidden" id="kpi-area"></div>
+  <div class="filters hidden" id="filters-area">
+    <div class="filter-group"><label>Week</label><select id="f-week" onchange="applyFilters()"><option value="">All</option></select></div>
+    <div class="filter-group"><label>SLA Category</label><select id="f-sla" onchange="applyFilters()"><option value="">All</option></select></div>
+    <div class="filter-group"><label>Sort by</label><select id="f-sort" onchange="applyFilters()"><option value="total">Total breaches</option><option value="counted">Counted</option><option value="excl">Excluded</option></select></div>
+  </div>
+  <div id="main-area" class="hidden">
+    <div class="charts-row">
+      <div class="chart-card"><h4>Top agents by total breaches</h4><canvas id="chart-agents"></canvas></div>
+      <div class="chart-card"><h4>Breach type breakdown</h4><canvas id="chart-types"></canvas></div>
+    </div>
+    <div class="section-title">Agent Leaderboard <span id="lb-count" style="font-size:.8rem;font-weight:400;color:var(--muted)"></span></div>
+    <div class="leaderboard">
+      <div class="lb-header"><div>#</div><div>Agent</div><div class="lb-num">Total</div><div class="lb-num lb-hide">Counted</div><div class="lb-num lb-hide">Excl.</div><div class="lb-num lb-hide">KSL-4</div><div class="lb-num lb-hide">KM-1</div><div class="lb-num lb-hide">KSL-5a</div><div class="lb-num lb-hide">KM-2</div></div>
+      <div id="lb-body"></div>
+    </div>
+    <div id="agent-detail" class="agent-detail hidden">
+      <h3 id="detail-name"></h3>
+      <div class="detail-grid" id="detail-kpis"></div>
+      <canvas id="detail-chart" style="max-height:200px"></canvas>
+    </div>
+  </div>
+  <div id="empty-state" class="empty">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
+    <h3>No data loaded</h3><p>Upload a filled monthly Breaches file to track agent performance</p>
+  </div>
+</main>
+<script>
+let allData=[],agentStats={},charts={},selectedAgent=null;
+const TAB_MAP={'KSL-4 |WRI':'KSL-4 WRI','KSL-4 | DE':'KSL-4 DE','KM-1 | Reopen':'KM-1 GR','KM-1 DE':'KM-1 DE','KSL-5a GR':'KSL-5a GR','KSL-5a DE':'KSL-5a DE','KM-2 GR':'KM-2 GR','KM-2 DE':'KM-2 DE'};
+const SLA_GROUP={'KSL-4 WRI':'KSL-4','KSL-4 DE':'KSL-4','KM-1 GR':'KM-1','KM-1 DE':'KM-1','KSL-5a GR':'KSL-5a','KSL-5a DE':'KSL-5a','KM-2 GR':'KM-2','KM-2 DE':'KM-2'};
+const PALETTE=['#01696f','#4f98a3','#964219','#a12c7b','#437a22','#6d5fbb','#bb5f3b','#3b8abb','#6daa45','#d163a7'];
+function loadFile(file){
+  if(!file)return;
+  showStatus('Reading '+file.name+'...');
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true,dateNF:'yyyy-mm-dd'});
+      const month=file.name.replace(/\.xlsx?$/i,'');
+      let n=0;
+      wb.SheetNames.forEach(name=>{
+        const label=TAB_MAP[name];if(!label)return;
+        XLSX.utils.sheet_to_json(wb.Sheets[name],{raw:false,dateNF:'yyyy-mm-dd'}).forEach(r=>{
+          if(!r['Incident Ticket'])return;
+          const agent=(r['Agent']||'').trim();if(!agent)return;
+          allData.push({ticket:r['Incident Ticket']||'',date:r['DATE_CLOSE']||'',queue:r['Queue']||r['Ticket Gruppe']||'',lang:r['ISO_Language']||'',sla_tab:label,sla_grp:SLA_GROUP[label]||label,week:String(r['Week']||r['Week ']||''),agent,bms:String(r['BMS ID']||''),excluded:String(r['Excluded']||'0'),month});
+          n++;
+        });
+      });
+      showStatus('Loaded '+n+' agent rows from '+file.name);
+      setTimeout(()=>document.getElementById('status').classList.add('hidden'),3000);
+      save();render();
+    }catch(err){showStatus('Error: '+err.message,'error');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function save(){try{localStorage.setItem('agent_tracker_data',JSON.stringify(allData));}catch(e){}}
+function loadSaved(){try{const d=localStorage.getItem('agent_tracker_data');if(d){allData=JSON.parse(d);render();}}catch(e){}}
+function render(){
+  if(!allData.length)return;
+  document.getElementById('empty-state').classList.add('hidden');
+  ['kpi-area','filters-area','main-area','months-area'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
+  document.getElementById('export-btn').classList.remove('hidden');
+  const months=[...new Set(allData.map(r=>r.month))];
+  document.getElementById('months-list').innerHTML=months.map(m=>`<div class="month-badge">${m}<button onclick="removeMonth('${m}')">x</button></div>`).join('');
+  fillSel('f-week',[...new Set(allData.map(r=>r.week).filter(Boolean))].sort((a,b)=>+a-+b));
+  fillSel('f-sla',[...new Set(allData.map(r=>r.sla_grp))].sort());
+  applyFilters();
+}
+function fillSel(id,opts){const el=document.getElementById(id),cur=el.value;el.innerHTML='<option value="">All</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');if(opts.includes(cur))el.value=cur;}
+function applyFilters(){
+  const week=document.getElementById('f-week').value,sla=document.getElementById('f-sla').value,sort=document.getElementById('f-sort').value;
+  let fd=allData.filter(r=>(!week||r.week===week)&&(!sla||r.sla_grp===sla));
+  agentStats={};
+  fd.forEach(r=>{
+    if(!agentStats[r.agent])agentStats[r.agent]={name:r.agent,bms:r.bms,total:0,counted:0,excl:0,'KSL-4':0,'KM-1':0,'KSL-5a':0,'KM-2':0,rows:[]};
+    const s=agentStats[r.agent];s.total++;s.rows.push(r);
+    if(r.excluded==='1')s.excl++;else s.counted++;
+    if(s[r.sla_grp]!==undefined)s[r.sla_grp]++;
+  });
+  const agents=Object.values(agentStats).sort((a,b)=>b[sort]-(a[sort]||0)||b.total-a.total);
+  const total=fd.length,excl=fd.filter(r=>r.excluded==='1').length;
+  document.getElementById('kpi-area').innerHTML=`<div class="kpi"><div class="kpi-label">Agents</div><div class="kpi-value">${agents.length}</div><div class="kpi-sub">with breaches</div></div><div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value">${total}</div><div class="kpi-sub">all breaches</div></div><div class="kpi"><div class="kpi-label">Counted</div><div class="kpi-value">${total-excl}</div><div class="kpi-sub">not excluded</div></div><div class="kpi"><div class="kpi-label">Excluded</div><div class="kpi-value">${excl}</div><div class="kpi-sub">flagged out</div></div><div class="kpi"><div class="kpi-label">Avg/agent</div><div class="kpi-value">${agents.length?Math.round(total/agents.length):0}</div><div class="kpi-sub">breaches</div></div>`;
+  document.getElementById('lb-count').textContent=agents.length+' agents';
+  renderLeaderboard(agents);renderCharts(agents);
+}
+const mx=()=>Math.max(1,...Object.values(agentStats).map(a=>a.total));
+function renderLeaderboard(agents){
+  document.getElementById('lb-body').innerHTML=agents.map((a,i)=>`
+    <div class="lb-row${selectedAgent===a.name?' selected':''}" onclick="selectAgent('${a.name.replace(/'/g,"\\'")}')"> 
+      <div class="rank ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':''} ">${i+1}</div>
+      <div><div class="agent-name">${a.name}</div><div class="agent-bms">${a.bms?'BMS: '+a.bms:''}</div><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(a.total/mx()*100)}%"></div></div></div>
+      <div class="lb-num total">${a.total}</div>
+      <div class="lb-num lb-hide">${a.counted}</div>
+      <div class="lb-num excl lb-hide">${a.excl}</div>
+      <div class="lb-num lb-hide">${a['KSL-4']}</div>
+      <div class="lb-num lb-hide">${a['KM-1']}</div>
+      <div class="lb-num lb-hide">${a['KSL-5a']}</div>
+      <div class="lb-num lb-hide">${a['KM-2']}</div>
+    </div>`).join('');
+}
+function renderCharts(agents){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const gc=isDark?'#393836':'#dcd9d5',tc=isDark?'#cdccca':'#7a7974';
+  Chart.defaults.color=tc;Chart.defaults.font={family:'Satoshi,sans-serif',size:12};
+  const top10=agents.slice(0,10);
+  if(charts['agents'])charts['agents'].destroy();
+  charts['agents']=new Chart(document.getElementById('chart-agents').getContext('2d'),{type:'bar',data:{labels:top10.map(a=>a.name),datasets:[{label:'Counted',data:top10.map(a=>a.counted),backgroundColor:'#01696f'},{label:'Excluded',data:top10.map(a=>a.excl),backgroundColor:'#964219'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true,position:'top'}},scales:{x:{stacked:true,grid:{color:gc},ticks:{color:tc,maxRotation:35}},y:{stacked:true,grid:{color:gc},ticks:{color:tc}}}}});
+  const slaKeys=['KSL-4','KM-1','KSL-5a','KM-2'],slaTotals=slaKeys.map(k=>agents.reduce((s,a)=>s+a[k],0));
+  if(charts['types'])charts['types'].destroy();
+  charts['types']=new Chart(document.getElementById('chart-types').getContext('2d'),{type:'doughnut',data:{labels:slaKeys,datasets:[{data:slaTotals,backgroundColor:PALETTE,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{boxWidth:12,padding:12}}}}});
+}
+function selectAgent(name){
+  selectedAgent=selectedAgent===name?null:name;
+  document.querySelectorAll('.lb-row').forEach(el=>el.classList.remove('selected'));
+  if(!selectedAgent){document.getElementById('agent-detail').classList.add('hidden');return;}
+  const a=agentStats[name];if(!a)return;
+  document.querySelectorAll('.lb-row').forEach(el=>{if(el.querySelector('.agent-name')&&el.querySelector('.agent-name').textContent===name)el.classList.add('selected');});
+  document.getElementById('agent-detail').classList.remove('hidden');
+  document.getElementById('detail-name').textContent=name+(a.bms?' (BMS '+a.bms+')');
+  const weekMap={};
+  a.rows.forEach(r=>{const w='Wk '+(r.week||'?');weekMap[w]=(weekMap[w]||0)+1;});
+  document.getElementById('detail-kpis').innerHTML=`<div class="detail-kpi"><div class="lbl">Total</div><div class="val">${a.total}</div></div><div class="detail-kpi"><div class="lbl">Counted</div><div class="val">${a.counted}</div></div><div class="detail-kpi"><div class="lbl">Excluded</div><div class="val">${a.excl}</div></div><div class="detail-kpi"><div class="lbl">KSL-4</div><div class="val">${a['KSL-4']}</div></div><div class="detail-kpi"><div class="lbl">KM-1</div><div class="val">${a['KM-1']}</div></div><div class="detail-kpi"><div class="lbl">KSL-5a</div><div class="val">${a['KSL-5a']}</div></div><div class="detail-kpi"><div class="lbl">KM-2</div><div class="val">${a['KM-2']}</div></div>`;
+  if(charts['detail'])charts['detail'].destroy();
+  const wKeys=Object.keys(weekMap).sort();
+  charts['detail']=new Chart(document.getElementById('detail-chart').getContext('2d'),{type:'bar',data:{labels:wKeys,datasets:[{label:'Breaches',data:wKeys.map(k=>weekMap[k]),backgroundColor:'#01696f'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'transparent'}},y:{grid:{color:'#dcd9d5'},ticks:{stepSize:1}}}}});
+  document.getElementById('agent-detail').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function removeMonth(m){allData=allData.filter(r=>r.month!==m);save();if(!allData.length){location.reload();return;}render();}
+function exportAll(){
+  const agents=Object.values(agentStats).sort((a,b)=>b.total-a.total);
+  const summary=agents.map((a,i)=>({Rank:i+1,Agent:a.name,'BMS ID':a.bms,Total:a.total,Counted:a.counted,Excluded:a.excl,'KSL-4':a['KSL-4'],'KM-1':a['KM-1'],'KSL-5a':a['KSL-5a'],'KM-2':a['KM-2']}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'Agent Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(allData),'Raw Data');
+  XLSX.writeFile(wb,'Agent_Tracker_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx');
+}
+function showStatus(msg,type='ok'){const el=document.getElementById('status');el.textContent=msg;el.className='status-bar'+(type==='error'?' error':'');el.classList.remove('hidden');}
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
+(function(){const btn=document.querySelector('[data-theme-toggle]');const root=document.documentElement;let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';root.setAttribute('data-theme',d);if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);applyFilters();});})();
+loadSaved();
+</script>
+</body>
+</html>
