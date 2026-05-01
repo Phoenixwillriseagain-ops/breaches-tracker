@@ -25,7 +25,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh;font-size:15px;line-height:1.6}
 button{cursor:pointer;font-family:inherit}
-.app-nav{background:var(--surface-2);border-bottom:2px solid var(--divider);padding:0 1.5rem;display:flex;align-items:center;gap:0;overflow-x:auto;position:sticky;top:0;z-index:200}
+.app-nav{background:var(--surface-2);border-bottom:2px solid var(--divider);padding:0 1.5rem;display:flex;align-items:center;overflow-x:auto;position:sticky;top:0;z-index:200}
 .app-nav a{display:flex;align-items:center;gap:.4rem;padding:.55rem 1rem;font-size:.82rem;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .18s}
 .app-nav a:hover{color:var(--text)}
 .app-nav a.active{color:var(--primary);border-bottom-color:var(--primary)}
@@ -121,7 +121,7 @@ select:focus{outline:none;border-color:var(--primary)}
   <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-in').click()">
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
     <h4>Add Monthly Breaches File</h4>
-    <p>Upload a filled <strong>.xlsx</strong> (Agent, Week, Excluded columns filled in) — repeat for each month</p>
+    <p>Upload a filled <strong>.xlsx</strong> (Agent, Excluded columns filled in) — repeat for each month</p>
     <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-in').click()">Choose file</button>
     <input type="file" id="file-in" class="hidden" accept=".xlsx,.xls" onchange="loadFile(this.files[0])">
   </div>
@@ -130,15 +130,14 @@ select:focus{outline:none;border-color:var(--primary)}
   <div class="filters hidden" id="filters-area">
     <div class="filter-group"><label>Week</label><select id="f-week" onchange="applyFilters()"><option value="">All</option></select></div>
     <div class="filter-group"><label>SLA Category</label><select id="f-sla" onchange="applyFilters()"><option value="">All</option></select></div>
-    <div class="filter-group"><label>Queue</label><select id="f-queue" onchange="applyFilters()"><option value="">All</option></select></div>
     <div class="filter-group"><label>Language</label><select id="f-lang" onchange="applyFilters()"><option value="">All</option></select></div>
     <div class="filter-group"><label>Excluded</label><select id="f-excl" onchange="applyFilters()"><option value="">All</option><option value="0">Counted</option><option value="1">Excluded</option></select></div>
   </div>
   <div class="charts-grid hidden" id="charts-area">
     <div class="chart-card"><h4>Breaches per Week</h4><canvas id="chart-week"></canvas></div>
     <div class="chart-card"><h4>By SLA Category</h4><canvas id="chart-sla"></canvas></div>
-    <div class="chart-card"><h4>Top Queues</h4><canvas id="chart-queue"></canvas></div>
     <div class="chart-card"><h4>Language Split</h4><canvas id="chart-lang"></canvas></div>
+    <div class="chart-card"><h4>Excluded vs Counted</h4><canvas id="chart-excl"></canvas></div>
   </div>
   <div id="table-area" class="hidden">
     <div class="toolbar"><span id="tbl-count" style="font-size:.85rem;color:var(--muted)"></span><button class="btn-outline" onclick="exportFiltered()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export filtered</button></div>
@@ -151,8 +150,46 @@ select:focus{outline:none;border-color:var(--primary)}
 </main>
 <script>
 let allData=[],filtered=[],charts={};
-const TAB_MAP={'KSL-4 |WRI':'KSL-4 WRI','KSL-4 | DE':'KSL-4 DE','KM-1 | Reopen':'KM-1 GR','KM-1 DE':'KM-1 DE','KSL-5a GR':'KSL-5a GR','KSL-5a DE':'KSL-5a DE','KM-2 GR':'KM-2 GR','KM-2 DE':'KM-2 DE'};
+
+// Normalise sheet name: strip spaces, pipes, underscores, dashes, dots
+function normSheet(n){return n.toLowerCase().replace(/[\s|_\-\.]+/g,'');}
+
+const SHEET_LABELS={
+  'ksl4wri':'KSL-4 WRI','ksl4de':'KSL-4 DE',
+  'km1reopen':'KM-1 GR','km1gr':'KM-1 GR','km1de':'KM-1 DE',
+  'ksl5agr':'KSL-5a GR','ksl5ade':'KSL-5a DE',
+  'km2gr':'KM-2 GR','km2de':'KM-2 DE',
+};
+const SLA_GROUP={
+  'KSL-4 WRI':'KSL-4','KSL-4 DE':'KSL-4',
+  'KM-1 GR':'KM-1','KM-1 DE':'KM-1',
+  'KSL-5a GR':'KSL-5a','KSL-5a DE':'KSL-5a',
+  'KM-2 GR':'KM-2','KM-2 DE':'KM-2',
+};
 const PALETTE=['#01696f','#4f98a3','#964219','#a12c7b','#437a22','#6d5fbb','#bb5f3b','#3b8abb','#6daa45','#d163a7'];
+
+function resolveLabel(name){
+  const n=normSheet(name);
+  if(SHEET_LABELS[n])return SHEET_LABELS[n];
+  if(n.includes('ksl4')&&n.includes('de'))return 'KSL-4 DE';
+  if(n.includes('ksl4'))return 'KSL-4 WRI';
+  if(n.includes('km1')&&n.includes('de'))return 'KM-1 DE';
+  if(n.includes('km1'))return 'KM-1 GR';
+  if(n.includes('ksl5')&&n.includes('de'))return 'KSL-5a DE';
+  if(n.includes('ksl5'))return 'KSL-5a GR';
+  if(n.includes('km2')&&n.includes('de'))return 'KM-2 DE';
+  if(n.includes('km2'))return 'KM-2 GR';
+  return null;
+}
+
+function flexGet(row,keys){
+  for(const k of keys){
+    const v=row[k];
+    if(v!==undefined&&v!==null&&String(v).trim()!=='')return String(v).trim();
+  }
+  return '';
+}
+
 function loadFile(file){
   if(!file)return;
   showStatus('Reading '+file.name+'...');
@@ -161,17 +198,39 @@ function loadFile(file){
     try{
       const wb=XLSX.read(e.target.result,{type:'array',cellDates:true,dateNF:'yyyy-mm-dd'});
       const month=file.name.replace(/\.xlsx?$/i,'');
-      let n=0;
+      let n=0,skipped=[];
       wb.SheetNames.forEach(name=>{
-        const label=TAB_MAP[name];if(!label)return;
-        XLSX.utils.sheet_to_json(wb.Sheets[name],{raw:false,dateNF:'yyyy-mm-dd'}).forEach(r=>{
-          if(!r['Incident Ticket'])return;
-          allData.push({ticket:r['Incident Ticket']||'',date:r['DATE_CLOSE']||'',queue:r['Queue']||r['Ticket Gruppe']||'',priority:r['Priority']||'',lang:r['ISO_Language']||r['Incident Element Supportsprache']||'',sla:label,week:String(r['Week']||r['Week ']||''),agent:r['Agent']||'',bms:String(r['BMS ID']||''),excluded:String(r['Excluded']||'0'),month});
+        const label=resolveLabel(name);
+        if(!label){skipped.push(name);return;}
+        const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{raw:false,dateNF:'yyyy-mm-dd'});
+        rows.forEach(r=>{
+          const ticket=flexGet(r,['Incident Ticket','Ticket','incident_ticket']);
+          if(!ticket)return;
+          const exclRaw=flexGet(r,['Excluded','excluded','Excl']).toLowerCase();
+          const excl=exclRaw==='1'||exclRaw==='yes'||exclRaw==='x'?'1':'0';
+          const week=flexGet(r,['Week','Week ','week']).replace(/\.0$/,'');
+          allData.push({
+            ticket,
+            date:flexGet(r,['DATE_CLOSE','Date Close','date_close']),
+            lang:flexGet(r,['ISO_Language','Language','iso_language','lang']),
+            sla_tab:label,
+            sla_grp:SLA_GROUP[label]||label,
+            week,
+            agent:flexGet(r,['Agent','agent']),
+            bms:flexGet(r,['BMS ID','BMS','bms_id']),
+            excluded:excl,
+            reason:flexGet(r,['Reason','reason','Comment if excluded','Comment']),
+            month
+          });
           n++;
         });
       });
-      showStatus('Loaded '+n+' rows from '+file.name);
-      setTimeout(()=>document.getElementById('status').classList.add('hidden'),3000);
+      if(n===0){
+        showStatus('No rows loaded. Sheet names found: '+wb.SheetNames.join(', '),'error');
+        return;
+      }
+      showStatus((skipped.length?`Loaded ${n} rows (skipped non-breach sheets: ${skipped.join(', ')})`:`Loaded ${n} rows from ${file.name}`));
+      setTimeout(()=>document.getElementById('status').classList.add('hidden'),4000);
       save();render();
     }catch(err){showStatus('Error: '+err.message,'error');}
   };
@@ -185,17 +244,16 @@ function render(){
   ['kpi-area','filters-area','charts-area','table-area','months-area'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
   document.getElementById('export-btn').classList.remove('hidden');
   const months=[...new Set(allData.map(r=>r.month))];
-  document.getElementById('months-list').innerHTML=months.map(m=>`<div class="month-badge">${m}<button onclick="removeMonth('${m}')">x</button></div>`).join('');
+  document.getElementById('months-list').innerHTML=months.map(m=>`<div class="month-badge">${m}<button onclick="removeMonth('${m.replace(/'/g,"\\'")}')">&#x2715;</button></div>`).join('');
   fillSel('f-week',[...new Set(allData.map(r=>r.week).filter(Boolean))].sort((a,b)=>+a-+b));
-  fillSel('f-sla',[...new Set(allData.map(r=>r.sla))].sort());
-  fillSel('f-queue',[...new Set(allData.map(r=>r.queue))].sort());
+  fillSel('f-sla',[...new Set(allData.map(r=>r.sla_grp))].sort());
   fillSel('f-lang',[...new Set(allData.map(r=>r.lang))].sort());
   applyFilters();
 }
 function fillSel(id,opts){const el=document.getElementById(id),cur=el.value;el.innerHTML='<option value="">All</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');if(opts.includes(cur))el.value=cur;}
 function applyFilters(){
-  const wk=document.getElementById('f-week').value,sl=document.getElementById('f-sla').value,qu=document.getElementById('f-queue').value,la=document.getElementById('f-lang').value,ex=document.getElementById('f-excl').value;
-  filtered=allData.filter(r=>(!wk||r.week===wk)&&(!sl||r.sla===sl)&&(!qu||r.queue===qu)&&(!la||r.lang===la)&&(!ex||r.excluded===ex));
+  const wk=document.getElementById('f-week').value,sl=document.getElementById('f-sla').value,la=document.getElementById('f-lang').value,ex=document.getElementById('f-excl').value;
+  filtered=allData.filter(r=>(!wk||r.week===wk)&&(!sl||r.sla_grp===sl)&&(!la||r.lang===la)&&(!ex||r.excluded===ex));
   renderKPIs();renderCharts();renderTable();
 }
 function renderKPIs(){
@@ -212,17 +270,17 @@ function mkChart(id,type,labels,datasets){
 }
 function renderCharts(){
   const wkMap=cnt(filtered,'week');const wkK=Object.keys(wkMap).sort((a,b)=>+a-+b);
-  mkChart('chart-week','bar',wkK.map(w=>'Wk '+w),[{data:wkK.map(k=>wkMap[k]),backgroundColor:PALETTE[0]}]);
-  const slaMap=cnt(filtered,'sla');
+  mkChart('chart-week','bar',wkK.map(w=>w?'Wk '+w:'No week'),[{data:wkK.map(k=>wkMap[k]),backgroundColor:PALETTE[0]}]);
+  const slaMap=cnt(filtered,'sla_grp');
   mkChart('chart-sla','doughnut',Object.keys(slaMap),[{data:Object.values(slaMap),backgroundColor:PALETTE,borderWidth:2}]);
-  const qMap=cnt(filtered,'queue');const qS=Object.entries(qMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  mkChart('chart-queue','bar',qS.map(e=>e[0].replace('FT_use-','')),[{data:qS.map(e=>e[1]),backgroundColor:PALETTE[1]}]);
   const lMap=cnt(filtered,'lang');
   mkChart('chart-lang','doughnut',Object.keys(lMap),[{data:Object.values(lMap),backgroundColor:PALETTE,borderWidth:2}]);
+  const counted=filtered.filter(r=>r.excluded!=='1').length,excl=filtered.filter(r=>r.excluded==='1').length;
+  mkChart('chart-excl','doughnut',['Counted','Excluded'],[{data:[counted,excl],backgroundColor:['#437a22','#a12c7b'],borderWidth:2}]);
 }
 function renderTable(){
-  const cols=['ticket','date','queue','priority','lang','sla','week','agent','bms','excluded','month'];
-  const heads=['Incident Ticket','DATE_CLOSE','Queue','Priority','Language','SLA','Week','Agent','BMS ID','Excluded','Month'];
+  const cols=['ticket','date','lang','sla_tab','week','agent','bms','excluded','reason','month'];
+  const heads=['Incident Ticket','DATE_CLOSE','Language','SLA Tab','Week','Agent','BMS ID','Excluded','Reason','Month'];
   document.getElementById('tbl-count').textContent=filtered.length+' records';
   const tbl=document.getElementById('report-table');
   if(!filtered.length){tbl.innerHTML='<tr><td style="padding:2rem;text-align:center;color:var(--muted)">No records match filters</td></tr>';return;}
