@@ -4,633 +4,390 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Breaches Tracker</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
-/* ============ TOKENS ============ */
-:root, [data-theme="light"] {
-  --color-bg: #f7f6f2; --color-surface: #f9f8f5; --color-surface-2: #fbfbf9;
-  --color-surface-offset: #f3f0ec; --color-border: #d4d1ca; --color-divider: #dcd9d5;
-  --color-text: #28251d; --color-text-muted: #7a7974; --color-text-faint: #bab9b4;
-  --color-primary: #01696f; --color-primary-hover: #0c4e54; --color-primary-highlight: #cedcd8;
-  --color-success: #437a22; --color-success-highlight: #d4dfcc;
-  --color-warning: #964219; --color-warning-highlight: #ddcfc6;
-  --color-error: #a12c7b; --color-error-highlight: #e0ced7;
-  --color-blue: #006494; --color-blue-highlight: #c6d8e4;
-  --color-orange: #da7101; --color-orange-highlight: #e7d7c4;
-  --color-purple: #7a39bb; --color-purple-highlight: #dacfde;
-  --color-gold: #d19900; --color-gold-highlight: #e9e0c6;
-  --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
-  --shadow-sm: 0 1px 2px oklch(0.2 0.01 80/0.06); --shadow-md: 0 4px 12px oklch(0.2 0.01 80/0.08);
-  --shadow-lg: 0 12px 32px oklch(0.2 0.01 80/0.12);
-  --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.25rem;
-  --space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;--space-16:4rem;
-  --text-xs:clamp(0.75rem,0.7rem + 0.25vw,0.875rem);
-  --text-sm:clamp(0.875rem,0.8rem + 0.35vw,1rem);
-  --text-base:clamp(1rem,0.95rem + 0.25vw,1.125rem);
-  --text-lg:clamp(1.125rem,1rem + 0.75vw,1.5rem);
-  --text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
-  --font-body: 'Inter', sans-serif;
-  --transition: 180ms cubic-bezier(0.16,1,0.3,1);
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fff;--border:#d4d1ca;--divider:#dcd9d5;
+  --text:#28251d;--muted:#7a7974;--faint:#bab9b4;
+  --primary:#01696f;--primary-h:#0c4e54;--primary-hi:#cedcd8;
+  --success:#437a22;--warn:#964219;--error:#a12c7b;
+  --shadow:0 4px 16px oklch(0.2 0.01 80/.08);
+  --radius:0.5rem;--radius-lg:0.75rem;--font:'Satoshi',sans-serif;
 }
-[data-theme="dark"] {
-  --color-bg:#171614;--color-surface:#1c1b19;--color-surface-2:#201f1d;
-  --color-surface-offset:#1d1c1a;--color-border:#393836;--color-divider:#262523;
-  --color-text:#cdccca;--color-text-muted:#797876;--color-text-faint:#5a5957;
-  --color-primary:#4f98a3;--color-primary-hover:#227f8b;--color-primary-highlight:#313b3b;
-  --color-success:#6daa45;--color-success-highlight:#3a4435;
-  --color-warning:#bb653b;--color-warning-highlight:#564942;
-  --color-error:#d163a7;--color-error-highlight:#4c3d46;
-  --color-blue:#5591c7;--color-blue-highlight:#3a4550;
-  --color-orange:#fdab43;--color-orange-highlight:#564b3e;
-  --color-purple:#a86fdf;--color-purple-highlight:#4e4652;
-  --color-gold:#e8af34;--color-gold-highlight:#4d4332;
-  --shadow-sm:0 1px 2px oklch(0 0 0/0.2);--shadow-md:0 4px 12px oklch(0 0 0/0.3);
-  --shadow-lg:0 12px 32px oklch(0 0 0/0.4);
+[data-theme="dark"]{
+  --bg:#171614;--surface:#1c1b19;--surface-2:#201f1d;--border:#393836;--divider:#262523;
+  --text:#cdccca;--muted:#797876;--faint:#5a5957;
+  --primary:#4f98a3;--primary-h:#227f8b;--primary-hi:#313b3b;
+  --success:#6daa45;--warn:#bb653b;--error:#d163a7;
+  --shadow:0 4px 16px oklch(0 0 0/.3);
 }
-/* ============ BASE ============ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;scroll-behavior:smooth}
-body{min-height:100dvh;font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-bg);line-height:1.6}
-img,svg{display:block;max-width:100%}
-button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px;border-radius:var(--radius-sm)}
-a,button,[role="button"]{transition:color var(--transition),background var(--transition),border-color var(--transition),box-shadow var(--transition)}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh;font-size:16px;line-height:1.6;transition:background .2s,color .2s}
+button{cursor:pointer;font-family:inherit}
+img{display:block;max-width:100%}
 
-/* ============ LAYOUT ============ */
-.app{display:grid;grid-template-rows:auto 1fr;min-height:100dvh}
-header{background:var(--color-surface);border-bottom:1px solid var(--color-border);padding:var(--space-4) var(--space-6);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-sm)}
-.logo{display:flex;align-items:center;gap:var(--space-3)}
-.logo svg{color:var(--color-primary)}
-.logo-text{font-size:var(--text-lg);font-weight:700;color:var(--color-text)}
-.logo-sub{font-size:var(--text-xs);color:var(--color-text-muted);font-weight:400}
-main{padding:var(--space-8) var(--space-6);max-width:1200px;margin-inline:auto;width:100%}
+/* LAYOUT */
+.header{background:var(--surface);border-bottom:1px solid var(--divider);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:.625rem;font-weight:700;font-size:1.1rem;color:var(--text)}
+.logo svg{color:var(--primary)}
+.header-right{display:flex;align-items:center;gap:.75rem}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:.375rem .625rem;color:var(--muted);display:flex;align-items:center;transition:all .18s}
+.theme-btn:hover{border-color:var(--primary);color:var(--primary)}
 
-/* ============ THEME TOGGLE ============ */
-.theme-toggle{width:40px;height:40px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);border:1px solid var(--color-border)}
-.theme-toggle:hover{background:var(--color-surface-offset);color:var(--color-text)}
+.main{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
 
-/* ============ UPLOAD ZONE ============ */
-.upload-section{margin-bottom:var(--space-8)}
-.upload-zone{border:2px dashed var(--color-border);border-radius:var(--radius-xl);padding:var(--space-12) var(--space-8);text-align:center;background:var(--color-surface);cursor:pointer;transition:border-color var(--transition),background var(--transition)}
-.upload-zone:hover,.upload-zone.drag-over{border-color:var(--color-primary);background:var(--color-primary-highlight)}
-.upload-zone input{display:none}
-.upload-icon{width:48px;height:48px;margin:0 auto var(--space-4);color:var(--color-text-faint)}
-.upload-title{font-size:var(--text-lg);font-weight:600;margin-bottom:var(--space-2)}
-.upload-sub{font-size:var(--text-sm);color:var(--color-text-muted)}
-.upload-btn{display:inline-flex;align-items:center;gap:var(--space-2);margin-top:var(--space-4);padding:var(--space-3) var(--space-6);background:var(--color-primary);color:#fff;border-radius:var(--radius-full);font-size:var(--text-sm);font-weight:600}
-.upload-btn:hover{background:var(--color-primary-hover)}
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:3rem 2rem;text-align:center;background:var(--surface);transition:all .2s;cursor:pointer;margin-bottom:2rem}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--primary);background:var(--primary-hi)}
+.upload-zone svg{margin:0 auto .75rem;color:var(--primary);opacity:.7}
+.upload-zone h3{font-size:1.125rem;margin-bottom:.375rem}
+.upload-zone p{color:var(--muted);font-size:.9rem}
+.upload-btn{display:inline-block;margin-top:1rem;background:var(--primary);color:#fff;border:none;padding:.5rem 1.25rem;border-radius:var(--radius);font-size:.9rem;font-weight:500;transition:background .18s}
+.upload-btn:hover{background:var(--primary-h)}
+#file-input{display:none}
 
-/* ============ STATUS BAR ============ */
-.status-bar{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-lg);font-size:var(--text-sm);margin-bottom:var(--space-6);background:var(--color-surface);border:1px solid var(--color-border)}
-.status-dot{width:8px;height:8px;border-radius:var(--radius-full);flex-shrink:0}
-.status-dot.idle{background:var(--color-text-faint)}
-.status-dot.loading{background:var(--color-gold);animation:pulse 1s ease-in-out infinite}
-.status-dot.success{background:var(--color-success)}
-.status-dot.error{background:var(--color-error)}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* KPIS */
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+.kpi{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);padding:1rem 1.25rem}
+.kpi-label{font-size:.8rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.25rem}
+.kpi-value{font-size:1.75rem;font-weight:700;color:var(--primary);line-height:1}
+.kpi-sub{font-size:.78rem;color:var(--faint);margin-top:.25rem}
 
-/* ============ KPI STRIP ============ */
-.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-4);margin-bottom:var(--space-8)}
-.kpi-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);box-shadow:var(--shadow-sm)}
-.kpi-label{font-size:var(--text-xs);color:var(--color-text-muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--space-2)}
-.kpi-value{font-size:var(--text-xl);font-weight:700;font-variant-numeric:tabular-nums;color:var(--color-text)}
-.kpi-card.ksl4{border-top:3px solid var(--color-primary)}
-.kpi-card.km1{border-top:3px solid var(--color-warning)}
-.kpi-card.ksl5{border-top:3px solid var(--color-blue)}
-.kpi-card.km2{border-top:3px solid var(--color-purple)}
-.kpi-card.pcm{border-top:3px solid var(--color-orange)}
-.kpi-card.total{border-top:3px solid var(--color-error)}
+/* TABS */
+.tabs-bar{display:flex;gap:.25rem;overflow-x:auto;border-bottom:2px solid var(--divider);margin-bottom:1.5rem;padding-bottom:0}
+.tab-btn{background:none;border:none;padding:.625rem 1rem;font-size:.875rem;font-weight:500;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;border-radius:var(--radius) var(--radius) 0 0}
+.tab-btn:hover{color:var(--text);background:var(--surface)}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);background:var(--surface)}
+.tab-badge{display:inline-block;background:var(--primary-hi);color:var(--primary);font-size:.72rem;font-weight:700;padding:.1rem .4rem;border-radius:99px;margin-left:.375rem}
+.tab-btn.active .tab-badge{background:var(--primary);color:#fff}
 
-/* ============ TABS ============ */
-.tabs-section{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow-sm)}
-.tabs-header{display:flex;overflow-x:auto;border-bottom:1px solid var(--color-border);background:var(--color-surface-offset);scrollbar-width:none}
-.tabs-header::-webkit-scrollbar{display:none}
-.tab-btn{flex-shrink:0;padding:var(--space-3) var(--space-5);font-size:var(--text-sm);font-weight:500;color:var(--color-text-muted);border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--transition),border-color var(--transition)}
-.tab-btn:hover{color:var(--color-text)}
-.tab-btn.active{color:var(--color-primary);border-bottom-color:var(--color-primary);background:var(--color-surface)}
-.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600;padding:0 var(--space-2);margin-left:var(--space-2);background:var(--color-surface-offset);color:var(--color-text-muted)}
-.tab-btn.active .tab-badge{background:var(--color-primary-highlight);color:var(--color-primary)}
+/* TABLE */
+.table-wrap{overflow-x:auto;border:1px solid var(--divider);border-radius:var(--radius-lg);background:var(--surface)}
+.data-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.data-table th{background:var(--surface-2);font-weight:600;color:var(--muted);text-align:left;padding:.5rem .75rem;border-bottom:2px solid var(--divider);white-space:nowrap;position:sticky;top:0;z-index:1}
+.data-table td{padding:.4rem .75rem;border-bottom:1px solid var(--divider);vertical-align:top;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--primary-hi)}
+.manual-col{background:oklch(from var(--warn) l c h / .06)}
+.data-table th.manual-col{background:oklch(from var(--warn) l c h / .1)}
 
-/* ============ TABLE ============ */
-.tab-content{display:none;padding:var(--space-4)}
-.tab-content.active{display:block}
-.tab-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);gap:var(--space-3);flex-wrap:wrap}
-.tab-desc{font-size:var(--text-sm);color:var(--color-text-muted)}
-.tab-actions{display:flex;gap:var(--space-2);align-items:center}
-.btn{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:500;cursor:pointer;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);transition:background var(--transition),border-color var(--transition)}
-.btn:hover{background:var(--color-surface-offset)}
-.btn-primary{background:var(--color-primary);color:#fff;border-color:transparent}
-.btn-primary:hover{background:var(--color-primary-hover)}
-.table-wrap{overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--color-border)}
-table{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
-thead{background:var(--color-surface-offset);position:sticky;top:0;z-index:1}
-th{padding:var(--space-3) var(--space-4);text-align:left;font-weight:600;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);border-bottom:1px solid var(--color-border);white-space:nowrap}
-td{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-divider);vertical-align:top;color:var(--color-text)}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--color-surface-offset)}
-.badge{display:inline-flex;align-items:center;padding:2px var(--space-2);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600;white-space:nowrap}
-.badge-de{background:var(--color-warning-highlight);color:var(--color-warning)}
-.badge-en,.badge-wri{background:var(--color-blue-highlight);color:var(--color-blue)}
-.badge-other{background:var(--color-surface-offset);color:var(--color-text-muted)}
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.75rem}
+.toolbar-left{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--muted)}
+.btn-export{background:var(--primary);color:#fff;border:none;padding:.4rem .875rem;border-radius:var(--radius);font-size:.82rem;font-weight:500;display:flex;align-items:center;gap:.375rem;transition:background .18s}
+.btn-export:hover{background:var(--primary-h)}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text);padding:.4rem .875rem;border-radius:var(--radius);font-size:.82rem;font-weight:500;display:flex;align-items:center;gap:.375rem;transition:all .18s}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-group{display:flex;gap:.5rem;flex-wrap:wrap}
 
-/* ============ EMPTY STATE ============ */
-.empty-state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:var(--space-16) var(--space-8);color:var(--color-text-muted)}
-.empty-icon{width:48px;height:48px;margin:0 auto var(--space-4);color:var(--color-text-faint)}
-.empty-state h3{color:var(--color-text);margin-bottom:var(--space-2);font-size:var(--text-lg)}
-.empty-state p{max-width:36ch;margin-bottom:var(--space-6);font-size:var(--text-sm)}
+/* EMPTY */
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+.empty svg{margin:0 auto 1rem;opacity:.3}
+.empty h3{font-size:1.1rem;margin-bottom:.375rem;color:var(--text)}
 
-/* ============ INSTRUCTIONS PANEL ============ */
-.instructions{background:var(--color-primary-highlight);border:1px solid oklch(from var(--color-primary) l c h / 0.2);border-radius:var(--radius-lg);padding:var(--space-5);margin-bottom:var(--space-6);font-size:var(--text-sm)}
-.instructions h3{color:var(--color-primary);font-weight:600;margin-bottom:var(--space-3);display:flex;align-items:center;gap:var(--space-2)}
-.instructions ol{padding-left:var(--space-5);color:var(--color-text);line-height:2}
+/* STATUS */
+.status-bar{background:var(--success);color:#fff;padding:.625rem 1.5rem;font-size:.875rem;font-weight:500;display:flex;align-items:center;gap:.5rem}
+.status-bar.error{background:var(--error)}
 
-/* ============ DOWNLOAD STRIP ============ */
-.download-strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);padding:var(--space-5);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);margin-top:var(--space-8);margin-bottom:var(--space-8)}
-.download-strip h3{font-size:var(--text-base);font-weight:600;margin-bottom:var(--space-1)}
-.download-strip p{font-size:var(--text-sm);color:var(--color-text-muted)}
-.btn-download{background:var(--color-success);color:#fff;border-color:transparent;padding:var(--space-3) var(--space-6);border-radius:var(--radius-full);font-weight:600}
-.btn-download:hover{background:#2e5c10}
-
-/* ============ RESPONSIVE ============ */
 @media(max-width:640px){
-  header{padding:var(--space-3) var(--space-4)}
-  main{padding:var(--space-4)}
-  .kpi-strip{grid-template-columns:repeat(2,1fr)}
-  .tab-btn{padding:var(--space-3) var(--space-3)}
-  .logo-sub{display:none}
+  .main{padding:1rem}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .header{padding:.75rem 1rem}
 }
 </style>
 </head>
 <body>
-<div class="app">
-  <!-- HEADER -->
-  <header>
-    <div class="logo">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="Breaches Tracker logo">
-        <rect width="32" height="32" rx="8" fill="currentColor" opacity=".1"/>
-        <path d="M8 24V14l8-6 8 6v10H20v-6h-4v-3H14v9H8Z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-        <circle cx="22" cy="10" r="4" fill="var(--color-error)" stroke="var(--color-surface)" stroke-width="1.5"/>
-        <path d="M22 8.5v2M22 11.5v.5" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
-      </svg>
-      <div>
-        <div class="logo-text">Breaches Tracker</div>
-        <div class="logo-sub">Operations</div>
-      </div>
-    </div>
-    <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+
+<header class="header">
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-label="Breaches Tracker">
+      <rect width="28" height="28" rx="7" fill="currentColor" opacity=".12"/>
+      <path d="M7 14h4l3-7 4 14 3-7h3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Breaches Tracker
+  </div>
+  <div class="header-right">
+    <button class="btn-outline" id="export-all-btn" style="display:none" onclick="exportAll()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export All
     </button>
-  </header>
+    <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
+</header>
 
-  <!-- MAIN -->
-  <main>
-    <!-- INSTRUCTIONS -->
-    <div class="instructions">
-      <h3>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        How to use this tool
-      </h3>
-      <ol>
-        <li>Export your raw data from the ticketing system and save as <strong>.xlsx</strong></li>
-        <li>Upload the file below — data is processed entirely in your browser, nothing is sent to any server</li>
-        <li>Review each breach category tab (KSL-4, KM-1, KSL-5a, KM-2, PCm)</li>
-        <li>Download the complete pre-filled Excel file when ready</li>
-      </ol>
-    </div>
+<div id="status" style="display:none" class="status-bar"></div>
 
-    <!-- UPLOAD -->
-    <div class="upload-section" id="uploadSection">
-      <div class="upload-zone" id="dropZone">
-        <input type="file" id="fileInput" accept=".xlsx,.xls">
-        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-        </svg>
-        <div class="upload-title">Upload your RAW data file</div>
-        <div class="upload-sub">Drag & drop your .xlsx export here, or click to browse</div>
-        <label for="fileInput" class="upload-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-          Choose file
-        </label>
+<main class="main">
+
+  <!-- UPLOAD -->
+  <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    <h3>Drop your RAW export here</h3>
+    <p>Upload the <strong>NEW-Breaches-file</strong> .xlsx — or a <strong>SLAs-Details .csv</strong> export from ServiceNow</p>
+    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-input').click()">Choose file</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])">
+  </div>
+
+  <!-- KPIS -->
+  <div class="kpis" id="kpi-area" style="display:none"></div>
+
+  <!-- TABS + TABLE -->
+  <div id="results" style="display:none">
+    <div class="tabs-bar" id="tabs-bar"></div>
+    <div class="toolbar">
+      <div class="toolbar-left" id="row-count"></div>
+      <div class="btn-group">
+        <button class="btn-outline" onclick="exportTab()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Tab
+        </button>
       </div>
     </div>
+    <div class="table-wrap"><table class="data-table" id="data-table"></table></div>
+  </div>
 
-    <!-- STATUS -->
-    <div class="status-bar" id="statusBar">
-      <div class="status-dot idle" id="statusDot"></div>
-      <span id="statusText">No file loaded — upload your RAW data to get started</span>
-    </div>
+  <!-- EMPTY state before upload -->
+  <div id="empty-state" class="empty">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+    <h3>No data loaded yet</h3>
+    <p>Upload a Breaches .xlsx file to auto-distribute into all 8 tabs</p>
+  </div>
 
-    <!-- KPI STRIP -->
-    <div class="kpi-strip" id="kpiStrip" style="display:none">
-      <div class="kpi-card ksl4"><div class="kpi-label">KSL-4 (WRI)</div><div class="kpi-value" id="kpi-ksl4-wri">—</div></div>
-      <div class="kpi-card ksl4"><div class="kpi-label">KSL-4 (DE)</div><div class="kpi-value" id="kpi-ksl4-de">—</div></div>
-      <div class="kpi-card km1"><div class="kpi-label">KM-1 (GR)</div><div class="kpi-value" id="kpi-km1-gr">—</div></div>
-      <div class="kpi-card km1"><div class="kpi-label">KM-1 (DE)</div><div class="kpi-value" id="kpi-km1-de">—</div></div>
-      <div class="kpi-card ksl5"><div class="kpi-label">KSL-5a (GR)</div><div class="kpi-value" id="kpi-ksl5-gr">—</div></div>
-      <div class="kpi-card ksl5"><div class="kpi-label">KSL-5a (DE)</div><div class="kpi-value" id="kpi-ksl5-de">—</div></div>
-      <div class="kpi-card km2"><div class="kpi-label">KM-2 (GR)</div><div class="kpi-value" id="kpi-km2-gr">—</div></div>
-      <div class="kpi-card km2"><div class="kpi-label">KM-2 (DE)</div><div class="kpi-value" id="kpi-km2-de">—</div></div>
-      <div class="kpi-card total"><div class="kpi-label">Total Breaches</div><div class="kpi-value" id="kpi-total">—</div></div>
-    </div>
-
-    <!-- TABS -->
-    <div class="tabs-section" id="tabsSection" style="display:none">
-      <div class="tabs-header">
-        <button class="tab-btn active" data-tab="ksl4wri">KSL-4 WRI<span class="tab-badge" id="badge-ksl4wri">0</span></button>
-        <button class="tab-btn" data-tab="ksl4de">KSL-4 DE<span class="tab-badge" id="badge-ksl4de">0</span></button>
-        <button class="tab-btn" data-tab="km1gr">KM-1 GR<span class="tab-badge" id="badge-km1gr">0</span></button>
-        <button class="tab-btn" data-tab="km1de">KM-1 DE<span class="tab-badge" id="badge-km1de">0</span></button>
-        <button class="tab-btn" data-tab="ksl5gr">KSL-5a GR<span class="tab-badge" id="badge-ksl5gr">0</span></button>
-        <button class="tab-btn" data-tab="ksl5de">KSL-5a DE<span class="tab-badge" id="badge-ksl5de">0</span></button>
-        <button class="tab-btn" data-tab="km2gr">KM-2 GR<span class="tab-badge" id="badge-km2gr">0</span></button>
-        <button class="tab-btn" data-tab="km2de">KM-2 DE<span class="tab-badge" id="badge-km2de">0</span></button>
-        <button class="tab-btn" data-tab="summary">Summary<span class="tab-badge" id="badge-summary">↗</span></button>
-      </div>
-
-      <!-- TAB PANELS -->
-      <div id="tab-ksl4wri" class="tab-content active">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KSL-4 – Solution Quality (WRI / non-DE languages)</strong><br>Tickets where a related incident was missing. Requires: Reason, Affected App, Agent, Comment.</div>
-          <div class="tab-actions">
-            <button class="btn" onclick="exportTab('ksl4wri','KSL-4_WRI')">⬇ Export tab</button>
-          </div>
-        </div>
-        <div class="table-wrap" id="table-ksl4wri"></div>
-      </div>
-
-      <div id="tab-ksl4de" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KSL-4 – Solution Quality (DE)</strong><br>Same as KSL-4 WRI but for German language tickets.</div>
-          <div class="tab-actions"><button class="btn" onclick="exportTab('ksl4de','KSL-4_DE')">⬇ Export tab</button></div>
-        </div>
-        <div class="table-wrap" id="table-ksl4de"></div>
-      </div>
-
-      <div id="tab-km1gr" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KM-1 – Reopen Breaches (GR / non-DE)</strong><br>Tickets that were reopened. Requires: Agent, Reason, User Feedback, Comment.</div>
-          <div class="tab-actions"><button class="btn" onclick="exportTab('km1gr','KM-1_GR')">⬇ Export tab</button></div>
-        </div>
-        <div class="table-wrap" id="table-km1gr"></div>
-      </div>
-
-      <div id="tab-km1de" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KM-1 – Reopen Breaches (DE)</strong><br>German reopen breach tickets.</div>
-          <div class="tab-actions"><button class="btn" onclick="exportTab('km1de','KM-1_DE')">⬇ Export tab</button></div>
-        </div>
-        <div class="table-wrap" id="table-km1de"></div>
-      </div>
-
-      <div id="tab-ksl5gr" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KSL-5a – Process Conformity (GR / non-DE)</strong><br>Automatic process conformity breaches (On Hold handling).</div>
-          <div class="tab-actions"><button class="btn" onclick="exportTab('ksl5gr','KSL-5a_GR')">⬇ Export tab</button></div>
-        </div>
-        <div class="table-wrap" id="table-ksl5gr"></div>
-      </div>
-
-      <div id="tab-ksl5de" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KSL-5a – Process Conformity (DE)</strong><br>German process conformity breaches.</div>
-          <div class="tab-actions"><button class="btn" onclick="exportTab('ksl5de','KSL-5a_DE')">⬇ Export tab</button></div>
-        </div>
-        <div class="table-wrap" id="table-ksl5de"></div>
-      </div>
-
-      <div id="tab-km2gr" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KM-2 – Repeat Contact / Assign Back (GR)</strong><br>Tickets with assign-back breaches.</div>
-          <div class="tab-actions"><button class="btn" onclick="exportTab('km2gr','KM-2_GR')">⬇ Export tab</button></div>
-        </div>
-        <div class="table-wrap" id="table-km2gr"></div>
-      </div>
-
-      <div id="tab-km2de" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>KM-2 – Repeat Contact / Assign Back (DE)</strong></div>
-          <div class="tab-actions"><button class="btn" onclick="exportTab('km2de','KM-2_DE')">⬇ Export tab</button></div>
-        </div>
-        <div class="table-wrap" id="table-km2de"></div>
-      </div>
-
-      <div id="tab-summary" class="tab-content">
-        <div class="tab-toolbar">
-          <div class="tab-desc"><strong>Summary by Category & Language</strong><br>Overview of all breach counts per category.</div>
-        </div>
-        <div class="table-wrap" id="table-summary"></div>
-      </div>
-    </div>
-
-    <!-- DOWNLOAD STRIP -->
-    <div class="download-strip" id="downloadStrip" style="display:none">
-      <div>
-        <h3>Download complete breach file</h3>
-        <p>All tabs pre-filled and ready to share with your team</p>
-      </div>
-      <button class="btn btn-download" id="downloadBtn" onclick="downloadExcel()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        Download Excel
-      </button>
-    </div>
-  </main>
-</div>
+</main>
 
 <script>
-// ============ THEME TOGGLE ============
-(function(){
-  const t=document.querySelector('[data-theme-toggle]'),r=document.documentElement;
-  let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
-  r.setAttribute('data-theme',d);
-  if(t)t.addEventListener('click',()=>{
-    d=d==='dark'?'light':'dark';
-    r.setAttribute('data-theme',d);
-    t.innerHTML=d==='dark'
-      ?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
-      :'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-  });
-})();
+// ─── State ───────────────────────────────────────────────────────────────────
+let tabs = {};
+let activeTab = '';
 
-// ============ STATE ============
-let processedData = {};
-let rawRows = [];
+const TAB_DEFS = [
+  { id:'ksl4-wri',  label:'KSL-4 WRI',   code:'KSL-4',  lang:'!de' },
+  { id:'ksl4-de',   label:'KSL-4 DE',    code:'KSL-4',  lang:'de'  },
+  { id:'km1-gr',    label:'KM-1 GR',     code:'KM-1',   lang:'!de', nokFilter:true },
+  { id:'km1-de',    label:'KM-1 DE',     code:'KM-1',   lang:'de',  nokFilter:true },
+  { id:'ksl5a-gr',  label:'KSL-5a GR',   code:'KSL-5a', lang:'!de' },
+  { id:'ksl5a-de',  label:'KSL-5a DE',   code:'KSL-5a', lang:'de'  },
+  { id:'km2-gr',    label:'KM-2 GR',     code:'KM-2',   lang:'!de' },
+  { id:'km2-de',    label:'KM-2 DE',     code:'KM-2',   lang:'de'  },
+];
 
-// ============ COLUMN MAPPING ============
-// RAW columns (by index after parsing):
-// 0=Incident Ticket, 3=DATE_CLOSED, 5=Ticket Gruppe(Queue), 6=Priority
-// 12=ISO_Language, 15=KM Anwendung(Topic), 19=SLA Kennzahl
-// 20=SLA Kennzahl Name, 25=SLA Prüfung Name(Breach Description)
-// 26=SLA Prüfung Zeitpunkt(DATE_TIME_Breach), 27=SLA OK/NOK
-
-function parseRaw(rows) {
-  // rows[0] = header, rows[1..] = data
-  const hdr = rows[0];
-  const idxOf = name => hdr.findIndex(h => h && h.toString().toLowerCase().includes(name.toLowerCase()));
-
-  const iTicket    = 0;
-  const iDateClose = idxOf('DATE_CLOSED') !== -1 ? idxOf('DATE_CLOSED') : 3;
-  const iQueue     = idxOf('Ticket Gruppe') !== -1 ? idxOf('Ticket Gruppe') : 5;
-  const iPriority  = idxOf('Ticket Priorit') !== -1 ? idxOf('Ticket Priorit') : 6;
-  const iLang      = idxOf('Supportsprache') !== -1 ? idxOf('Supportsprache') : 12;
-  const iTopic     = idxOf('KM Anwendung') !== -1 ? idxOf('KM Anwendung') : 15;
-  const iSLACode   = idxOf('SLA Kennzahl') !== -1 ? idxOf('SLA Kennzahl') : 19;
-  // SLA Kennzahl Name is next column
-  const iSLAName   = idxOf('Kennzahl Name') !== -1 ? idxOf('Kennzahl Name') : 20;
-  const iBreachDesc= idxOf('SLA Pr') !== -1 ? idxOf('SLA Pr') : 25; // SLA Prüfung Name
-  const iBreachTime= hdr.findIndex((h,i) => h && h.toString().includes('Zeitpunkt')) !== -1 
-                     ? hdr.findIndex((h,i) => h && h.toString().includes('Zeitpunkt')) : 26;
-  const iNOK       = 27;
-
-  const parsed = [];
-  for(let i=1;i<rows.length;i++){
-    const r = rows[i];
-    if(!r || !r[iTicket]) continue;
-    const nok = r[iNOK];
-    parsed.push({
-      ticket: r[iTicket],
-      dateClose: formatDate(r[iDateClose]),
-      queue: r[iQueue] || '',
-      priority: r[iPriority] || '',
-      lang: (r[iLang] || '').toLowerCase(),
-      topic: r[iTopic] || '',
-      slaCode: r[iSLACode] || '',
-      slaName: r[iSLAName] || '',
-      breachDesc: r[iBreachDesc] || '',
-      breachTime: formatDate(r[iBreachTime]),
-      nok: nok === 0 || nok === '0' || nok === false ? 0 : (nok == null ? null : 1),
-    });
-  }
-  return parsed;
-}
-
-function formatDate(v) {
-  if(!v) return '';
-  if(v instanceof Date) return v.toISOString().slice(0,16).replace('T',' ');
-  if(typeof v === 'number') {
-    // Excel serial date
-    const d = XLSX.SSF.parse_date_code(v);
-    if(d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')} ${String(d.H).padStart(2,'0')}:${String(d.M).padStart(2,'0')}`;
-  }
-  return String(v);
-}
-
-function distributeRows(parsed) {
-  const isDE = r => r.lang === 'de';
-  const isNOK = r => r.nok === 0; // NOK = breach (0=breach in this system)
-
-  // KSL-4: Solution Quality, NOK breaches
-  const ksl4_wri = parsed.filter(r => r.slaCode === 'KSL-4' && !isDE(r) && isNOK(r));
-  const ksl4_de  = parsed.filter(r => r.slaCode === 'KSL-4' &&  isDE(r) && isNOK(r));
-  // KM-1: Reopen breaches
-  const km1_gr   = parsed.filter(r => r.slaCode === 'KM-1'  && !isDE(r) && isNOK(r));
-  const km1_de   = parsed.filter(r => r.slaCode === 'KM-1'  &&  isDE(r) && isNOK(r));
-  // KSL-5a: Process Conformity
-  const ksl5_gr  = parsed.filter(r => r.slaCode === 'KSL-5a'&& !isDE(r) && isNOK(r));
-  const ksl5_de  = parsed.filter(r => r.slaCode === 'KSL-5a'&&  isDE(r) && isNOK(r));
-  // KM-2: Assign Back
-  const km2_gr   = parsed.filter(r => r.slaCode === 'KM-2'  && !isDE(r) && isNOK(r));
-  const km2_de   = parsed.filter(r => r.slaCode === 'KM-2'  &&  isDE(r) && isNOK(r));
-
-  return { ksl4wri: ksl4_wri, ksl4de: ksl4_de, km1gr: km1_gr, km1de: km1_de,
-           ksl5gr: ksl5_gr, ksl5de: ksl5_de, km2gr: km2_gr, km2de: km2_de };
-}
-
-// ============ UPLOAD ============
-const fileInput = document.getElementById('fileInput');
-const dropZone  = document.getElementById('dropZone');
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
-
-function setStatus(state, msg) {
-  const dot  = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-  dot.className = 'status-dot ' + state;
-  text.textContent = msg;
-}
-
-function handleFile(file) {
-  if(!file) return;
-  if(!file.name.match(/\.xlsx?$/i)) { setStatus('error','Please upload an .xlsx file'); return; }
-  setStatus('loading', `Reading ${file.name}…`);
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
-
-      // Try RAW_Data first, then RAW, then first sheet
-      const sheetName = wb.SheetNames.find(s => s === 'RAW_Data') 
-                     || wb.SheetNames.find(s => s === 'RAW')
-                     || wb.SheetNames[0];
-
-      const ws   = wb.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
-
-      rawRows = rows;
-      const parsed = parseRaw(rows);
-      processedData = distributeRows(parsed);
-
-      renderAll(processedData);
-      setStatus('success', `✓ ${file.name} loaded — ${parsed.length} raw rows processed`);
-    } catch(err) {
-      setStatus('error', 'Error reading file: ' + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ============ RENDER ============
-const TAB_COLS = ['Incident Ticket','DATE_CLOSE','Queue','Priority','ISO_Language','Topic','SLA_CODE','DATE_TIME_Breach'];
-const MANUAL_COLS = {
-  ksl4wri:['COMPASS ID','Reason','Affected App','Agent','BMS ID','Comment','Excluded'],
-  ksl4de: ['COMPASS ID','Reason','Affected App','Comment','Excluded'],
-  km1gr:  ['COMPASS ID','Agent','BMS ID','Reason','User Feedback','Comment','Excluded'],
-  km1de:  ['COMPASS ID','Reason','User Feedback','Comment','Excluded'],
-  ksl5gr: ['SLA_N','Breach_Description','Agent','BMS ID','Comment','Excluded'],
-  ksl5de: ['SLA_N','Breach_Description','Comment','Excluded'],
-  km2gr:  ['Agent','BMS ID','Reason','Comment','Excluded'],
-  km2de:  ['Reason','Comment','Excluded'],
+// Column indices for XLSX RAW_Data sheet (0-based)
+const C_XLSX = {
+  ticket:0, date_close:3, status:4, queue:5, priority:6,
+  lang:12, tool:14, topic:15, sla_code:19,
+  sla_n:24, breach_desc:25, breach_dt:26, nok:27
 };
+// Column indices for CSV export (different order!)
+const C_CSV = {
+  sla_code:0, priority:8, sla_n:10, breach_desc:11,
+  breach_dt:12, nok:13, tool:15, date_close:18,
+  status:19, lang:20, ticket:21, queue:22, topic:27
+};
+let C = C_XLSX; // default
 
-function rowToArr(r, tab) {
-  return [r.ticket, r.dateClose, r.queue, r.priority, r.lang, r.topic, r.slaCode, r.breachTime];
+const OUT_COLS  = ['Incident Ticket','DATE_CLOSE','Status','Queue','Priority','ISO_Language','Tool','TOPIC','SLA_Code','SLA_N','Breach_Description','DATE_TIME_Breach','Agent','BMS ID','Comment if excluded','Additional comment','Excluded','Jira','Week','Unique'];
+const MANUAL_C  = ['Agent','BMS ID','Comment if excluded','Additional comment','Excluded','Jira','Week','Unique'];
+
+// ─── File handling ────────────────────────────────────────────────────────────
+function handleFile(file) {
+  if (!file) return;
+  showStatus('Reading file…');
+  const ext = file.name.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+
+  if (ext === 'csv') {
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'string', raw:false, dateNF:'yyyy-mm-dd hh:mm:ss'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, dateNF:'yyyy-mm-dd hh:mm:ss'});
+        if (rows.length < 2) { showStatus('CSV appears empty.','error'); return; }
+        C = C_CSV; processRows(rows.slice(1));
+      } catch(err) { showStatus('Error reading CSV: ' + err.message, 'error'); }
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array', cellDates:true, dateNF:'yyyy-mm-dd hh:mm:ss'});
+        const rawName = wb.SheetNames.find(n => n.toLowerCase().includes('raw'));
+        if (!rawName) { showStatus('No RAW_Data sheet found in this file.','error'); return; }
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[rawName], {header:1, raw:false, dateNF:'yyyy-mm-dd hh:mm:ss'});
+        if (rows.length < 2) { showStatus('RAW sheet appears empty.','error'); return; }
+        processRows(rows.slice(1));
+      } catch(err) { showStatus('Error reading file: ' + err.message, 'error'); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
 }
 
-function langBadge(lang) {
-  const cls = lang === 'de' ? 'badge-de' : lang === 'en' ? 'badge-en' : 'badge-other';
-  return `<span class="badge ${cls}">${lang}</span>`;
-}
+function processRows(rows) {
+  tabs = {};
+  TAB_DEFS.forEach(t => tabs[t.id] = []);
+  // Validate structure: check that key indices exist and look right
+  const maxIdx = Math.max(...Object.values(C));
+  const sampleRow = rows[0];
+  if (!sampleRow || sampleRow.length <= maxIdx) {
+    showStatus('⚠ File structure mismatch — expected at least ' + (maxIdx+1) + ' columns, got ' + (sampleRow ? sampleRow.length : 0) + '. Check format.', 'error');
+    return;
+  }
+  const slaCodeSample = (sampleRow[C.sla_code]||'').toString().trim();
+  if (!slaCodeSample.startsWith('KS') && !slaCodeSample.startsWith('KM') && !slaCodeSample.startsWith('PC')) {
+    showStatus('⚠ Column mapping looks off — SLA Code column contains: "' + slaCodeSample + '". Try uploading the other file format.', 'error');
+    return;
+  }
 
-function buildTable(rows, tabKey) {
-  const manCols = MANUAL_COLS[tabKey] || [];
-  const allCols = [...TAB_COLS, ...manCols];
+  rows.forEach(row => {
+    if (!row[C.ticket]) return;
+    const sla  = (row[C.sla_code]||'').toString().trim();
+    const lang = (row[C.lang]||'').toString().trim().toLowerCase();
+    const nok  = parseInt(row[C.nok]) || 0;
 
-  if(!rows.length) return `<div class="empty-state">
-    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2"/></svg>
-    <h3>No breaches found</h3>
-    <p>No tickets matching this category and language were found in the uploaded data</p>
-  </div>`;
+    const mapped = {
+      'Incident Ticket':    row[C.ticket]||'',
+      'DATE_CLOSE':         row[C.date_close]||'',
+      'Status':             row[C.status]||'',
+      'Queue':              row[C.queue]||'',
+      'Priority':           row[C.priority]||'',
+      'ISO_Language':       row[C.lang]||'',
+      'Tool':               row[C.tool]||'',
+      'TOPIC':              row[C.topic]||'',
+      'SLA_Code':           sla,
+      'SLA_N':              row[C.sla_n]||'',
+      'Breach_Description': row[C.breach_desc]||'',
+      'DATE_TIME_Breach':   row[C.breach_dt]||'',
+      'Agent':'','BMS ID':'','Comment if excluded':'','Additional comment':'','Excluded':'','Jira':'','Week':'','Unique':''
+    };
 
-  const ths = allCols.map((c,i) => {
-    const isManual = i >= TAB_COLS.length;
-    return `<th style="${isManual?'background:oklch(from var(--color-gold) l c h / 0.08);color:var(--color-gold)':''}">${c}${isManual?' ✎':''}</th>`;
-  }).join('');
-
-  const trs = rows.map(r => {
-    const autoVals = rowToArr(r, tabKey);
-    const tds = autoVals.map((v,i) => {
-      const disp = i === 4 ? langBadge(v) : (v || '<span style="color:var(--color-text-faint)">—</span>');
-      return `<td>${disp}</td>`;
-    }).join('') + manCols.map(() => `<td style="background:oklch(from var(--color-gold) l c h / 0.04)"></td>`).join('');
-    return `<tr>${tds}</tr>`;
-  }).join('');
-
-  return `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
-}
-
-function renderAll(data) {
-  const tabs = ['ksl4wri','ksl4de','km1gr','km1de','ksl5gr','ksl5de','km2gr','km2de'];
-  let total = 0;
-
-  tabs.forEach(t => {
-    const rows = data[t] || [];
-    total += rows.length;
-    document.getElementById('table-' + t).innerHTML = buildTable(rows, t);
-    document.getElementById('badge-' + t).textContent = rows.length;
+    TAB_DEFS.forEach(t => {
+      if (t.code !== sla) return;
+      const isDE = lang === 'de';
+      if (t.lang === 'de' && !isDE) return;
+      if (t.lang === '!de' && isDE) return;
+      if (t.nokFilter && nok !== 1) return;
+      tabs[t.id].push(mapped);
+    });
   });
 
-  // KPIs
-  document.getElementById('kpi-ksl4-wri').textContent = data.ksl4wri.length;
-  document.getElementById('kpi-ksl4-de').textContent  = data.ksl4de.length;
-  document.getElementById('kpi-km1-gr').textContent   = data.km1gr.length;
-  document.getElementById('kpi-km1-de').textContent   = data.km1de.length;
-  document.getElementById('kpi-ksl5-gr').textContent  = data.ksl5gr.length;
-  document.getElementById('kpi-ksl5-de').textContent  = data.ksl5de.length;
-  document.getElementById('kpi-km2-gr').textContent   = data.km2gr.length;
-  document.getElementById('kpi-km2-de').textContent   = data.km2de.length;
-  document.getElementById('kpi-total').textContent    = total;
-
-  // Summary table
-  const summaryRows = [
-    ['KSL-4 (Solution Quality)', 'WRI/non-DE', data.ksl4wri.length],
-    ['KSL-4 (Solution Quality)', 'DE', data.ksl4de.length],
-    ['KM-1 (Reopen)', 'WRI/non-DE', data.km1gr.length],
-    ['KM-1 (Reopen)', 'DE', data.km1de.length],
-    ['KSL-5a (Process Conformity)', 'WRI/non-DE', data.ksl5gr.length],
-    ['KSL-5a (Process Conformity)', 'DE', data.ksl5de.length],
-    ['KM-2 (Assign Back)', 'WRI/non-DE', data.km2gr.length],
-    ['KM-2 (Assign Back)', 'DE', data.km2de.length],
-  ];
-  const sumHtml = `<table><thead><tr><th>Category</th><th>Language Group</th><th>Breach Count</th></tr></thead><tbody>
-    ${summaryRows.map(([cat,lang,cnt]) => `<tr><td>${cat}</td><td>${lang}</td><td style="font-weight:700;font-variant-numeric:tabular-nums">${cnt}</td></tr>`).join('')}
-    <tr style="background:var(--color-surface-offset)"><td colspan="2" style="font-weight:700">Total</td><td style="font-weight:700;font-variant-numeric:tabular-nums">${total}</td></tr>
-  </tbody></table>`;
-  document.getElementById('table-summary').innerHTML = sumHtml;
-
-  // Show UI
-  document.getElementById('kpiStrip').style.display = '';
-  document.getElementById('tabsSection').style.display = '';
-  document.getElementById('downloadStrip').style.display = '';
+  renderKPIs();
+  renderTabs();
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('kpi-area').style.display = '';
+  document.getElementById('results').style.display = '';
+  document.getElementById('export-all-btn').style.display = '';
+  showStatus(`✓ Loaded — ${Object.values(tabs).reduce((a,b)=>a+b.length,0)} breach records distributed across 8 tabs`);
+  setTimeout(()=>document.getElementById('status').style.display='none', 3500);
+  if (!activeTab || !tabs[activeTab]) activeTab = TAB_DEFS[0].id;
+  renderTable(activeTab);
 }
 
-// ============ TAB SWITCHING ============
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+// ─── KPIs ────────────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const el = document.getElementById('kpi-area');
+  const total = Object.values(tabs).reduce((a,b)=>a+b.length,0);
+  let html = `<div class="kpi"><div class="kpi-label">Total Breaches</div><div class="kpi-value">${total}</div><div class="kpi-sub">all categories</div></div>`;
+  TAB_DEFS.forEach(t => {
+    const n = tabs[t.id].length;
+    html += `<div class="kpi"><div class="kpi-label">${t.label}</div><div class="kpi-value">${n}</div><div class="kpi-sub">breaches</div></div>`;
   });
+  el.innerHTML = html;
+}
+
+// ─── Tabs ────────────────────────────────────────────────────────────────────
+function renderTabs() {
+  const bar = document.getElementById('tabs-bar');
+  bar.innerHTML = TAB_DEFS.map(t =>
+    `<button class="tab-btn${t.id===activeTab?' active':''}" onclick="switchTab('${t.id}')">${t.label}<span class="tab-badge">${tabs[t.id].length}</span></button>`
+  ).join('');
+}
+
+function switchTab(id) {
+  activeTab = id;
+  renderTabs();
+  renderTable(id);
+}
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+function renderTable(tabId) {
+  const data = tabs[tabId] || [];
+  const rowCountEl = document.getElementById('row-count');
+  rowCountEl.textContent = `${data.length} records`;
+
+  const tbl = document.getElementById('data-table');
+  if (!data.length) {
+    tbl.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:3rem;color:var(--muted)">No breaches in this category</td></tr>';
+    return;
+  }
+
+  let html = '<thead><tr>' + OUT_COLS.map(c =>
+    `<th class="${MANUAL_C.includes(c)?'manual-col':''}">${c}</th>`
+  ).join('') + '</tr></thead><tbody>';
+
+  data.forEach(row => {
+    html += '<tr>' + OUT_COLS.map(c =>
+      `<td class="${MANUAL_C.includes(c)?'manual-col':''}" title="${String(row[c]).replace(/"/g,'&quot;')}">${row[c]||''}</td>`
+    ).join('') + '</tr>';
+  });
+
+  tbl.innerHTML = html + '</tbody>';
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function exportTab() {
+  const data = tabs[activeTab];
+  if (!data || !data.length) { alert('No data in this tab.'); return; }
+  const ws = XLSX.utils.json_to_sheet(data, {header: OUT_COLS});
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, activeTab);
+  XLSX.writeFile(wb, `Breaches_${activeTab}_${today()}.xlsx`);
+}
+
+function exportAll() {
+  const wb = XLSX.utils.book_new();
+  TAB_DEFS.forEach(t => {
+    const data = tabs[t.id];
+    const ws = XLSX.utils.json_to_sheet(data.length ? data : [Object.fromEntries(OUT_COLS.map(c=>[c,""]))], {header:OUT_COLS});
+    XLSX.utils.book_append_sheet(wb, ws, t.label);
+  });
+  XLSX.writeFile(wb, `Breaches_All_${today()}.xlsx`);
+}
+
+function today() {
+  return new Date().toISOString().slice(0,10).replace(/-/g,'');
+}
+
+// ─── Drag & drop ─────────────────────────────────────────────────────────────
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
 });
 
-// ============ EXPORT ============
-function exportTab(tabKey, sheetName) {
-  const rows = processedData[tabKey] || [];
-  const manCols = MANUAL_COLS[tabKey] || [];
-  const headers = [...TAB_COLS, ...manCols];
-  const data = [headers, ...rows.map(r => [...rowToArr(r, tabKey), ...manCols.map(()=>'')])] ;
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, sheetName + '.xlsx');
+// ─── Status ───────────────────────────────────────────────────────────────────
+function showStatus(msg, type='ok') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status-bar' + (type==='error'?' error':'');
+  el.style.display = '';
 }
 
-function downloadExcel() {
-  const wb = XLSX.utils.book_new();
-
-  // RAW sheet
-  if(rawRows.length) {
-    const wsRaw = XLSX.utils.aoa_to_sheet(rawRows);
-    XLSX.utils.book_append_sheet(wb, wsRaw, 'RAW');
-  }
-
-  // Breach tabs
-  const tabDefs = [
-    ['ksl4wri','KSL-4 WRI'], ['ksl4de','KSL-4 DE'],
-    ['km1gr','KM-1 GR'],     ['km1de','KM-1 DE'],
-    ['ksl5gr','KSL-5a GR'],  ['ksl5de','KSL-5a DE'],
-    ['km2gr','KM-2 GR'],     ['km2de','KM-2 DE'],
-  ];
-  tabDefs.forEach(([key, name]) => {
-    const rows = processedData[key] || [];
-    const manCols = MANUAL_COLS[key] || [];
-    const headers = [...TAB_COLS, ...manCols];
-    const data = [headers, ...rows.map(r => [...rowToArr(r, key), ...manCols.map(()=>'')])];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, name);
+// ─── Theme toggle ─────────────────────────────────────────────────────────────
+(function(){
+  const btn = document.querySelector('[data-theme-toggle]');
+  const root = document.documentElement;
+  let d = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  root.setAttribute('data-theme', d);
+  if (btn) btn.addEventListener('click', () => {
+    d = d === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', d);
   });
-
-  const now = new Date();
-  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  XLSX.writeFile(wb, `Breaches_${stamp}.xlsx`);
-}
+})();
 </script>
 </body>
 </html>
