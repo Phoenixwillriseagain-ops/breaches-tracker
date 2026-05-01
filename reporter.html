@@ -232,7 +232,6 @@ function resolveLabel(name){
   return null;
 }
 
-// Read first non-empty value from a row using ordered key list
 function fg(row,keys){
   for(const k of keys){
     const v=row[k];
@@ -240,15 +239,12 @@ function fg(row,keys){
   }
   return '';
 }
-
-// Read ALL matching keys and join non-empty values (for combined comment fields)
 function fgAll(row,keys){
   return keys.map(k=>{
     const v=row[k];
-    return (v!==undefined&&v!==null&&String(v).trim()!=='')?String(v).trim():'';
+    return(v!==undefined&&v!==null&&String(v).trim()!=='')?String(v).trim():'';
   }).filter(Boolean).join(' | ');
 }
-
 const isExcl=v=>{const s=String(v).toLowerCase().trim();return s==='1'||s==='yes'||s==='x';};
 
 function loadFile(file){
@@ -264,52 +260,19 @@ function loadFile(file){
         const label=resolveLabel(sheetName);
         if(!label){skipped.push(sheetName);return;}
         const isKM1=label.startsWith('KM-1');
-        const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{raw:false,dateNF:'yyyy-mm-dd'});
-        rows.forEach(r=>{
+        XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{raw:false,dateNF:'yyyy-mm-dd'}).forEach(r=>{
           const ticket=fg(r,['Incident Ticket','Ticket']);
           if(!ticket)return;
-
-          // Excluded: integer 0/1 or text
           const exclRaw=fg(r,['Excluded','excluded']);
           const excl=isExcl(exclRaw)?'1':'0';
-
-          // Week: KSL-5a and KM-2 have no Week column -> blank
           const week=fg(r,['Week','Week ']).replace(/\.0$/,'');
-
-          // Reason: KSL-5a has no Reason column
           const reason=fg(r,['Reason','reason']);
-
-          // Comment: different names per sheet
-          // KSL-4/KM-1/KM-2: 'Comment'
-          // KSL-5a: 'Comment if excluded' + 'Additional comment'
           const comment=fgAll(r,['Comment','comment','Comment if excluded','Additional comment']);
-
-          // Topic: 'Topic' in most, 'TOPIC' in KSL-5a
           const topic=fg(r,['Topic','TOPIC','topic']);
-
-          // Remote/Callback: only in KM-1 column 'Addtion'
           const remote=isKM1?fg(r,['Addtion','Addition','Remote/Callback','remote']):'';
-
-          // AOS flag: reason mentions AOS OR topic is #SW#AOS
-          const isAOS=reason.toLowerCase().includes('aos')||topic.toUpperCase().includes('#SW#AOS');
-
-          allData.push({
-            ticket,
-            date:fg(r,['DATE_CLOSE','Date Close']),
-            lang:fg(r,['ISO_Language','Language']),
-            sla_tab:label,
-            sla_grp:SLA_GROUP[label]||label,
-            week,
-            agent:fg(r,['Agent','agent']),
-            bms:fg(r,['BMS ID','BMS']),
-            excluded:excl,
-            reason,
-            comment,
-            topic,
-            remote,
-            isAOS,
-            month
-          });
+          // AOS: only rows where Reason is exactly "AOS Portal issue" (case-insensitive)
+          const isAOS=reason.toLowerCase().includes('aos portal issue');
+          allData.push({ticket,date:fg(r,['DATE_CLOSE','Date Close']),lang:fg(r,['ISO_Language','Language']),sla_tab:label,sla_grp:SLA_GROUP[label]||label,week,agent:fg(r,['Agent','agent']),bms:fg(r,['BMS ID','BMS']),excluded:excl,reason,comment,topic,remote,isAOS,month});
           n++;
         });
       });
@@ -337,26 +300,14 @@ function render(){
   fillSel('f-lang',[...new Set(allData.map(r=>r.lang))].sort());
   applyFilters();
 }
-
-function fillSel(id,opts){
-  const el=document.getElementById(id),cur=el.value;
-  el.innerHTML='<option value="">All</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');
-  if(opts.includes(cur))el.value=cur;
-}
-
+function fillSel(id,opts){const el=document.getElementById(id),cur=el.value;el.innerHTML='<option value="">All</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');if(opts.includes(cur))el.value=cur;}
 function applyFilters(){
-  const wk=document.getElementById('f-week').value;
-  const sl=document.getElementById('f-sla').value;
-  const la=document.getElementById('f-lang').value;
-  const ex=document.getElementById('f-excl').value;
+  const wk=document.getElementById('f-week').value,sl=document.getElementById('f-sla').value,la=document.getElementById('f-lang').value,ex=document.getElementById('f-excl').value;
   filtered=allData.filter(r=>(!wk||r.week===wk)&&(!sl||r.sla_grp===sl)&&(!la||r.lang===la)&&(!ex||r.excluded===ex));
-  renderKPIs();
-  renderActiveTab();
+  renderKPIs();renderActiveTab();
 }
-
 function renderKPIs(){
-  const t=filtered.length;
-  const ex=filtered.filter(r=>r.excluded==='1').length;
+  const t=filtered.length,ex=filtered.filter(r=>r.excluded==='1').length;
   const ag=new Set(filtered.map(r=>r.agent).filter(Boolean)).size;
   const wks=new Set(filtered.map(r=>r.week).filter(Boolean)).size;
   const aos=filtered.filter(r=>r.isAOS).length;
@@ -369,85 +320,61 @@ function renderKPIs(){
     <div class="kpi"><div class="kpi-label">Agents</div><div class="kpi-value">${ag}</div><div class="kpi-sub">with breaches</div></div>
     <div class="kpi"><div class="kpi-label">Weeks</div><div class="kpi-value">${wks}</div><div class="kpi-sub">covered</div></div>`;
 }
-
 function renderActiveTab(){
   switch(activeTab){
-    case 'overview': renderOverview(); break;
-    case 'reasons':  renderReasons(); break;
-    case 'apps':     renderApps(); break;
-    case 'aos':      renderAOS(); break;
-    case 'km1':      renderKM1(); break;
-    case 'all':      renderAllRecords(); break;
+    case 'overview':renderOverview();break;
+    case 'reasons':renderReasons();break;
+    case 'apps':renderApps();break;
+    case 'aos':renderAOS();break;
+    case 'km1':renderKM1();break;
+    case 'all':renderAllRecords();break;
   }
 }
-
 function cnt(arr,key,topN){
   const m={};
-  arr.forEach(r=>{const v=r[key]||'';const k=String(v).trim()||'(blank)';m[k]=(m[k]||0)+1;});
+  arr.forEach(r=>{const k=String(r[key]||'').trim()||'(blank)';m[k]=(m[k]||0)+1;});
   let entries=Object.entries(m).sort((a,b)=>b[1]-a[1]);
-  if(topN&&entries.length>topN){
-    const rest=entries.slice(topN).reduce((s,e)=>s+e[1],0);
-    entries=entries.slice(0,topN);
-    if(rest)entries.push(['Other',rest]);
-  }
+  if(topN&&entries.length>topN){const rest=entries.slice(topN).reduce((s,e)=>s+e[1],0);entries=entries.slice(0,topN);if(rest)entries.push(['Other',rest]);}
   return entries;
 }
-
 function mkChart(id,type,labels,datasets,extra){
   if(charts[id])charts[id].destroy();
   const isDark=document.documentElement.getAttribute('data-theme')==='dark';
   const gc=isDark?'#393836':'#dcd9d5',tc=isDark?'#cdccca':'#7a7974';
-  Chart.defaults.color=tc;
-  Chart.defaults.font={family:'Satoshi,sans-serif',size:12};
+  Chart.defaults.color=tc;Chart.defaults.font={family:'Satoshi,sans-serif',size:12};
   const scalesCfg=type==='bar'?{x:{grid:{color:gc},ticks:{color:tc,maxRotation:35}},y:{grid:{color:gc},ticks:{color:tc}}}:{};
-  const opts={responsive:true,maintainAspectRatio:true,
-    plugins:{legend:{display:type==='doughnut',position:'right',labels:{boxWidth:12,padding:10}}},
-    scales:scalesCfg,...(extra||{})};
+  const opts={responsive:true,maintainAspectRatio:true,plugins:{legend:{display:type==='doughnut',position:'right',labels:{boxWidth:12,padding:10}}},scales:scalesCfg,...(extra||{})};
   charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type,data:{labels,datasets},options:opts});
 }
-
 function renderOverview(){
-  const wkE=cnt(filtered,'week');
-  const wkK=wkE.map(e=>e[0]).sort((a,b)=>+a-+b);
-  mkChart('chart-week','bar',
-    wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),
-    [{data:wkK.map(k=>(wkE.find(e=>e[0]===k)||[,0])[1]),backgroundColor:PALETTE[0]}]);
-  const slaE=cnt(filtered,'sla_grp');
-  mkChart('chart-sla','doughnut',slaE.map(e=>e[0]),[{data:slaE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
-  const lE=cnt(filtered,'lang');
-  mkChart('chart-lang','doughnut',lE.map(e=>e[0]),[{data:lE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
+  const wkE=cnt(filtered,'week');const wkK=wkE.map(e=>e[0]).sort((a,b)=>+a-+b);
+  mkChart('chart-week','bar',wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),[{data:wkK.map(k=>(wkE.find(e=>e[0]===k)||[,0])[1]),backgroundColor:PALETTE[0]}]);
+  const slaE=cnt(filtered,'sla_grp');mkChart('chart-sla','doughnut',slaE.map(e=>e[0]),[{data:slaE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
+  const lE=cnt(filtered,'lang');mkChart('chart-lang','doughnut',lE.map(e=>e[0]),[{data:lE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
   const counted=filtered.filter(r=>r.excluded!=='1').length,excl=filtered.filter(r=>r.excluded==='1').length;
   mkChart('chart-excl','doughnut',['Counted','Excluded'],[{data:[counted,excl],backgroundColor:['#437a22','#a12c7b'],borderWidth:2}]);
 }
-
 function renderReasons(){
-  // Charts
   const rE=cnt(filtered,'reason',9);
   mkChart('chart-reasons','bar',rE.map(e=>e[0]),[{data:rE.map(e=>e[1]),backgroundColor:PALETTE[0]}]);
   const slas=[...new Set(filtered.map(r=>r.sla_grp))].sort();
-  const topReasons=cnt(filtered,'reason',6).map(e=>e[0]).filter(r=>r!=='(blank)');
-  const rDatasets=topReasons.map((r,i)=>({label:r,data:slas.map(s=>filtered.filter(x=>x.sla_grp===s&&x.reason===r).length),backgroundColor:PALETTE[i%PALETTE.length]}));
-  mkChart('chart-reasons-sla','bar',slas,rDatasets,{scales:{x:{stacked:true,grid:{color:'transparent'}},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:11,padding:8}}}});
-  // Table
+  const topR=cnt(filtered,'reason',6).map(e=>e[0]).filter(r=>r!=='(blank)');
+  mkChart('chart-reasons-sla','bar',slas,topR.map((r,i)=>({label:r,data:slas.map(s=>filtered.filter(x=>x.sla_grp===s&&x.reason===r).length),backgroundColor:PALETTE[i%PALETTE.length]})),{scales:{x:{stacked:true,grid:{color:'transparent'}},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:11,padding:8}}}});
   reasonsTableData=filtered.map(r=>({'Ticket':r.ticket,'Date':r.date,'SLA':r.sla_tab,'Week':r.week,'Agent':r.agent,'Reason':r.reason,'Comment':r.comment,'Excluded':r.excluded==='1'?'Yes':'No','Month':r.month}));
   document.getElementById('reasons-count').textContent=reasonsTableData.length+' records';
   renderTable('reasons-table',reasonsTableData,['Ticket','Date','SLA','Week','Agent','Reason','Comment','Excluded','Month']);
 }
-
 function renderApps(){
   const withApp=filtered.map(r=>({...r,app:(r.topic||'').replace(/^#[A-Z]+#/,'').split('/')[0].trim()||'(unknown)'}));
   const appE=cnt(withApp,'app',10);
   mkChart('chart-apps','bar',appE.map(e=>e[0]),[{data:appE.map(e=>e[1]),backgroundColor:PALETTE[1]}]);
   const slas=[...new Set(withApp.map(r=>r.sla_grp))].sort();
-  const topApps=appE.slice(0,5).map(e=>e[0]);
-  const aDatasets=topApps.map((a,i)=>({label:a,data:slas.map(s=>withApp.filter(x=>x.sla_grp===s&&x.app===a).length),backgroundColor:PALETTE[i%PALETTE.length]}));
-  mkChart('chart-apps-sla','bar',slas,aDatasets,{scales:{x:{stacked:true,grid:{color:'transparent'}},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:11,padding:8}}}});
-  // Table
+  const topA=appE.slice(0,5).map(e=>e[0]);
+  mkChart('chart-apps-sla','bar',slas,topA.map((a,i)=>({label:a,data:slas.map(s=>withApp.filter(x=>x.sla_grp===s&&x.app===a).length),backgroundColor:PALETTE[i%PALETTE.length]})),{scales:{x:{stacked:true,grid:{color:'transparent'}},y:{stacked:true}},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:11,padding:8}}}});
   appsTableData=withApp.map(r=>({'Ticket':r.ticket,'Date':r.date,'SLA':r.sla_tab,'Week':r.week,'Agent':r.agent,'Application':r.app,'Topic':r.topic,'Reason':r.reason,'Comment':r.comment,'Excluded':r.excluded==='1'?'Yes':'No','Month':r.month}));
   document.getElementById('apps-count').textContent=appsTableData.length+' records';
   renderTable('apps-table',appsTableData,['Ticket','Date','SLA','Week','Agent','Application','Topic','Reason','Excluded','Month']);
 }
-
 function renderAOS(){
   const aos=filtered.filter(r=>r.isAOS);
   const tot=aos.length,excl=aos.filter(r=>r.excluded==='1').length;
@@ -455,32 +382,28 @@ function renderAOS(){
     <div class="aos-kpi"><div class="lbl">AOS Total</div><div class="val">${tot}</div></div>
     <div class="aos-kpi"><div class="lbl">Counted</div><div class="val">${tot-excl}</div></div>
     <div class="aos-kpi"><div class="lbl">Excluded</div><div class="val">${excl}</div></div>`;
+  if(tot===0){
+    document.getElementById('aos-count').textContent='0 AOS records';
+    renderTable('aos-table',[],['Ticket','Date','SLA','Week','Agent','Topic','Reason','Comment','Excluded','Month']);
+    return;
+  }
   const wkE=cnt(aos,'week');const wkK=wkE.map(e=>e[0]).sort((a,b)=>+a-+b);
-  mkChart('chart-aos-week','bar',
-    wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),
-    [{data:wkK.map(k=>(wkE.find(e=>e[0]===k)||[,0])[1]),backgroundColor:'#964219'}]);
-  const slaE=cnt(aos,'sla_grp');
-  mkChart('chart-aos-sla','doughnut',slaE.map(e=>e[0]),[{data:slaE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
-  // Table
+  mkChart('chart-aos-week','bar',wkK.map(w=>w&&w!=='(blank)'?'Wk '+w:'?'),[{data:wkK.map(k=>(wkE.find(e=>e[0]===k)||[,0])[1]),backgroundColor:'#964219'}]);
+  const slaE=cnt(aos,'sla_grp');mkChart('chart-aos-sla','doughnut',slaE.map(e=>e[0]),[{data:slaE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
   aosTableData=aos.map(r=>({'Ticket':r.ticket,'Date':r.date,'SLA':r.sla_tab,'Week':r.week,'Agent':r.agent,'Topic':r.topic,'Reason':r.reason,'Comment':r.comment,'Excluded':r.excluded==='1'?'Yes':'No','Month':r.month}));
-  document.getElementById('aos-count').textContent=aosTableData.length+' AOS records';
+  document.getElementById('aos-count').textContent=aosTableData.length+' AOS Portal records';
   renderTable('aos-table',aosTableData,['Ticket','Date','SLA','Week','Agent','Topic','Reason','Comment','Excluded','Month']);
 }
-
 function renderKM1(){
   const km1=filtered.filter(r=>r.sla_grp==='KM-1');
   const remoteE=cnt(km1,'remote');
-  mkChart('chart-km1-remote','doughnut',
-    remoteE.map(e=>e[0]||'(blank)'),
-    [{data:remoteE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
+  mkChart('chart-km1-remote','doughnut',remoteE.map(e=>e[0]||'(blank)'),[{data:remoteE.map(e=>e[1]),backgroundColor:PALETTE,borderWidth:2}]);
   const rE=cnt(km1,'reason',8);
   mkChart('chart-km1-reasons','bar',rE.map(e=>e[0]),[{data:rE.map(e=>e[1]),backgroundColor:PALETTE[2]}]);
-  // Table
   km1TableData=km1.map(r=>({'Ticket':r.ticket,'Date':r.date,'SLA':r.sla_tab,'Week':r.week,'Agent':r.agent,'Reason':r.reason,'Comment':r.comment,'Remote/Callback could help':r.remote,'Excluded':r.excluded==='1'?'Yes':'No','Month':r.month}));
   document.getElementById('km1-count').textContent=km1TableData.length+' KM-1 records';
   renderTable('km1-table',km1TableData,['Ticket','Date','SLA','Week','Agent','Reason','Comment','Remote/Callback could help','Excluded','Month']);
 }
-
 function renderAllRecords(){
   const cols=['ticket','date','lang','sla_tab','week','agent','reason','comment','topic','remote','excluded','month'];
   const heads=['Ticket','Date','Lang','SLA','Week','Agent','Reason','Comment','Topic','Remote/CB','Excluded','Month'];
@@ -488,88 +411,41 @@ function renderAllRecords(){
   const tbl=document.getElementById('report-table');
   if(!filtered.length){tbl.innerHTML='<tr><td colspan="12" style="padding:2rem;text-align:center;color:var(--muted)">No records</td></tr>';return;}
   let h='<thead><tr>'+heads.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
-  const show=filtered.slice(0,500);
-  show.forEach(r=>{
+  filtered.slice(0,500).forEach(r=>{
     h+='<tr>'+cols.map(c=>{
       if(c==='excluded')return `<td><span class="badge ${r[c]==='1'?'badge-excl':'badge-ok'}">${r[c]==='1'?'Excl':'OK'}</span></td>`;
-      const v=String(r[c]||'');
-      return `<td title="${v.replace(/"/g,'&quot;')}">${v}</td>`;
+      const v=String(r[c]||'');return `<td title="${v.replace(/"/g,'&quot;')}">${v}</td>`;
     }).join('')+'</tr>';
   });
   if(filtered.length>500)h+=`<tr><td colspan="12" style="text-align:center;padding:.75rem;color:var(--muted);font-size:.8rem">Showing 500 of ${filtered.length} — export for full data</td></tr>`;
   tbl.innerHTML=h+'</tbody>';
 }
-
 function renderTable(id,rows,cols){
   const tbl=document.getElementById(id);
   if(!rows.length){tbl.innerHTML=`<tr><td colspan="${cols.length}" style="padding:2rem;text-align:center;color:var(--muted)">No records match current filters</td></tr>`;return;}
   let h='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
-  rows.slice(0,500).forEach(r=>{
-    h+='<tr>'+cols.map(c=>{
-      const v=String(r[c]||'');
-      return `<td title="${v.replace(/"/g,'&quot;')}">${v}</td>`;
-    }).join('')+'</tr>';
-  });
+  rows.slice(0,500).forEach(r=>{h+='<tr>'+cols.map(c=>{const v=String(r[c]||'');return `<td title="${v.replace(/"/g,'&quot;')}">${v}</td>`;}).join('')+'</tr>';});
   if(rows.length>500)h+=`<tr><td colspan="${cols.length}" style="text-align:center;padding:.75rem;color:var(--muted);font-size:.8rem">Showing 500 of ${rows.length}</td></tr>`;
   tbl.innerHTML=h+'</tbody>';
 }
-
 function switchTab(id){
   activeTab=id;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
-  ['overview','reasons','apps','aos','km1','all'].forEach(t=>{
-    const p=document.getElementById('pane-'+t);
-    if(p)p.classList.toggle('hidden',t!==id);
-  });
+  ['overview','reasons','apps','aos','km1','all'].forEach(t=>{const p=document.getElementById('pane-'+t);if(p)p.classList.toggle('hidden',t!==id);});
   renderActiveTab();
 }
-
-function removeMonth(m){
-  allData=allData.filter(r=>r.month!==m);
-  save();
-  if(!allData.length){location.reload();return;}
-  render();
-}
-
-function exportFiltered(){
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(filtered),'Report');
-  XLSX.writeFile(wb,'Breaches_Report_'+today()+'.xlsx');
-}
-function exportTable(data,name){
-  if(!data||!data.length){alert('No data to export');return;}
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),name.slice(0,31));
-  XLSX.writeFile(wb,'Breaches_'+name+'_'+today()+'.xlsx');
-}
-function exportReport(){
-  const wb=XLSX.utils.book_new();
-  [{d:filtered,n:'All Records'},{d:reasonsTableData,n:'Reasons'},{d:appsTableData,n:'Applications'},{d:aosTableData,n:'AOS Portal'},{d:km1TableData,n:'KM-1 Detail'}]
-    .forEach(({d,n})=>{if(d&&d.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d),n);});
-  XLSX.writeFile(wb,'Breaches_FullReport_'+today()+'.xlsx');
-}
+function removeMonth(m){allData=allData.filter(r=>r.month!==m);save();if(!allData.length){location.reload();return;}render();}
+function exportFiltered(){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(filtered),'Report');XLSX.writeFile(wb,'Breaches_Report_'+today()+'.xlsx');}
+function exportTable(data,name){if(!data||!data.length){alert('No data to export');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),name.slice(0,31));XLSX.writeFile(wb,'Breaches_'+name+'_'+today()+'.xlsx');}
+function exportReport(){const wb=XLSX.utils.book_new();[{d:filtered,n:'All Records'},{d:reasonsTableData,n:'Reasons'},{d:appsTableData,n:'Applications'},{d:aosTableData,n:'AOS Portal'},{d:km1TableData,n:'KM-1 Detail'}].forEach(({d,n})=>{if(d&&d.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d),n);});XLSX.writeFile(wb,'Breaches_FullReport_'+today()+'.xlsx');}
 function today(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
-function showStatus(msg,type='ok'){
-  const el=document.getElementById('status');
-  el.textContent=msg;
-  el.className='status-bar'+(type==='error'?' error':'');
-  el.classList.remove('hidden');
-}
-
+function showStatus(msg,type='ok'){const el=document.getElementById('status');el.textContent=msg;el.className='status-bar'+(type==='error'?' error':'');el.classList.remove('hidden');}
 const dz=document.getElementById('drop-zone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
-
-(function(){
-  const btn=document.querySelector('[data-theme-toggle]');
-  const root=document.documentElement;
-  let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
-  root.setAttribute('data-theme',d);
-  if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);if(filtered.length)renderActiveTab();});
-})();
-
+(function(){const btn=document.querySelector('[data-theme-toggle]');const root=document.documentElement;let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';root.setAttribute('data-theme',d);if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);if(filtered.length)renderActiveTab();});})();
 loadSaved();
 </script>
 </body>
