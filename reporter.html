@@ -8,12 +8,29 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-:root,[data-theme="light"]{--bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fff;--border:#d4d1ca;--divider:#dcd9d5;--text:#28251d;--muted:#7a7974;--faint:#bab9b4;--primary:#01696f;--primary-h:#0c4e54;--primary-hi:#cedcd8;--success:#437a22;--warn:#964219;--error:#a12c7b;--shadow:0 4px 16px oklch(0.2 0.01 80/.08);--radius:.5rem;--radius-lg:.75rem;--font:'Satoshi',sans-serif;}
-[data-theme="dark"]{--bg:#171614;--surface:#1c1b19;--surface-2:#201f1d;--border:#393836;--divider:#262523;--text:#cdccca;--muted:#797876;--faint:#5a5957;--primary:#4f98a3;--primary-h:#227f8b;--primary-hi:#313b3b;--success:#6daa45;--warn:#bb653b;--error:#d163a7;}
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fff;--border:#d4d1ca;--divider:#dcd9d5;
+  --text:#28251d;--muted:#7a7974;--faint:#bab9b4;
+  --primary:#01696f;--primary-h:#0c4e54;--primary-hi:#cedcd8;
+  --success:#437a22;--warn:#964219;--error:#a12c7b;
+  --shadow:0 4px 16px oklch(0.2 0.01 80/.08);
+  --radius:.5rem;--radius-lg:.75rem;--font:'Satoshi',sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#171614;--surface:#1c1b19;--surface-2:#201f1d;--border:#393836;--divider:#262523;
+  --text:#cdccca;--muted:#797876;--faint:#5a5957;
+  --primary:#4f98a3;--primary-h:#227f8b;--primary-hi:#313b3b;
+  --success:#6daa45;--warn:#bb653b;--error:#d163a7;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh;font-size:15px;line-height:1.6}
 button{cursor:pointer;font-family:inherit}
-.header{background:var(--surface);border-bottom:1px solid var(--divider);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.app-nav{background:var(--surface-2);border-bottom:2px solid var(--divider);padding:0 1.5rem;display:flex;align-items:center;gap:0;overflow-x:auto;position:sticky;top:0;z-index:200}
+.app-nav a{display:flex;align-items:center;gap:.4rem;padding:.55rem 1rem;font-size:.82rem;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .18s}
+.app-nav a:hover{color:var(--text)}
+.app-nav a.active{color:var(--primary);border-bottom-color:var(--primary)}
+.app-nav svg{flex-shrink:0}
+.header{background:var(--surface);border-bottom:1px solid var(--divider);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:2.4rem;z-index:100;box-shadow:var(--shadow)}
 .logo{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.05rem}
 .logo svg{color:var(--primary)}
 .header-right{display:flex;gap:.75rem;align-items:center}
@@ -26,6 +43,7 @@ button{cursor:pointer;font-family:inherit}
 .upload-card h4{font-size:.95rem;font-weight:600;margin-bottom:.25rem}
 .upload-card p{color:var(--muted);font-size:.82rem}
 .upload-btn{margin-top:.75rem;background:var(--primary);color:#fff;border:none;padding:.4rem 1rem;border-radius:var(--radius);font-size:.82rem;font-weight:500}
+.upload-btn:hover{background:var(--primary-h)}
 .hidden{display:none}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
 .kpi{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);padding:.875rem 1.1rem}
@@ -35,12 +53,13 @@ button{cursor:pointer;font-family:inherit}
 .section-title{font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--text)}
 .charts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:1.5rem;margin-bottom:2rem}
 .chart-card{background:var(--surface);border:1px solid var(--divider);border-radius:var(--radius-lg);padding:1.25rem}
-.chart-card h4{font-size:.875rem;font-weight:600;color:var(--muted);margin-bottom:1rem;text-transform:uppercase;letter-spacing:.04em}
+.chart-card h4{font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.04em}
 .chart-card canvas{max-height:260px}
 .filters{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:flex-end}
 .filter-group{display:flex;flex-direction:column;gap:.25rem}
 .filter-group label{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 select{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.375rem .625rem;font-family:var(--font);font-size:.82rem;color:var(--text);cursor:pointer}
+select:focus{outline:none;border-color:var(--primary)}
 .btn-outline{background:none;border:1px solid var(--border);color:var(--text);padding:.4rem .875rem;border-radius:var(--radius);font-size:.82rem;font-weight:500;display:flex;align-items:center;gap:.375rem;transition:all .18s}
 .btn-outline:hover{border-color:var(--primary);color:var(--primary)}
 .btn-primary{background:var(--primary);color:#fff;border:none;padding:.4rem .875rem;border-radius:var(--radius);font-size:.82rem;font-weight:500;display:flex;align-items:center;gap:.375rem}
@@ -54,7 +73,7 @@ select{background:var(--surface);border:1px solid var(--border);border-radius:va
 .data-table tr:hover td{background:var(--primary-hi)}
 .badge{display:inline-block;padding:.1rem .5rem;border-radius:99px;font-size:.72rem;font-weight:700}
 .badge-ok{background:#d1f0d8;color:#1a6b32}
-.badge-breach{background:#fde3e3;color:#9b1c1c}
+.badge-excl{background:#fde3e3;color:#9b1c1c}
 .empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
 .status-bar{background:var(--success);color:#fff;padding:.5rem 1.5rem;font-size:.85rem;font-weight:500}
 .status-bar.error{background:var(--error)}
@@ -65,27 +84,46 @@ select{background:var(--surface);border:1px solid var(--border);border-radius:va
 </style>
 </head>
 <body>
+<nav class="app-nav">
+  <a href="index.html">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 14h4l3-7 4 14 3-7h3"/></svg>
+    Breaches Tracker
+  </a>
+  <a href="reporter.html" class="active">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Reporter
+  </a>
+  <a href="agent-tracker.html">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
+    Agent Tracker
+  </a>
+</nav>
 <header class="header">
   <div class="logo">
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect width="26" height="26" rx="6" fill="currentColor" opacity=".12"/><path d="M5 18l4-5 4 3 4-7 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <rect width="26" height="26" rx="6" fill="currentColor" opacity=".12"/>
+      <path d="M5 18l4-5 4 3 4-7 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
     Breaches Reporter
   </div>
   <div class="header-right">
-    <button class="btn-primary hidden" id="export-report-btn" onclick="exportReport()">
+    <button class="btn-primary hidden" id="export-btn" onclick="exportReport()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Export Report
     </button>
-    <button class="theme-btn" data-theme-toggle><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+    <button class="theme-btn" data-theme-toggle>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
   </div>
 </header>
 <div id="status" class="status-bar hidden"></div>
 <main class="main">
-  <div class="upload-card" id="drop1" onclick="document.getElementById('fi1').click()">
+  <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-in').click()">
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-    <h4>Add Monthly File</h4>
-    <p>Upload a filled Breaches .xlsx (with Agent &amp; Week data filled in)</p>
-    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fi1').click()">Choose file</button>
-    <input type="file" id="fi1" class="hidden" accept=".xlsx,.xls" onchange="loadFile(this.files[0])">
+    <h4>Add Monthly Breaches File</h4>
+    <p>Upload a filled <strong>.xlsx</strong> (Agent, Week, Excluded columns filled in) — repeat for each month</p>
+    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-in').click()">Choose file</button>
+    <input type="file" id="file-in" class="hidden" accept=".xlsx,.xls" onchange="loadFile(this.files[0])">
   </div>
   <div id="months-area" class="hidden"><div class="section-title">Loaded months</div><div class="months-list" id="months-list"></div></div>
   <div class="kpis hidden" id="kpi-area"></div>
@@ -98,89 +136,111 @@ select{background:var(--surface);border:1px solid var(--border);border-radius:va
   </div>
   <div class="charts-grid hidden" id="charts-area">
     <div class="chart-card"><h4>Breaches per Week</h4><canvas id="chart-week"></canvas></div>
-    <div class="chart-card"><h4>Breaches by SLA Category</h4><canvas id="chart-sla"></canvas></div>
+    <div class="chart-card"><h4>By SLA Category</h4><canvas id="chart-sla"></canvas></div>
     <div class="chart-card"><h4>Top Queues</h4><canvas id="chart-queue"></canvas></div>
     <div class="chart-card"><h4>Language Split</h4><canvas id="chart-lang"></canvas></div>
   </div>
   <div id="table-area" class="hidden">
-    <div class="toolbar"><span id="tbl-count" style="font-size:.85rem;color:var(--muted)"></span>
-      <button class="btn-outline" onclick="exportFiltered()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export filtered</button>
-    </div>
+    <div class="toolbar"><span id="tbl-count" style="font-size:.85rem;color:var(--muted)"></span><button class="btn-outline" onclick="exportFiltered()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export filtered</button></div>
     <div class="table-wrap"><table class="data-table" id="report-table"></table></div>
   </div>
   <div id="empty-state" class="empty">
     <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    <h3>No data loaded</h3><p>Upload one or more filled monthly Breaches files to generate reports</p>
+    <h3>No data loaded</h3><p>Upload filled monthly Breaches files to generate reports</p>
   </div>
 </main>
 <script>
 let allData=[],filtered=[],charts={};
-const COLS=['Incident Ticket','DATE_CLOSE','Queue','Priority','ISO_Language','SLA_Code','Week','Agent','BMS ID','Excluded','_month'];
+const TAB_MAP={'KSL-4 |WRI':'KSL-4 WRI','KSL-4 | DE':'KSL-4 DE','KM-1 | Reopen':'KM-1 GR','KM-1 DE':'KM-1 DE','KSL-5a GR':'KSL-5a GR','KSL-5a DE':'KSL-5a DE','KM-2 GR':'KM-2 GR','KM-2 DE':'KM-2 DE'};
+const PALETTE=['#01696f','#4f98a3','#964219','#a12c7b','#437a22','#6d5fbb','#bb5f3b','#3b8abb','#6daa45','#d163a7'];
 function loadFile(file){
-  if(!file)return;showStatus('Reading '+file.name+'...');
+  if(!file)return;
+  showStatus('Reading '+file.name+'...');
   const reader=new FileReader();
   reader.onload=e=>{
     try{
       const wb=XLSX.read(e.target.result,{type:'array',cellDates:true,dateNF:'yyyy-mm-dd'});
-      const TM={'KSL-4 |WRI':'KSL-4 WRI','KSL-4 | DE':'KSL-4 DE','KM-1 | Reopen':'KM-1 GR','KM-1 DE':'KM-1 DE','KSL-5a GR':'KSL-5a GR','KSL-5a DE':'KSL-5a DE','KM-2 GR':'KM-2 GR','KM-2 DE':'KM-2 DE'};
-      let n=0;const m=file.name.replace(/\.xlsx?$/i,'');
-      wb.SheetNames.forEach(name=>{const label=TM[name];if(!label)return;XLSX.utils.sheet_to_json(wb.Sheets[name],{raw:false,dateNF:'yyyy-mm-dd'}).forEach(r=>{if(!r['Incident Ticket'])return;allData.push({'Incident Ticket':r['Incident Ticket']||'','DATE_CLOSE':r['DATE_CLOSE']||'','Queue':r['Queue']||r['Ticket Gruppe']||'','Priority':r['Priority']||'','ISO_Language':r['ISO_Language']||r['Incident Element Supportsprache']||'','SLA_Code':label,'Week':r['Week']||r['Week ']||'','Agent':r['Agent']||'','BMS ID':r['BMS ID']||'','Excluded':r['Excluded']||'0','_month':m});n++;});});
-      showStatus('Loaded '+n+' rows from '+file.name);setTimeout(()=>document.getElementById('status').classList.add('hidden'),3000);saveToStorage();render();
+      const month=file.name.replace(/\.xlsx?$/i,'');
+      let n=0;
+      wb.SheetNames.forEach(name=>{
+        const label=TAB_MAP[name];if(!label)return;
+        XLSX.utils.sheet_to_json(wb.Sheets[name],{raw:false,dateNF:'yyyy-mm-dd'}).forEach(r=>{
+          if(!r['Incident Ticket'])return;
+          allData.push({ticket:r['Incident Ticket']||'',date:r['DATE_CLOSE']||'',queue:r['Queue']||r['Ticket Gruppe']||'',priority:r['Priority']||'',lang:r['ISO_Language']||r['Incident Element Supportsprache']||'',sla:label,week:String(r['Week']||r['Week ']||''),agent:r['Agent']||'',bms:String(r['BMS ID']||''),excluded:String(r['Excluded']||'0'),month});
+          n++;
+        });
+      });
+      showStatus('Loaded '+n+' rows from '+file.name);
+      setTimeout(()=>document.getElementById('status').classList.add('hidden'),3000);
+      save();render();
     }catch(err){showStatus('Error: '+err.message,'error');}
-  };reader.readAsArrayBuffer(file);
+  };
+  reader.readAsArrayBuffer(file);
 }
-function saveToStorage(){try{localStorage.setItem('breaches_report_data',JSON.stringify(allData));}catch(e){}}
-function loadFromStorage(){try{const d=localStorage.getItem('breaches_report_data');if(d){allData=JSON.parse(d);render();}}catch(e){}}
+function save(){try{localStorage.setItem('reporter_data',JSON.stringify(allData));}catch(e){}}
+function loadSaved(){try{const d=localStorage.getItem('reporter_data');if(d){allData=JSON.parse(d);render();}}catch(e){}}
 function render(){
   if(!allData.length)return;
   document.getElementById('empty-state').classList.add('hidden');
   ['kpi-area','filters-area','charts-area','table-area','months-area'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
-  document.getElementById('export-report-btn').classList.remove('hidden');
-  const months=[...new Set(allData.map(r=>r._month))];
+  document.getElementById('export-btn').classList.remove('hidden');
+  const months=[...new Set(allData.map(r=>r.month))];
   document.getElementById('months-list').innerHTML=months.map(m=>`<div class="month-badge">${m}<button onclick="removeMonth('${m}')">x</button></div>`).join('');
-  populateFilter('f-week',[...new Set(allData.map(r=>r.Week).filter(Boolean))].sort((a,b)=>+a-+b));
-  populateFilter('f-sla',[...new Set(allData.map(r=>r.SLA_Code))].sort());
-  populateFilter('f-queue',[...new Set(allData.map(r=>r.Queue))].sort());
-  populateFilter('f-lang',[...new Set(allData.map(r=>r.ISO_Language))].sort());
+  fillSel('f-week',[...new Set(allData.map(r=>r.week).filter(Boolean))].sort((a,b)=>+a-+b));
+  fillSel('f-sla',[...new Set(allData.map(r=>r.sla))].sort());
+  fillSel('f-queue',[...new Set(allData.map(r=>r.queue))].sort());
+  fillSel('f-lang',[...new Set(allData.map(r=>r.lang))].sort());
   applyFilters();
 }
-function populateFilter(id,opts){const el=document.getElementById(id),cur=el.value;el.innerHTML='<option value="">All</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');if(opts.includes(cur))el.value=cur;}
+function fillSel(id,opts){const el=document.getElementById(id),cur=el.value;el.innerHTML='<option value="">All</option>'+opts.map(o=>`<option value="${o}">${o}</option>`).join('');if(opts.includes(cur))el.value=cur;}
 function applyFilters(){
-  const week=document.getElementById('f-week').value,sla=document.getElementById('f-sla').value,queue=document.getElementById('f-queue').value,lang=document.getElementById('f-lang').value,excl=document.getElementById('f-excl').value;
-  filtered=allData.filter(r=>(!week||String(r.Week)===week)&&(!sla||r.SLA_Code===sla)&&(!queue||r.Queue===queue)&&(!lang||r.ISO_Language===lang)&&(!excl||String(r.Excluded)===excl));
+  const wk=document.getElementById('f-week').value,sl=document.getElementById('f-sla').value,qu=document.getElementById('f-queue').value,la=document.getElementById('f-lang').value,ex=document.getElementById('f-excl').value;
+  filtered=allData.filter(r=>(!wk||r.week===wk)&&(!sl||r.sla===sl)&&(!qu||r.queue===qu)&&(!la||r.lang===la)&&(!ex||r.excluded===ex));
   renderKPIs();renderCharts();renderTable();
 }
 function renderKPIs(){
-  const total=filtered.length,excl=filtered.filter(r=>String(r.Excluded)==='1').length,counted=total-excl,agents=new Set(filtered.map(r=>r.Agent).filter(Boolean)).size,weeks=new Set(filtered.map(r=>r.Week).filter(Boolean)).size;
-  document.getElementById('kpi-area').innerHTML=`<div class="kpi"><div class="kpi-label">Total Breaches</div><div class="kpi-value">${total}</div><div class="kpi-sub">all SLA types</div></div><div class="kpi"><div class="kpi-label">Counted</div><div class="kpi-value">${counted}</div><div class="kpi-sub">not excluded</div></div><div class="kpi"><div class="kpi-label">Excluded</div><div class="kpi-value">${excl}</div><div class="kpi-sub">flagged out</div></div><div class="kpi"><div class="kpi-label">Agents</div><div class="kpi-value">${agents}</div><div class="kpi-sub">with breaches</div></div><div class="kpi"><div class="kpi-label">Weeks</div><div class="kpi-value">${weeks}</div><div class="kpi-sub">covered</div></div>`;
+  const t=filtered.length,ex=filtered.filter(r=>r.excluded==='1').length,ag=new Set(filtered.map(r=>r.agent).filter(Boolean)).size,wk=new Set(filtered.map(r=>r.week).filter(Boolean)).size;
+  document.getElementById('kpi-area').innerHTML=`<div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value">${t}</div><div class="kpi-sub">all breaches</div></div><div class="kpi"><div class="kpi-label">Counted</div><div class="kpi-value">${t-ex}</div><div class="kpi-sub">not excluded</div></div><div class="kpi"><div class="kpi-label">Excluded</div><div class="kpi-value">${ex}</div><div class="kpi-sub">flagged out</div></div><div class="kpi"><div class="kpi-label">Agents</div><div class="kpi-value">${ag}</div><div class="kpi-sub">with breaches</div></div><div class="kpi"><div class="kpi-label">Weeks</div><div class="kpi-value">${wk}</div><div class="kpi-sub">covered</div></div>`;
 }
-const PALETTE=['#01696f','#4f98a3','#964219','#a12c7b','#437a22','#6d5fbb','#bb5f3b','#3b8abb','#6daa45','#d163a7'];
-function renderCharts(){
-  const isDark=document.documentElement.getAttribute('data-theme')==='dark',gc=isDark?'#393836':'#dcd9d5',tc=isDark?'#cdccca':'#7a7974';
+function cnt(arr,key){const m={};arr.forEach(r=>{const v=String(r[key]||'?');m[v]=(m[v]||0)+1;});return m;}
+function mkChart(id,type,labels,datasets){
+  if(charts[id])charts[id].destroy();
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const gc=isDark?'#393836':'#dcd9d5',tc=isDark?'#cdccca':'#7a7974';
   Chart.defaults.color=tc;Chart.defaults.font={family:'Satoshi,sans-serif',size:12};
-  function count(arr,key){const m={};arr.forEach(r=>{const v=String(r[key]||'?');m[v]=(m[v]||0)+1;});return m;}
-  function mk(id,type,labels,datasets){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:type==='doughnut',position:'right',labels:{boxWidth:12,padding:12}}},scales:type==='bar'?{x:{grid:{color:gc},ticks:{color:tc}},y:{grid:{color:gc},ticks:{color:tc}}}:{}}});}
-  const wk=count(filtered,'Week'),wkK=Object.keys(wk).sort((a,b)=>+a-+b);mk('chart-week','bar',wkK.map(w=>'Wk '+w),[{data:wkK.map(k=>wk[k]),backgroundColor:PALETTE[0]}]);
-  const sl=count(filtered,'SLA_Code');mk('chart-sla','doughnut',Object.keys(sl),[{data:Object.values(sl),backgroundColor:PALETTE,borderWidth:2}]);
-  const qs=Object.entries(count(filtered,'Queue')).sort((a,b)=>b[1]-a[1]).slice(0,8);mk('chart-queue','bar',qs.map(e=>e[0].replace('FT_use-','')),[{data:qs.map(e=>e[1]),backgroundColor:PALETTE[2]}]);
-  const lm=count(filtered,'ISO_Language');mk('chart-lang','doughnut',Object.keys(lm),[{data:Object.values(lm),backgroundColor:PALETTE,borderWidth:2}]);
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:type==='doughnut',position:'right',labels:{boxWidth:12,padding:10}}},scales:type==='bar'?{x:{grid:{color:gc},ticks:{color:tc,maxRotation:30}},y:{grid:{color:gc},ticks:{color:tc}}}:{}}});
+}
+function renderCharts(){
+  const wkMap=cnt(filtered,'week');const wkK=Object.keys(wkMap).sort((a,b)=>+a-+b);
+  mkChart('chart-week','bar',wkK.map(w=>'Wk '+w),[{data:wkK.map(k=>wkMap[k]),backgroundColor:PALETTE[0]}]);
+  const slaMap=cnt(filtered,'sla');
+  mkChart('chart-sla','doughnut',Object.keys(slaMap),[{data:Object.values(slaMap),backgroundColor:PALETTE,borderWidth:2}]);
+  const qMap=cnt(filtered,'queue');const qS=Object.entries(qMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkChart('chart-queue','bar',qS.map(e=>e[0].replace('FT_use-','')),[{data:qS.map(e=>e[1]),backgroundColor:PALETTE[1]}]);
+  const lMap=cnt(filtered,'lang');
+  mkChart('chart-lang','doughnut',Object.keys(lMap),[{data:Object.values(lMap),backgroundColor:PALETTE,borderWidth:2}]);
 }
 function renderTable(){
-  const tbl=document.getElementById('report-table');document.getElementById('tbl-count').textContent=filtered.length+' records';
+  const cols=['ticket','date','queue','priority','lang','sla','week','agent','bms','excluded','month'];
+  const heads=['Incident Ticket','DATE_CLOSE','Queue','Priority','Language','SLA','Week','Agent','BMS ID','Excluded','Month'];
+  document.getElementById('tbl-count').textContent=filtered.length+' records';
+  const tbl=document.getElementById('report-table');
   if(!filtered.length){tbl.innerHTML='<tr><td style="padding:2rem;text-align:center;color:var(--muted)">No records match filters</td></tr>';return;}
-  const dc=COLS.filter(c=>c!=='_month');
-  let html='<thead><tr>'+dc.map(c=>`<th>${c}</th>`).join('')+'<th>Month</th></tr></thead><tbody>';
-  filtered.slice(0,500).forEach(r=>{html+='<tr>'+dc.map(c=>c==='Excluded'?`<td><span class="badge ${String(r[c])==='1'?'badge-breach':'badge-ok'}">${String(r[c])==='1'?'Excl':'OK'}</span></td>`:`<td>${r[c]||''}</td>`).join('')+`<td>${r._month}</td></tr>`;});
-  if(filtered.length>500)html+=`<tr><td colspan="${dc.length+1}" style="text-align:center;padding:.75rem;color:var(--muted);font-size:.8rem">Showing first 500 of ${filtered.length} rows</td></tr>`;
-  tbl.innerHTML=html+'</tbody>';
+  let h='<thead><tr>'+heads.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>';
+  filtered.slice(0,500).forEach(r=>{h+='<tr>'+cols.map(c=>{if(c==='excluded')return `<td><span class="badge ${r.excluded==='1'?'badge-excl':'badge-ok'}">${r.excluded==='1'?'Excl':'OK'}</span></td>`;return `<td>${r[c]||''}</td>`;}).join('')+'</tr>';});
+  if(filtered.length>500)h+=`<tr><td colspan="${cols.length}" style="text-align:center;padding:.75rem;color:var(--muted);font-size:.8rem">Showing 500 of ${filtered.length} — export for full data</td></tr>`;
+  tbl.innerHTML=h+'</tbody>';
 }
-function removeMonth(m){allData=allData.filter(r=>r._month!==m);saveToStorage();if(!allData.length){location.reload();return;}render();}
-function exportFiltered(){const ws=XLSX.utils.json_to_sheet(filtered);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Report');XLSX.writeFile(wb,'Breaches_Report_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx');}
+function removeMonth(m){allData=allData.filter(r=>r.month!==m);save();if(!allData.length){location.reload();return;}render();}
+function exportFiltered(){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(filtered),'Report');XLSX.writeFile(wb,'Breaches_Report_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx');}
 function exportReport(){exportFiltered();}
 function showStatus(msg,type='ok'){const el=document.getElementById('status');el.textContent=msg;el.className='status-bar'+(type==='error'?' error':'');el.classList.remove('hidden');}
-const dc2=document.getElementById('drop1');dc2.addEventListener('dragover',e=>{e.preventDefault();dc2.classList.add('drag');});dc2.addEventListener('dragleave',()=>dc2.classList.remove('drag'));dc2.addEventListener('drop',e=>{e.preventDefault();dc2.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
-(function(){const btn=document.querySelector('[data-theme-toggle]'),root=document.documentElement;let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';root.setAttribute('data-theme',d);if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);if(allData.length)renderCharts();});})();
-loadFromStorage();
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
+(function(){const btn=document.querySelector('[data-theme-toggle]');const root=document.documentElement;let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';root.setAttribute('data-theme',d);if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);if(filtered.length)renderCharts();});})();
+loadSaved();
 </script>
 </body>
 </html>
