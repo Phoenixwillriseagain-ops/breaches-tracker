@@ -264,4 +264,20 @@
   window.BT.initTheme = initTheme;
   window.BT.initKeyboardShortcuts = initKeyboardShortcuts;
 
+
+  	// Table search/filter function
+	function searchTable(searchValue) {
+		const table = document.querySelector('.data-table');
+		if (!table) return;
+		
+		const rows = table.querySelectorAll('tbody tr');
+		const lowerSearch = searchValue.toLowerCase();
+		
+		rows.forEach(row => {
+			const text = row.textContent.toLowerCase();
+			row.style.display = text.includes(lowerSearch) ? '' : 'none';
+		});
+	}
+	
+	window.searchTable = searchTable;
 })();
