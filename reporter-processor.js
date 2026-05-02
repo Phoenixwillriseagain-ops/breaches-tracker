@@ -341,4 +341,15 @@
   window.RPT.renderKPIs = renderKPIs;
   window.RPT.init = init;
 
+
+  	// Clear filters function
+	function clearFilters() {
+		rptState.filtered = [];
+		rptState.allData = rptState.allData.map(item => ({...item, visible: true}));
+		document.querySelectorAll('.filter-btn.active').forEach(btn => btn.classList.remove('active'));
+		document.querySelectorAll('.data-table tbody tr').forEach(row => row.style.display = '');
+		showStatus('Filters cleared', 'success');
+	}
+	
+	window.RPT.clearFilters = clearFilters;
 })();
