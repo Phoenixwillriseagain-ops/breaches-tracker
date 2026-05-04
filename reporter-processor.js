@@ -1,4 +1,4 @@
-// reporter-processor.js - Auto-mapping all Excel columns
+// reporter-processor.js - Final version with corrected column mapping
 
 (function() {
   'use strict';
@@ -43,33 +43,36 @@
     return 'N';
   }
 
-  // Auto-detect column mappings from first row
   function detectColumns(firstRow) {
     const colMap = { ticket: '', month: '', sla: '', km1: '', aos: '', reason: '', lang: '', type: '', status: '', excluded: '' };
     const rowKeys = Object.keys(firstRow);
     
     console.log('Available columns:', rowKeys);
     
-    // For each row key, try to match it to a field
+    // Try to find exact column names
     rowKeys.forEach(function(key) {
       const keyLower = clean(key).toLowerCase().replace(/[_\s-]/g, '');
       
-      if (keyLower.includes('ticket') || keyLower.includes('incident')) colMap.ticket = key;
-      else if (keyLower.includes('month') || keyLower.includes('week') || keyLower.includes('date')) colMap.month = key;
-      else if (keyLower.includes('sla') || keyLower.includes('code')) colMap.sla = key;
-      else if (keyLower.includes('km1') || keyLower.includes('km')) colMap.km1 = key;
-      else if (keyLower.includes('aos') || keyLower.includes('portal')) colMap.aos = key;
-      else if (keyLower.includes('reason') || keyLower.includes('breach')) colMap.reason = key;
-      else if (keyLower.includes('lang') || keyLower.includes('language')) colMap.lang = key;
-      else if (keyLower.includes('type') || keyLower.includes('app') || keyLower.includes('application')) colMap.type = key;
-      else if (keyLower.includes('status') || keyLower.includes('state')) colMap.status = key;
-      else if (keyLower.includes('exclude')) colMap.excluded = key;
+      // Exact matches first
+      if (key === 'ticket' || key === 'Incident Ticket') colMap.ticket = key;
+      if (key === 'sla_code' || key === 'SLA_Code' || key === 'sla' || key === 'SLA') colMap.sla = key;
+      if (key === 'week' || key === 'Week' || key === 'month' || key === 'Month') colMap.month = key;
+      if (key === 'reason' || key === 'Reason' || key === 'breach_reason') colMap.reason = key;
+      if (key === 'language' || key === 'Language' || key === 'lang') colMap.lang = key;
+      if (key === 'type' || key === 'Type' || key === 'breach_type' || key === 'application') colMap.type = key;
+      if (key === 'excluded' || key === 'Excluded' || key === 'exclude') colMap.excluded = key;
+      if (key === 'aos' || key === 'AOS' || key === 'aos_portal') colMap.aos = key;
+      if (key === 'km1' || key === 'KM1' || key === 'km-1') colMap.km1 = key;
+      if (key === 'status' || key === 'Status') colMap.status = key;
+      
+      // Fallback keyword matching if exact match didn't work
+      if (!colMap.ticket && keyLower.includes('ticket')) colMap.ticket = key;
+      if (!colMap.month && (keyLower.includes('month') || keyLower.includes('week') || keyLower.includes('date'))) colMap.month = key;
+      if (!colMap.sla && (keyLower.includes('sla') || keyLower.includes('code'))) colMap.sla = key;
+      if (!colMap.reason && (keyLower.includes('reason') || keyLower.includes('breach'))) colMap.reason = key;
+      if (!colMap.lang && (keyLower.includes('lang') || keyLower.includes('language'))) colMap.lang = key;
+      if (!colMap.type && (keyLower.includes('type') || keyLower.includes('app'))) colMap.type = key;
     });
-    
-    // Fallback: if a column wasn't matched, use first available
-    if (!colMap.ticket && rowKeys.length > 0) colMap.ticket = rowKeys[0];
-    if (!colMap.month && rowKeys.length > 1) colMap.month = rowKeys[1];
-    if (!colMap.sla && rowKeys.length > 2) colMap.sla = rowKeys[2];
     
     console.log('Detected mappings:', colMap);
     return colMap;
@@ -97,7 +100,6 @@
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
       
       rows.forEach(function(r, idx) {
-        // Auto-detect columns from first row
         if (!colMap) {
           colMap = detectColumns(r);
           rptState.columnMap = colMap;
