@@ -1,4 +1,4 @@
-// reporter-processor.js - Final version with corrected column mapping
+// reporter-processor.js - Simple direct column mapping from Excel
 
 (function() {
   'use strict';
@@ -43,41 +43,6 @@
     return 'N';
   }
 
-  function detectColumns(firstRow) {
-    const colMap = { ticket: '', month: '', sla: '', km1: '', aos: '', reason: '', lang: '', type: '', status: '', excluded: '' };
-    const rowKeys = Object.keys(firstRow);
-    
-    console.log('Available columns:', rowKeys);
-    
-    // Try to find exact column names
-    rowKeys.forEach(function(key) {
-      const keyLower = clean(key).toLowerCase().replace(/[_\s-]/g, '');
-      
-      // Exact matches first
-      if (key === 'ticket' || key === 'Incident Ticket') colMap.ticket = key;
-      if (key === 'sla_code' || key === 'SLA_Code' || key === 'sla' || key === 'SLA') colMap.sla = key;
-      if (key === 'week' || key === 'Week' || key === 'month' || key === 'Month') colMap.month = key;
-      if (key === 'reason' || key === 'Reason' || key === 'breach_reason') colMap.reason = key;
-      if (key === 'language' || key === 'Language' || key === 'lang') colMap.lang = key;
-      if (key === 'type' || key === 'Type' || key === 'breach_type' || key === 'application') colMap.type = key;
-      if (key === 'excluded' || key === 'Excluded' || key === 'exclude') colMap.excluded = key;
-      if (key === 'aos' || key === 'AOS' || key === 'aos_portal') colMap.aos = key;
-      if (key === 'km1' || key === 'KM1' || key === 'km-1') colMap.km1 = key;
-      if (key === 'status' || key === 'Status') colMap.status = key;
-      
-      // Fallback keyword matching if exact match didn't work
-      if (!colMap.ticket && keyLower.includes('ticket')) colMap.ticket = key;
-      if (!colMap.month && (keyLower.includes('month') || keyLower.includes('week') || keyLower.includes('date'))) colMap.month = key;
-      if (!colMap.sla && (keyLower.includes('sla') || keyLower.includes('code'))) colMap.sla = key;
-      if (!colMap.reason && (keyLower.includes('reason') || keyLower.includes('breach'))) colMap.reason = key;
-      if (!colMap.lang && (keyLower.includes('lang') || keyLower.includes('language'))) colMap.lang = key;
-      if (!colMap.type && (keyLower.includes('type') || keyLower.includes('app'))) colMap.type = key;
-    });
-    
-    console.log('Detected mappings:', colMap);
-    return colMap;
-  }
-
   function loadFile(file) {
     if (!file) return;
     const reader = new FileReader();
@@ -94,14 +59,38 @@
 
   function processWorkbook(wb) {
     const data = [];
-    let colMap = null;
+    let colMap = {};
     
     wb.SheetNames.forEach(function(sn) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
       
       rows.forEach(function(r, idx) {
-        if (!colMap) {
-          colMap = detectColumns(r);
+        // On first row, detect column mappings
+        if (idx === 0) {
+          const keys = Object.keys(r);
+          console.log('Excel columns:', keys);
+          
+          // Try to find columns by partial matching on keys
+          keys.forEach(function(key) {
+            const lower = key.toLowerCase();
+            if (lower.includes('ticket') || lower.includes('incident')) colMap.ticket = key;
+            if (lower.includes('week') || lower.includes('month') || lower.includes('date')) colMap.month = key;
+            if (lower.includes('sla') || lower.includes('code')) colMap.sla = key;
+            if (lower.includes('km')) colMap.km1 = key;
+            if (lower.includes('aos') || lower.includes('portal')) colMap.aos = key;
+            if (lower.includes('reason') || lower.includes('breach')) colMap.reason = key;
+            if (lower.includes('lang')) colMap.lang = key;
+            if (lower.includes('type') || lower.includes('app')) colMap.type = key;
+            if (lower.includes('status')) colMap.status = key;
+            if (lower.includes('exclude')) colMap.excluded = key;
+          });
+          
+          // If we still don't have mappings, use first columns as defaults
+          if (!colMap.ticket) colMap.ticket = keys[0];
+          if (!colMap.month) colMap.month = keys[1];
+          if (!colMap.sla) colMap.sla = keys[2];
+          
+          console.log('Detected mappings:', colMap);
           rptState.columnMap = colMap;
         }
         
@@ -125,7 +114,7 @@
       });
     });
 
-    console.log('Processed', data.length, 'records with mappings:', rptState.columnMap);
+    console.log('Processed', data.length, 'records');
     rptState.allData = data;
     applyFilters();
     renderKPIs();
