@@ -1,10 +1,10 @@
-// reporter-processor.js - Simple direct column mapping from Excel
+// reporter-processor.js - Fixed column mapping with correct element IDs
 
 (function() {
   'use strict';
 
   const { CONFIG } = window.BT || {};
-  const { MAX_DISPLAY_ROWS } = CONFIG;
+  const { MAX_DISPLAY_ROWS } = CONFIG || { MAX_DISPLAY_ROWS: 100 };
 
   const rptState = window.RPT = {
     allData: [],
@@ -51,56 +51,22 @@
     wb.SheetNames.forEach(function(sn) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
       rows.forEach(function(r, idx) {
-        const lower = {};
-        Object.keys(r).forEach(key => {
-          lower[key.toLowerCase()] = key;
-        });
-        
-        // Detect columns from header (first row)
+        // Build lowercase header map on first iteration
         if (idx === 0) {
-          Object.keys(lower).forEach(lowerKey => {
-            const origKey = lower[lowerKey];
+          Object.keys(r).forEach(key => {
+            const lower = key.toLowerCase();
+            console.log('Header column:', key, '->', lower);
             
-            // Ticket/Incident detection
-            if (lowerKey.includes('ticket') || lowerKey.includes('incident')) {
-              colMap.ticket = origKey;
-            }
-            // Week/Month/Date detection
-            if ((lowerKey.includes('week') || lowerKey.includes('month')) || lowerKey.includes('date')) {
-              if (!colMap.month) colMap.month = origKey;
-            }
-            // SLA detection
-            if (lowerKey.includes('sla') || lowerKey.includes('code')) {
-              colMap.sla = origKey;
-            }
-            // KM detection
-            if (lowerKey.includes('km')) {
-              colMap.kml = origKey;
-            }
-            // AOS/Portal detection
-            if (lowerKey.includes('aos') || lowerKey.includes('portal')) {
-              colMap.aos = origKey;
-            }
-            // Reason detection
-            if (lowerKey.includes('reason') || lowerKey.includes('breach')) {
-              colMap.reason = origKey;
-            }
-            // Language detection
-            if (lowerKey.includes('lang')) {
-              colMap.lang = origKey;
-            }
-            // Type/App detection
-            if (lowerKey.includes('type') || lowerKey.includes('app')) {
-              colMap.type = origKey;
-            }
-            // Status detection
-            if (lowerKey.includes('status')) {
-              colMap.status = origKey;
-            }
-            // Excluded detection
-            if (lowerKey.includes('excluded')) {
-              colMap.excluded = origKey;
-            }
+            if (lower.includes('ticket') || lower.includes('incident')) colMap.ticket = key;
+            if (lower.includes('week') || lower.includes('month') || lower.includes('date')) colMap.month = key;
+            if (lower.includes('sla') || lower.includes('code')) colMap.sla = key;
+            if (lower.includes('km')) colMap.kml = key;
+            if (lower.includes('aos') || lower.includes('portal')) colMap.aos = key;
+            if (lower.includes('reason') || lower.includes('breach') || lower.includes('type')) colMap.reason = key;
+            if (lower.includes('lang')) colMap.lang = key;
+            if (lower.includes('app')) colMap.type = key;
+            if (lower.includes('status')) colMap.status = key;
+            if (lower.includes('excluded')) colMap.excluded = key;
           });
         }
         
@@ -116,6 +82,7 @@
           status: normKey(clean(r[colMap.status] || ''), 'N/A'),
           breachType: normKey(clean(r[colMap.type] || ''), 'Unknown'),
           language: normKey(clean(r[colMap.lang] || ''), 'Unknown'),
+          reason: normKey(clean(r[colMap.reason] || ''), 'Unknown'),
           excluded: normBoolLike(clean(r[colMap.excluded] || ''))
         };
         data.push(prow);
@@ -123,6 +90,7 @@
     });
 
     console.log('Detected mappings:', colMap);
+    console.log('Loaded records:', data.length);
     rptState.columnMap = colMap;
     rptState.allData = data;
     rptState.filtered = data.slice();
@@ -134,7 +102,6 @@
   function normSla(v) {
     if (!v) return 'Unknown';
     const lower = v.toLowerCase();
-    const cleaned = lower.replace(/\D/g, '');
     if (lower.includes('critical')) return 'Critical';
     if (lower.includes('high')) return 'High';
     if (lower.includes('medium')) return 'Medium';
@@ -152,10 +119,10 @@
   }
 
   function applyFilters() {
-    const weekFilter = document.getElementById('week-filter')?.value || 'All';
-    const slaFilter = document.getElementById('sla-filter')?.value || 'All';
-    const langFilter = document.getElementById('lang-filter')?.value || 'All';
-    const excludedFilter = document.getElementById('excluded-filter')?.value || 'All';
+    const weekFilter = document.getElementById('filter-week')?.value || 'All';
+    const slaFilter = document.getElementById('filter-sla')?.value || 'All';
+    const langFilter = document.getElementById('filter-lang')?.value || 'All';
+    const excludedFilter = document.getElementById('filter-excl')?.value || 'All';
 
     rptState.filtered = rptState.allData.filter(row => {
       if (weekFilter !== 'All' && row.month !== weekFilter) return false;
@@ -168,17 +135,17 @@
   }
 
   function renderCharts() {
-    const bpwCtx = document.getElementById('chart-breaches-week')?.getContext('2d');
-    const slaCatCtx = document.getElementById('chart-sla-category')?.getContext('2d');
-    const langCtx = document.getElementById('chart-language')?.getContext('2d');
-    const excCtx = document.getElementById('chart-excluded')?.getContext('2d');
-
+    // Breaches per Week
+    const bpwCtx = document.getElementById('chart-week')?.getContext('2d');
+    if (bpwCtx && rptState.charts['week']) {
+      rptState.charts['week'].destroy();
+    }
     if (bpwCtx) {
       const weekData = {};
       rptState.filtered.forEach(row => {
         weekData[row.month] = (weekData[row.month] || 0) + 1;
       });
-      new Chart(bpwCtx, {
+      rptState.charts['week'] = new Chart(bpwCtx, {
         type: 'bar',
         data: {
           labels: Object.keys(weekData),
@@ -187,12 +154,17 @@
       });
     }
 
+    // SLA Category
+    const slaCatCtx = document.getElementById('chart-sla')?.getContext('2d');
+    if (slaCatCtx && rptState.charts['sla']) {
+      rptState.charts['sla'].destroy();
+    }
     if (slaCatCtx) {
       const slaData = {};
       rptState.filtered.forEach(row => {
         slaData[row.sla] = (slaData[row.sla] || 0) + 1;
       });
-      new Chart(slaCatCtx, {
+      rptState.charts['sla'] = new Chart(slaCatCtx, {
         type: 'pie',
         data: {
           labels: Object.keys(slaData),
@@ -207,48 +179,44 @@
     const aosTable = document.getElementById('aos-table');
     if (aosTable) {
       aosTable.innerHTML = '';
-      const th = document.createElement('thead');
-      th.innerHTML = '<tr><th>Ticket</th><th>AOS</th><th>Status</th><th>Month</th></tr>';
-      aosTable.appendChild(th);
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>Ticket</th><th>AOS</th><th>Status</th><th>Month</th></tr>';
+      aosTable.appendChild(thead);
       
-      const tb = document.createElement('tbody');
+      const tbody = document.createElement('tbody');
       rptState.filtered.forEach((row, i) => {
         if (i >= MAX_DISPLAY_ROWS) return;
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${row.ticket}</td><td>${row.aos}</td><td>${row.status}</td><td>${row.month}</td>`;
-        tb.appendChild(tr);
+        tbody.appendChild(tr);
       });
-      aosTable.appendChild(tb);
+      aosTable.appendChild(tbody);
     }
   }
 
   window.addEventListener('load', function() {
-    const fileInput = document.getElementById('file-input');
+    console.log('Reporter processor loaded');
+    
+    const fileInput = document.getElementById('reporter-file-input');
     if (fileInput) {
       fileInput.addEventListener('change', function(e) {
+        console.log('File selected:', e.target.files[0]?.name);
         loadFile(e.target.files[0]);
       });
+    } else {
+      console.warn('File input element not found');
     }
     
-    document.getElementById('week-filter')?.addEventListener('change', function() {
-      applyFilters();
-      renderCharts();
-      renderTables();
-    });
-    document.getElementById('sla-filter')?.addEventListener('change', function() {
-      applyFilters();
-      renderCharts();
-      renderTables();
-    });
-    document.getElementById('lang-filter')?.addEventListener('change', function() {
-      applyFilters();
-      renderCharts();
-      renderTables();
-    });
-    document.getElementById('excluded-filter')?.addEventListener('change', function() {
-      applyFilters();
-      renderCharts();
-      renderTables();
+    // Filter listeners
+    ['filter-week', 'filter-sla', 'filter-lang', 'filter-excl'].forEach(filterId => {
+      const elem = document.getElementById(filterId);
+      if (elem) {
+        elem.addEventListener('change', function() {
+          applyFilters();
+          renderCharts();
+          renderTables();
+        });
+      }
     });
   });
 })();
