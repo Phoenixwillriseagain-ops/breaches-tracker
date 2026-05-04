@@ -374,8 +374,8 @@ function renderKPIs() {
 // ---------- SIDE STATS ----------
 function renderSideStats() {
   const active = filtered.filter(r=>!r.excluded);
-  const grCount = active.filter(r=>r.sheet.includes('GR')).length;
-  const deCount = active.filter(r=>r.sheet.includes('DE')).length;
+  const grCount = active.filter(r=>r.sheet && r.sheet.includes('GR')).length;
+const deCount = active.filter(r=>r.sheet && r.sheet.includes('DE')).length;
   const aosCount = active.filter(r=>r.topic==='#SW#AOS').length;
   const weeks = [...new Set(active.map(r=>r.week).filter(w=>w>0))].sort((a,b)=>a-b);
   document.getElementById('sideStats').innerHTML = `
