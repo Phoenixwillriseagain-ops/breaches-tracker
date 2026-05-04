@@ -1,4 +1,4 @@
-// reporter-processor.js - Fixed column mapping with correct element IDs
+// reporter-processor.js - Fixed column mapping, normalization, and filter dropdowns
 
 (function() {
   'use strict';
@@ -11,7 +11,8 @@
     filtered: [],
     activeTab: 'overview',
     charts: {},
-    columnMap: {}
+    columnMap: {},
+    uniqueValues: {}
   };
 
   function clean(v) {
@@ -28,6 +29,51 @@
     if (!s) return 'N';
     if (['t', 'true', 'yes', 'y'].indexOf(s) !== -1) return 'Y';
     return 'N';
+  }
+
+  function extractWeek(v) {
+    if (!v) return 'Unknown';
+    const s = String(v).toLowerCase();
+    // Extract week number if present
+    const weekMatch = s.match(/w(\d+)|week[\s-]*(\d+)/);
+    if (weekMatch) return 'W' + (weekMatch[1] || weekMatch[2]);
+    // Extract month if present
+    const monthMatch = s.match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{1,2}[\/\-]\d{1,2}/);
+    if (monthMatch) return monthMatch[0];
+    // If it looks like a timestamp, extract just the date part
+    if (s.includes('summer time') || s.includes('gmt')) {
+      return s.split('(')[0].trim().split(' ').slice(0, 3).join(' ');
+    }
+    return clean(v).substring(0, 20);
+  }
+
+  function normSla(v) {
+    if (!v) return 'Unknown';
+    const lower = String(v).toLowerCase();
+    
+    // Check for SLA numbers/codes first
+    if (lower === '1' || lower.includes('1.')) return 'SLA-1';
+    if (lower === '2' || lower.includes('2.')) return 'SLA-2';
+    if (lower === '3' || lower.includes('3.')) return 'SLA-3';
+    if (lower === 'unknown' || lower === '') return 'Unknown';
+    
+    // Check for named SLAs
+    if (lower.includes('critical')) return 'Critical';
+    if (lower.includes('high')) return 'High';
+    if (lower.includes('medium')) return 'Medium';
+    if (lower.includes('low')) return 'Low';
+    
+    // Return as-is if it's already a code
+    return clean(v).toUpperCase();
+  }
+
+  function normAos(v) {
+    if (!v) return 'Unknown';
+    const lower = String(v).toLowerCase();
+    if (lower.includes('tick')) return 'Ticket';
+    if (lower.includes('incident')) return 'Incident';
+    if (lower.includes('request')) return 'Request';
+    return clean(v);
   }
 
   function loadFile(file) {
@@ -51,12 +97,9 @@
     wb.SheetNames.forEach(function(sn) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
       rows.forEach(function(r, idx) {
-        // Build lowercase header map on first iteration
         if (idx === 0) {
           Object.keys(r).forEach(key => {
             const lower = key.toLowerCase();
-            console.log('Header column:', key, '->', lower);
-            
             if (lower.includes('ticket') || lower.includes('incident')) colMap.ticket = key;
             if (lower.includes('week') || lower.includes('month') || lower.includes('date')) colMap.month = key;
             if (lower.includes('sla') || lower.includes('code')) colMap.sla = key;
@@ -75,10 +118,10 @@
 
         const prow = {
           ticket: ticket,
-          month: normKey(clean(r[colMap.month] || ''), 'Unknown'),
-          sla: normSla(clean(r[colMap.sla] || '')),
-          kml: normBoolLike(clean(r[colMap.kml] || '')),
-          aos: normAos(clean(r[colMap.aos] || '')),
+          month: extractWeek(r[colMap.month]),
+          sla: normSla(r[colMap.sla]),
+          kml: normBoolLike(r[colMap.kml]),
+          aos: normAos(r[colMap.aos]),
           status: normKey(clean(r[colMap.status] || ''), 'N/A'),
           breachType: normKey(clean(r[colMap.type] || ''), 'Unknown'),
           language: normKey(clean(r[colMap.lang] || ''), 'Unknown'),
@@ -89,33 +132,71 @@
       });
     });
 
-    console.log('Detected mappings:', colMap);
     console.log('Loaded records:', data.length);
     rptState.columnMap = colMap;
     rptState.allData = data;
     rptState.filtered = data.slice();
+    
+    // Extract unique values for dropdowns
+    populateUniqueValues();
+    updateFilterDropdowns();
     applyFilters();
     renderCharts();
     renderTables();
   }
 
-  function normSla(v) {
-    if (!v) return 'Unknown';
-    const lower = v.toLowerCase();
-    if (lower.includes('critical')) return 'Critical';
-    if (lower.includes('high')) return 'High';
-    if (lower.includes('medium')) return 'Medium';
-    if (lower.includes('low')) return 'Low';
-    return v.toUpperCase();
+  function populateUniqueValues() {
+    rptState.uniqueValues = {
+      months: [],
+      slas: [],
+      languages: [],
+      excluded: ['Y', 'N']
+    };
+    
+    rptState.allData.forEach(row => {
+      if (rptState.uniqueValues.months.indexOf(row.month) === -1) {
+        rptState.uniqueValues.months.push(row.month);
+      }
+      if (rptState.uniqueValues.slas.indexOf(row.sla) === -1) {
+        rptState.uniqueValues.slas.push(row.sla);
+      }
+      if (rptState.uniqueValues.languages.indexOf(row.language) === -1) {
+        rptState.uniqueValues.languages.push(row.language);
+      }
+    });
+    
+    rptState.uniqueValues.months.sort();
+    rptState.uniqueValues.slas.sort();
+    rptState.uniqueValues.languages.sort();
   }
 
-  function normAos(v) {
-    if (!v) return 'Unknown';
-    const lower = v.toLowerCase();
-    if (lower.includes('tick')) return 'Ticket';
-    if (lower.includes('incident')) return 'Incident';
-    if (lower.includes('request')) return 'Request';
-    return v;
+  function updateFilterDropdowns() {
+    const weekSelect = document.getElementById('filter-week');
+    const slaSelect = document.getElementById('filter-sla');
+    const langSelect = document.getElementById('filter-lang');
+    const exclSelect = document.getElementById('filter-excl');
+    
+    if (weekSelect) {
+      const html = '<option value="All">All</option>' + 
+        rptState.uniqueValues.months.map(m => `<option value="${m}">${m}</option>`).join('');
+      weekSelect.innerHTML = html;
+    }
+    
+    if (slaSelect) {
+      const html = '<option value="All">All</option>' + 
+        rptState.uniqueValues.slas.map(s => `<option value="${s}">${s}</option>`).join('');
+      slaSelect.innerHTML = html;
+    }
+    
+    if (langSelect) {
+      const html = '<option value="All">All</option>' + 
+        rptState.uniqueValues.languages.map(l => `<option value="${l}">${l}</option>`).join('');
+      langSelect.innerHTML = html;
+    }
+    
+    if (exclSelect) {
+      exclSelect.innerHTML = '<option value="All">All</option><option value="Y">Yes</option><option value="N">No</option>';
+    }
   }
 
   function applyFilters() {
@@ -140,16 +221,21 @@
     if (bpwCtx && rptState.charts['week']) {
       rptState.charts['week'].destroy();
     }
-    if (bpwCtx) {
+    if (bpwCtx && rptState.filtered.length > 0) {
       const weekData = {};
       rptState.filtered.forEach(row => {
         weekData[row.month] = (weekData[row.month] || 0) + 1;
       });
+      const labels = Object.keys(weekData).sort();
       rptState.charts['week'] = new Chart(bpwCtx, {
         type: 'bar',
         data: {
-          labels: Object.keys(weekData),
-          datasets: [{ label: 'Breaches', data: Object.values(weekData), backgroundColor: '#0099cc' }]
+          labels: labels,
+          datasets: [{ label: 'Breaches', data: labels.map(l => weekData[l]), backgroundColor: '#0099cc' }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } }
         }
       });
     }
@@ -159,23 +245,23 @@
     if (slaCatCtx && rptState.charts['sla']) {
       rptState.charts['sla'].destroy();
     }
-    if (slaCatCtx) {
+    if (slaCatCtx && rptState.filtered.length > 0) {
       const slaData = {};
       rptState.filtered.forEach(row => {
         slaData[row.sla] = (slaData[row.sla] || 0) + 1;
       });
+      const colors = ['#ff6b6b', '#ffa500', '#4ecdc4', '#45b7d1', '#96ceb4', '#dda15e'];
       rptState.charts['sla'] = new Chart(slaCatCtx, {
         type: 'pie',
         data: {
           labels: Object.keys(slaData),
-          datasets: [{ data: Object.values(slaData), backgroundColor: ['#ff6b6b', '#ffa500', '#4ecdc4', '#45b7d1'] }]
+          datasets: [{ data: Object.values(slaData), backgroundColor: colors }]
         }
       });
     }
   }
 
   function renderTables() {
-    // AOS Portal Issues
     const aosTable = document.getElementById('aos-table');
     if (aosTable) {
       aosTable.innerHTML = '';
@@ -203,11 +289,8 @@
         console.log('File selected:', e.target.files[0]?.name);
         loadFile(e.target.files[0]);
       });
-    } else {
-      console.warn('File input element not found');
     }
     
-    // Filter listeners
     ['filter-week', 'filter-sla', 'filter-lang', 'filter-excl'].forEach(filterId => {
       const elem = document.getElementById(filterId);
       if (elem) {
