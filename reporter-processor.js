@@ -1,4 +1,4 @@
-// reporter-processor.js - Improved with smart column detection
+// reporter-processor.js - Auto-mapping all Excel columns
 
 (function() {
   'use strict';
@@ -11,6 +11,7 @@
     filtered: [],
     activeTab: 'overview',
     charts: {},
+    columnMap: {}
   };
 
   function clean(v) {
@@ -25,7 +26,7 @@
   function normBoolLike(v) {
     var s = clean(v).toLowerCase();
     if (!s) return '0';
-    if (['1', 'true', 'yes', 'y', 'excluded'].indexOf(s) !== -1) return '1';
+    if (['1', 'true', 'yes', 'y'].indexOf(s) !== -1) return '1';
     return '0';
   }
 
@@ -42,42 +43,36 @@
     return 'N';
   }
 
-  // Intelligent column finder
-  function findColumn(row, keywords) {
-    if (!Array.isArray(keywords)) keywords = [keywords];
+  // Auto-detect column mappings from first row
+  function detectColumns(firstRow) {
+    const colMap = { ticket: '', month: '', sla: '', km1: '', aos: '', reason: '', lang: '', type: '', status: '', excluded: '' };
+    const rowKeys = Object.keys(firstRow);
     
-    const rowKeys = Object.keys(row);
+    console.log('Available columns:', rowKeys);
     
-    // Exact match first
-    for (let keyword of keywords) {
-      if (row[keyword] !== undefined && row[keyword] !== null && row[keyword] !== '') {
-        return row[keyword];
-      }
-    }
+    // For each row key, try to match it to a field
+    rowKeys.forEach(function(key) {
+      const keyLower = clean(key).toLowerCase().replace(/[_\s-]/g, '');
+      
+      if (keyLower.includes('ticket') || keyLower.includes('incident')) colMap.ticket = key;
+      else if (keyLower.includes('month') || keyLower.includes('week') || keyLower.includes('date')) colMap.month = key;
+      else if (keyLower.includes('sla') || keyLower.includes('code')) colMap.sla = key;
+      else if (keyLower.includes('km1') || keyLower.includes('km')) colMap.km1 = key;
+      else if (keyLower.includes('aos') || keyLower.includes('portal')) colMap.aos = key;
+      else if (keyLower.includes('reason') || keyLower.includes('breach')) colMap.reason = key;
+      else if (keyLower.includes('lang') || keyLower.includes('language')) colMap.lang = key;
+      else if (keyLower.includes('type') || keyLower.includes('app') || keyLower.includes('application')) colMap.type = key;
+      else if (keyLower.includes('status') || keyLower.includes('state')) colMap.status = key;
+      else if (keyLower.includes('exclude')) colMap.excluded = key;
+    });
     
-    // Case-insensitive exact match
-    const keywordsLower = keywords.map(k => clean(k).toLowerCase());
-    for (let rowKey of rowKeys) {
-      const cleanedKey = clean(rowKey).toLowerCase();
-      if (keywordsLower.includes(cleanedKey)) {
-        const val = row[rowKey];
-        if (val !== undefined && val !== null && val !== '') return val;
-      }
-    }
+    // Fallback: if a column wasn't matched, use first available
+    if (!colMap.ticket && rowKeys.length > 0) colMap.ticket = rowKeys[0];
+    if (!colMap.month && rowKeys.length > 1) colMap.month = rowKeys[1];
+    if (!colMap.sla && rowKeys.length > 2) colMap.sla = rowKeys[2];
     
-    // Partial/fuzzy match
-    for (let keyword of keywords) {
-      const searchTerm = clean(keyword).toLowerCase();
-      for (let rowKey of rowKeys) {
-        const cleanedKey = clean(rowKey).toLowerCase();
-        if (cleanedKey.includes(searchTerm) || searchTerm.includes(cleanedKey)) {
-          const val = row[rowKey];
-          if (val !== undefined && val !== null && val !== '') return val;
-        }
-      }
-    }
-    
-    return '';
+    console.log('Detected mappings:', colMap);
+    return colMap;
   }
 
   function loadFile(file) {
@@ -96,42 +91,39 @@
 
   function processWorkbook(wb) {
     const data = [];
+    let colMap = null;
     
     wb.SheetNames.forEach(function(sn) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
       
-      rows.forEach(function(r) {
-        const ticket = findColumn(r, ['Incident Ticket', 'Ticket', 'ticket', 'Incident ID', 'ID']);
+      rows.forEach(function(r, idx) {
+        // Auto-detect columns from first row
+        if (!colMap) {
+          colMap = detectColumns(r);
+          rptState.columnMap = colMap;
+        }
+        
+        const ticket = clean(r[colMap.ticket] || '');
         if (!ticket) return;
         
-        const monthVal = findColumn(r, ['Month', 'Date', 'Created', 'Week', 'month', 'date', 'week']);
-        const slaVal = findColumn(r, ['SLA Code', 'SLA', 'SLA_Code', 'sla', 'KSL']);
-        const km1Val = findColumn(r, ['KM-1', 'KM1', 'KM Code', 'km1', 'km-1']);
-        const aosVal = findColumn(r, ['AOS Portal', 'AOS', 'Portal', 'aos', 'aos_portal']);
-        const statusVal = findColumn(r, ['Status', 'State', 'status', 'state']);
-        const breachTypeVal = findColumn(r, ['Breach Type', 'Type', 'Application', 'breach_type', 'type', 'application']);
-        const langVal = findColumn(r, ['Language', 'Lang', 'language', 'lang', 'Language Code']);
-        const excludedVal = findColumn(r, ['Excluded', 'Exclude', 'excluded']);
-        const reasonVal = findColumn(r, ['Reason', 'Breach Reason', 'reason', 'breach_reason']);
-        
         const row = {
-          ticket: clean(ticket),
-          month: normKey(monthVal, 'Unknown'),
-          sla: normSla(slaVal),
-          km1: normBoolLike(km1Val),
-          aos: normAos(aosVal),
-          status: normKey(statusVal, 'N/A'),
-          breachType: normKey(breachTypeVal, 'Unknown'),
-          language: normKey(langVal, 'Unknown'),
-          excluded: normBoolLike(excludedVal),
-          reason: normKey(reasonVal, 'Unknown'),
+          ticket: ticket,
+          month: normKey(clean(r[colMap.month] || ''), 'Unknown'),
+          sla: normSla(clean(r[colMap.sla] || '')),
+          km1: normBoolLike(clean(r[colMap.km1] || '')),
+          aos: normAos(clean(r[colMap.aos] || '')),
+          status: normKey(clean(r[colMap.status] || ''), 'N/A'),
+          breachType: normKey(clean(r[colMap.type] || ''), 'Unknown'),
+          language: normKey(clean(r[colMap.lang] || ''), 'Unknown'),
+          excluded: normBoolLike(clean(r[colMap.excluded] || '')),
+          reason: normKey(clean(r[colMap.reason] || ''), 'Unknown'),
           details: r
         };
         data.push(row);
       });
     });
 
-    console.log('Processed', data.length, 'records');
+    console.log('Processed', data.length, 'records with mappings:', rptState.columnMap);
     rptState.allData = data;
     applyFilters();
     renderKPIs();
