@@ -238,7 +238,7 @@ let page = 1;
 const PER_PAGE = 50;
 
 // ---------- INIT ----------
-  document.getElementById('csvUpload').addEventListener('change', function(e) {
+document.getElementById('csvUpload').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
   const status = document.getElementById('upload-status');
@@ -261,7 +261,7 @@ const PER_PAGE = 50;
   };
   reader.readAsArrayBuffer(file);
 });
- window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
   populateFilters();
   applyFilters();
 });
