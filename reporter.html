@@ -1,1 +1,124 @@
-<!DOCTYPE html><html lang="en" data-theme="light"><head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Breaches Reporter</title> <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet"> <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script> <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script> <link href="styles.css" rel="stylesheet"></head><body> <nav class="app-nav"> <a href="index.html">Breaches Tracker</a> <a href="reporter.html" class="active">Reporter</a> </nav> <header class="header"> <div class="logo">Breaches Reporter</div> <div class="header-right"> <button class="theme-btn" data-theme-toggle> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <circle cx="12" cy="12" r="5"></circle> <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path> </svg> </button> </div> </header> <main class="main"> <div id="upload-area"> <div class="upload-zone variant-card"> <h3>Breaches Reporter</h3> <p>Upload the <strong>allBreaches</strong> export to analyze patterns across all categories</p> <button class="upload-btn" onclick="document.getElementById('reporter-file-input').click()">Select file</button> <input type="file" id="reporter-file-input" accept=".xlsx,.xls"> </div> </div> <div class="kpis" id="kpi-area"></div> <div id="months-area" class="months-list"></div> <div class="toolbar"> <div class="filters"> <div class="filter-group"> <label for="filter-week">Week</label> <select id="filter-week"><option value="">All</option></select> </div> <div class="filter-group"> <label for="filter-sla">SLA</label> <select id="filter-sla"><option value="">All</option></select> </div> <div class="filter-group"> <label for="filter-lang">Language</label> <select id="filter-lang"><option value="">All</option></select> </div> <div class="filter-group"> <label for="filter-excl">Excluded</label> <select id="filter-excl"><option value="">All</option><option value="1">Excluded</option><option value="0">Counted</option></select> </div> </div> <div class="btn-group"> <button class="btn-outline" onclick="window.RPT.resetToUpload()">Replace File</button> <button class="btn-outline" onclick="window.RPT.clearFilters()">Clear Filters</button> <button class="btn-outline" onclick="window.RPT.exportFiltered()">Export View</button> <button class="btn-outline" onclick="window.RPT.exportReport()">Export Full</button> </div> </div> <div class="tabs-bar" id="tabs-bar"> <button class="tab-btn active" data-tab="overview" onclick="switchTab(event, 'overview')">Overview</button> <button class="tab-btn" data-tab="aos" onclick="switchTab(event, 'aos')">AOS Portal Issues</button> <button class="tab-btn" data-tab="km1" onclick="switchTab(event, 'km1')">KM-1 Analysis</button> </div> <div id="tab-overview" class="tab-content active"> <div class="charts-grid"> <div class="chart-card"><h4>Breaches per Week</h4><canvas id="chart-week"></canvas></div> <div class="chart-card"><h4>SLA Category</h4><canvas id="chart-sla"></canvas></div> <div class="chart-card"><h4>Language Split</h4><canvas id="chart-lang"></canvas></div> <div class="chart-card"><h4>Excluded vs Counted</h4><canvas id="chart-excl"></canvas></div> </div> </div> <div id="tab-aos" class="tab-content" style="display:none"> <div class="table-wrap"><table class="data-table" id="aos-table"></table></div> </div> <div id="tab-km1" class="tab-content" style="display:none"> <div class="table-wrap"><table class="data-table" id="km1-table"></table></div> </div> </main> <div id="status" class="status-bar" style="display:none"></div> <script src="config.js"></script> <script src="reporter-processor.js"></script> <script> function switchTab(event, tabName) { const tabs = document.querySelectorAll('.tab-content'); tabs.forEach(t => t.classList.remove('active')); tabs.forEach(t => t.style.display = 'none'); document.getElementById('tab-' + tabName).classList.add('active'); document.getElementById('tab-' + tabName).style.display = 'block'; document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); event.target.classList.add('active'); } document.addEventListener('DOMContentLoaded', function() { window.RPT.init(); }); </script></body></html>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Breaches Reporter</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+  <nav class="app-nav">
+    <a href="index.html" class="nav-item">Breaches Tracker</a>
+    <a href="reporter.html" class="nav-item active">Reporter</a>
+  </nav>
+
+  <header class="header">
+    <h1>Breaches Reporter</h1>
+    <div class="theme-toggle"><button id="theme-toggle" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light')">🌙</button></div>
+  </header>
+
+  <div class="upload-area">
+    <div class="upload-zone upload-card">
+      <h3>Breaches Reporter</h3>
+      <p>Upload the <strong>allBreaches</strong> export to analyze patterns across all categories</p>
+      <input type="file" id="reporter-file-input" accept=".xlsx,.xls" />
+    </div>
+
+    <div class="kpis kpi-area">
+      <div id="kpi-months" class="kpi"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <select id="filter-week"><option value="">All</option></select>
+    <div class="filter-group">
+      <label for="filter-sla">SLA</label>
+      <select id="filter-sla"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-lang">Language</label>
+      <select id="filter-lang"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-excl">Excluded</label>
+      <select id="filter-excl"><option value="">All</option><option value="1">Excluded</option><option value="0">Counted</option></select>
+    </div>
+    <button class="btn btn-outline" onclick="window.RPT.replaceFile()">Replace File</button>
+    <button class="btn btn-outline" onclick="window.RPT.clearFilters()">Clear Filters</button>
+    <button class="btn btn-outline" onclick="window.RPT.exportFiltered()">Export View</button>
+    <button class="btn btn-outline" onclick="window.RPT.exportFull()">Export Full</button>
+  </div>
+
+  <div class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" data-tab="overview" onclick="switchTab(event, 'overview')">Overview</button>
+    <button class="tab-btn" data-tab="aos" onclick="switchTab(event, 'aos')">AOS Portal Issues</button>
+    <button class="tab-btn" data-tab="km1" onclick="switchTab(event, 'km1')">KM-1 Analysis</button>
+  </div>
+
+  <div id="tab-overview" class="tab-content active">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h4>Breaches per Week</h4>
+        <canvas id="chart-week"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>SLA Category</h4>
+        <canvas id="chart-sla"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>Language Split</h4>
+        <canvas id="chart-lang"></canvas>
+      </div>
+      <div class="chart-card">
+        <h4>Excluded vs Counted</h4>
+        <canvas id="chart-excl"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-aos" class="tab-content" style="display:none">
+    <div class="data-table" id="aos-table">
+      <table class="aos-table">
+        <thead><tr><th>Date</th><th>Ticket</th><th>Category</th><th>Status</th><th>Days</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-km1" class="tab-content" style="display:none">
+    <div class="data-table" id="km1-table">
+      <table class="km1-table">
+        <thead><tr><th>Date</th><th>Ticket</th><th>Category</th><th>Status</th><th>Days</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="data-processor.js"></script>
+  <script src="reporter-processor.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <script src="reporter-charts.js"></script>
+  <script src="reporter-exporter.js"></script>
+  <script src="data-validator.js"></script>
+  <script src="ui-renderer.js"></script>
+
+  <script>
+    function switchTab(event, tabName) {
+      const tabs = document.querySelectorAll('.tab-content');
+      tabs.forEach(t => t.classList.remove('active'));
+      tabs.forEach(t => t.style.display = 'none');
+      document.getElementById('tab-' + tabName).classList.add('active');
+      document.getElementById('tab-' + tabName).style.display = 'block';
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      window.RPT.init();
+    });
+  </script>
+</body>
+</html>
