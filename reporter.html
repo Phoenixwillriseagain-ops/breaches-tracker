@@ -32,8 +32,8 @@
       <div class="upload-zone variant-card">
         <h3>Breaches Reporter</h3>
         <p>Upload the <strong>allBreaches</strong> export to analyze patterns across all categories</p>
-        <button class="upload-btn">Select file</button>
-        <input type="file" id="reporter-file-input" accept=".xlsx,.xls">
+        <button class="upload-btn" onclick="document.getElementById('reporter-file-input').click()">Select file</button>
+        <input type="file" id="reporter-file-input" accep onchange="window.RPT.loadFile(this.files[0])t=".xlsx,.xls">
       </div>
     </div>
 
