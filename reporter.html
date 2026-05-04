@@ -261,9 +261,7 @@ const PER_PAGE = 50;
   };
   reader.readAsArrayBuffer(file);
 });
-  reader.readAsText(file, 'UTF-8');
-});
-window.addEventListener('DOMContentLoaded', () => {
+ window.addEventListener('DOMContentLoaded', () => {
   populateFilters();
   applyFilters();
 });
