@@ -157,13 +157,11 @@ tr:hover td { background: #f9f8f5; }
 <div class="main">
 <!-- UPLOAD BAR -->
 <div id="upload-bar" style="width:100%;background:var(--color-surface);padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);position:sticky;top:0;z-index:10;">
-  <label for="csvUpload" style="font-weight:600;font-size:13px;color:var(--color-text);">📂 Carica nuovo file CSV:</label>
-  <input type="file" id="csvUpload" accept=".csv"
+  <label for="csvUpload" style="font-weight:600;font-size:13px;color:var(--color-text);">📂 Upload new file here:</label>
+  <input type="file" id="csvUpload" accept=".xlsx"
     style="font-size:13px;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 8px;background:var(--color-bg);color:var(--color-text);cursor:pointer;">
   <span id="upload-status" style="font-size:12px;color:var(--color-success);"></span>
 </div>
-
-<aside class="sidebar">
   <aside class="sidebar">
     <div class="filter-section">
       <h3>Filters</h3>
