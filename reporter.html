@@ -40,7 +40,7 @@ header { background: var(--color-surface); border-bottom: 1px solid var(--color-
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; color: var(--color-text); }
 .logo svg { color: var(--color-primary); }
 .header-meta { margin-left: auto; color: var(--color-text-muted); font-size: 12px; }
-.main { display: flex; flex: 1; gap: 0; }
+.main { display: flex; flex: 1; gap: 0; flex-wrap: wrap; align-content: flex-start; }
 .sidebar { width: 260px; min-width: 260px; background: var(--color-surface); border-right: 1px solid var(--color-border); padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
 .content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
 
@@ -157,7 +157,7 @@ tr:hover td { background: #f9f8f5; }
 
 <div class="main">
 <!-- UPLOAD BAR -->
-<<div id="upload-bar" style="width:100%;background:var(--color-surface);padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);flex:0 0 100%;order:-1;">
+<div id="upload-bar" style="width:100%;background:var(--color-surface);padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);flex:0 0 100%;order:-1;">
   <label for="csvUpload" style="font-weight:600;font-size:13px;color:var(--color-text);">📂 Upload new file here:</label>
   <input type="file" id="csvUpload" accept=".xlsx"
     style="font-size:13px;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 8px;background:var(--color-bg);color:var(--color-text);cursor:pointer;">
