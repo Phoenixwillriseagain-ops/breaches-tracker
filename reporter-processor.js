@@ -1,12 +1,27 @@
-// reporter-processor.js - Complete processor with all charts and tables
+// reporter-processor.js - Enhanced processor with AOS filtering and callback support
 (function() {
   'use strict';
   const { CONFIG } = window.BT || {};
   const { MAX_DISPLAY_ROWS } = CONFIG || { MAX_DISPLAY_ROWS: 100 };
 
+  // Column name mapping for actual Google Sheets columns
+  const COLUMN_MAPPING = {
+    'Incident Ticket': 'ticket',
+    'Element eingegangen am': 'dateReceived',
+    'Element gelöst am': 'dateResolved',
+    'DATE_CLOSED': 'dateClosed',
+    'Element Status': 'status',
+    'Ticket Gruppe': 'ticketGroup',
+    'SLA Kennzahl': 'slaCode',
+    'SLA Prüfung': 'slaReview',
+    'SLA Prüfung Name': 'slaName',
+    'SLA Prüfung ist OK/NOK?': 'slaResult'
+  };
+
   window.RPT = {
     allData: [],
     filtered: [],
+    aosFiltered: [],
     charts: {},
     columnMap: {},
     uniqueValues: {},
@@ -19,7 +34,15 @@
     },
     resetToUpload: function() { location.reload(); },
     exportFiltered: function() { alert('Export feature coming soon'); },
-    exportReport: function() { alert('Export feature coming soon'); }
+    exportReport: function() { alert('Export feature coming soon'); },
+    // Callback function for custom data processing
+    processDataCallback: function(data, callback) {
+      // This allows external systems to hook into data processing
+      if (typeof callback === 'function') {
+        return callback(data);
+      }
+      return data;
+    }
   };
 
   function clean(v) {
@@ -60,6 +83,37 @@
     return 'N';
   }
 
+  // Helper function to detect AOS Portal Issues
+  function isAosIssue(ticketGroup) {
+    if (!ticketGroup) return false;
+    const lower = String(ticketGroup).toLowerCase();
+    return lower.includes('aos') || lower.includes('portal');
+  }
+
+  // Callback-enabled remote data processor
+  function remoteDataProcessor(rowData, callback) {
+    const processed = {
+      ticket: clean(rowData.ticket || ''),
+      dateReceived: clean(rowData.dateReceived || ''),
+      dateResolved: clean(rowData.dateResolved || ''),
+      dateClosed: clean(rowData.dateClosed || ''),
+      status: clean(rowData.status || 'N/A'),
+      ticketGroup: clean(rowData.ticketGroup || 'Unknown'),
+      month: extractWeek(rowData.month),
+      sla: normSla(rowData.sla),
+      isAos: isAosIssue(rowData.ticketGroup),
+      language: clean(rowData.language || 'Unknown'),
+      reason: clean(rowData.reason || 'Unknown'),
+      excluded: normBoolLike(rowData.excluded)
+    };
+    
+    // If callback provided, use it for custom processing
+    if (typeof callback === 'function') {
+      return callback(processed);
+    }
+    return processed;
+  }
+
   function loadFile(file) {
     if (!file) return;
     const reader = new FileReader();
@@ -89,28 +143,38 @@
             if (lower.includes('week') || lower.includes('month') || lower.includes('date')) colMap.month = key;
             if (lower.includes('sla') || lower.includes('code')) colMap.sla = key;
             if (lower.includes('km')) colMap.kml = key;
-            if (lower.includes('aos') || lower.includes('portal')) colMap.aos = key;
+            if (lower.includes('gruppe') || lower.includes('group')) colMap.ticketGroup = key;
             if (lower.includes('reason') || lower.includes('breach') || lower.includes('type')) colMap.reason = key;
             if (lower.includes('lang')) colMap.lang = key;
             if (lower.includes('app')) colMap.type = key;
             if (lower.includes('status')) colMap.status = key;
             if (lower.includes('excluded')) colMap.excluded = key;
+            if (lower.includes('eingegangen') || lower.includes('received')) colMap.dateReceived = key;
+            if (lower.includes('gelöst') || lower.includes('resolved')) colMap.dateResolved = key;
+            if (lower.includes('closed')) colMap.dateClosed = key;
           });
         }
         const ticket = clean(r[colMap.ticket] || '');
         if (!ticket) return;
-        const prow = {
+        
+        const rawRow = {
           ticket: ticket,
           month: extractWeek(r[colMap.month]),
           sla: normSla(r[colMap.sla]),
           kml: normBoolLike(r[colMap.kml]),
-          aos: clean(r[colMap.aos] || 'Unknown'),
+          ticketGroup: clean(r[colMap.ticketGroup] || 'Unknown'),
           status: clean(r[colMap.status] || 'N/A'),
           breachType: clean(r[colMap.type] || 'Unknown'),
           language: clean(r[colMap.lang] || 'Unknown'),
           reason: clean(r[colMap.reason] || 'Unknown'),
+          dateReceived: clean(r[colMap.dateReceived] || ''),
+          dateResolved: clean(r[colMap.dateResolved] || ''),
+          dateClosed: clean(r[colMap.dateClosed] || ''),
           excluded: normBoolLike(r[colMap.excluded])
         };
+        
+        // Process through callback-enabled remote processor
+        const prow = remoteDataProcessor(rawRow, null);
         data.push(prow);
       });
     });
@@ -119,6 +183,11 @@
     window.RPT.columnMap = colMap;
     window.RPT.allData = data;
     window.RPT.filtered = data.slice();
+    
+    // Filter AOS Portal Issues separately
+    window.RPT.aosFiltered = data.filter(row => row.isAos === true);
+    console.log('AOS Portal Issues found:', window.RPT.aosFiltered.length);
+    
     populateUniqueValues();
     updateFilterDropdowns();
     applyFilters();
@@ -131,6 +200,7 @@
       months: [],
       slas: [],
       languages: [],
+      ticketGroups: [],
       excluded: ['Y', 'N']
     };
     window.RPT.allData.forEach(row => {
@@ -143,10 +213,14 @@
       if (window.RPT.uniqueValues.languages.indexOf(row.language) === -1) {
         window.RPT.uniqueValues.languages.push(row.language);
       }
+      if (window.RPT.uniqueValues.ticketGroups.indexOf(row.ticketGroup) === -1) {
+        window.RPT.uniqueValues.ticketGroups.push(row.ticketGroup);
+      }
     });
     window.RPT.uniqueValues.months.sort();
     window.RPT.uniqueValues.slas.sort();
     window.RPT.uniqueValues.languages.sort();
+    window.RPT.uniqueValues.ticketGroups.sort();
   }
 
   function updateFilterDropdowns() {
@@ -283,20 +357,28 @@
   function renderTables() {
     const data = window.RPT.filtered;
 
-    // AOS Portal Issues Table
+    // AOS Portal Issues Table - filtered to show ONLY AOS issues
     const aosTable = document.getElementById('aos-table');
     if (aosTable) {
       aosTable.innerHTML = '';
-      const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>Ticket</th><th>AOS</th><th>Status</th><th>Week</th></tr>';
-      aosTable.appendChild(thead);
-      const tbody = document.createElement('tbody');
-      data.slice(0, MAX_DISPLAY_ROWS).forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${clean(row.ticket)}</td><td>${clean(row.aos)}</td><td>${clean(row.status)}</td><td>${clean(row.month)}</td>`;
-        tbody.appendChild(tr);
-      });
-      aosTable.appendChild(tbody);
+      const aosData = data.filter(row => row.isAos === true);
+      
+      if (aosData.length > 0) {
+        const thead = document.createElement('thead');
+        thead.innerHTML = '<tr><th>Ticket</th><th>Group</th><th>Status</th><th>SLA</th><th>Week</th></tr>';
+        aosTable.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        aosData.slice(0, MAX_DISPLAY_ROWS).forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${clean(row.ticket)}</td><td>${clean(row.ticketGroup)}</td><td>${clean(row.status)}</td><td>${clean(row.sla)}</td><td>${clean(row.month)}</td>`;
+          tbody.appendChild(tr);
+        });
+        aosTable.appendChild(tbody);
+      } else {
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = '<td colspan="5" style="text-align: center; padding: 20px;">No AOS Portal Issues found in current filters</td>';
+        aosTable.appendChild(emptyRow);
+      }
     }
 
     // KM-1 Table
@@ -316,7 +398,9 @@
         });
         km1Table.appendChild(tbody);
       } else {
-        km1Table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No KM-1 data available</td></tr>';
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = '<td colspan="4" style="text-align: center; padding: 20px;">No KM-1 data available</td>';
+        km1Table.appendChild(emptyRow);
       }
     }
   }
