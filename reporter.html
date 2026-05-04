@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Breaches Reporter</title>
@@ -156,7 +157,7 @@ tr:hover td { background: #f9f8f5; }
 
 <div class="main">
 <!-- UPLOAD BAR -->
-<div id="upload-bar" style="width:100%;background:var(--color-surface);padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);position:sticky;top:0;z-index:10;">
+<<div id="upload-bar" style="width:100%;background:var(--color-surface);padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);flex:0 0 100%;order:-1;">
   <label for="csvUpload" style="font-weight:600;font-size:13px;color:var(--color-text);">📂 Upload new file here:</label>
   <input type="file" id="csvUpload" accept=".xlsx"
     style="font-size:13px;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 8px;background:var(--color-bg);color:var(--color-text);cursor:pointer;">
@@ -245,18 +246,12 @@ const PER_PAGE = 50;
   const reader = new FileReader();
   reader.onload = function(ev) {
     try {
-      const text = ev.target.result;
-      const lines = text.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-      const parsed = lines.slice(1).map(line => {
-        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = vals[i] ?? '');
-        return obj;
-      });
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const parsed = XLSX.utils.sheet_to_json(ws, {defval:''});
       RAW.length = 0;
       parsed.forEach(r => RAW.push(r));
-      buildFilters();
+      populateFilters();
       applyFilters();
       status.textContent = `✅ ${parsed.length} righe caricate`;
     } catch(err) {
@@ -264,6 +259,8 @@ const PER_PAGE = 50;
       console.error(err);
     }
   };
+  reader.readAsArrayBuffer(file);
+});
   reader.readAsText(file, 'UTF-8');
 });
 window.addEventListener('DOMContentLoaded', () => {
