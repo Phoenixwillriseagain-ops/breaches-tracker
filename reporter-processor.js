@@ -1,8 +1,6 @@
 // reporter-processor.js - Complete processor with all charts and tables
-
 (function() {
   'use strict';
-
   const { CONFIG } = window.BT || {};
   const { MAX_DISPLAY_ROWS } = CONFIG || { MAX_DISPLAY_ROWS: 100 };
 
@@ -13,7 +11,12 @@
     columnMap: {},
     uniqueValues: {},
     loadFile: function(file) { loadFile(file); },
-    clearFilters: function() { document.querySelectorAll('.filter-group select').forEach(s => s.value = 'All'); applyFilters(); renderCharts(); renderTables(); },
+    clearFilters: function() {
+      document.querySelectorAll('.filter-group select').forEach(s => s.value = 'All');
+      applyFilters();
+      renderCharts();
+      renderTables();
+    },
     resetToUpload: function() { location.reload(); },
     exportFiltered: function() { alert('Export feature coming soon'); },
     exportReport: function() { alert('Export feature coming soon'); }
@@ -66,6 +69,7 @@
         processWorkbook(wb);
       } catch (err) {
         console.error('Error loading file:', err);
+        alert('Error loading file: ' + err.message);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -93,10 +97,8 @@
             if (lower.includes('excluded')) colMap.excluded = key;
           });
         }
-        
         const ticket = clean(r[colMap.ticket] || '');
         if (!ticket) return;
-
         const prow = {
           ticket: ticket,
           month: extractWeek(r[colMap.month]),
@@ -131,7 +133,6 @@
       languages: [],
       excluded: ['Y', 'N']
     };
-    
     window.RPT.allData.forEach(row => {
       if (window.RPT.uniqueValues.months.indexOf(row.month) === -1) {
         window.RPT.uniqueValues.months.push(row.month);
@@ -143,7 +144,6 @@
         window.RPT.uniqueValues.languages.push(row.language);
       }
     });
-    
     window.RPT.uniqueValues.months.sort();
     window.RPT.uniqueValues.slas.sort();
     window.RPT.uniqueValues.languages.sort();
@@ -154,25 +154,22 @@
     const slaSelect = document.getElementById('filter-sla');
     const langSelect = document.getElementById('filter-lang');
     const exclSelect = document.getElementById('filter-excl');
-    
+
     if (weekSelect) {
-      const html = '<option value="All">All</option>' + 
+      const html = '<option value="All">All</option>' +
         window.RPT.uniqueValues.months.map(m => `<option value="${m}">${m}</option>`).join('');
       weekSelect.innerHTML = html;
     }
-    
     if (slaSelect) {
-      const html = '<option value="All">All</option>' + 
+      const html = '<option value="All">All</option>' +
         window.RPT.uniqueValues.slas.map(s => `<option value="${s}">${s}</option>`).join('');
       slaSelect.innerHTML = html;
     }
-    
     if (langSelect) {
-      const html = '<option value="All">All</option>' + 
+      const html = '<option value="All">All</option>' +
         window.RPT.uniqueValues.languages.map(l => `<option value="${l}">${l}</option>`).join('');
       langSelect.innerHTML = html;
     }
-    
     if (exclSelect) {
       exclSelect.innerHTML = '<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
     }
@@ -204,13 +201,19 @@
     if (bpwCtx) {
       if (window.RPT.charts['week']) window.RPT.charts['week'].destroy();
       const weekData = {};
-      data.forEach(row => { weekData[row.month] = (weekData[row.month] || 0) + 1; });
+      data.forEach(row => {
+        weekData[row.month] = (weekData[row.month] || 0) + 1;
+      });
       const labels = Object.keys(weekData).sort();
       window.RPT.charts['week'] = new Chart(bpwCtx, {
         type: 'bar',
         data: {
           labels: labels,
-          datasets: [{ label: 'Breaches', data: labels.map(l => weekData[l]), backgroundColor: '#0099cc' }]
+          datasets: [{
+            label: 'Breaches',
+            data: labels.map(l => weekData[l]),
+            backgroundColor: '#0099cc'
+          }]
         }
       });
     }
@@ -220,12 +223,17 @@
     if (slaCatCtx) {
       if (window.RPT.charts['sla']) window.RPT.charts['sla'].destroy();
       const slaData = {};
-      data.forEach(row => { slaData[row.sla] = (slaData[row.sla] || 0) + 1; });
+      data.forEach(row => {
+        slaData[row.sla] = (slaData[row.sla] || 0) + 1;
+      });
       window.RPT.charts['sla'] = new Chart(slaCatCtx, {
         type: 'pie',
         data: {
           labels: Object.keys(slaData),
-          datasets: [{ data: Object.values(slaData), backgroundColor: colors }]
+          datasets: [{
+            data: Object.values(slaData),
+            backgroundColor: colors
+          }]
         }
       });
     }
@@ -235,12 +243,17 @@
     if (langCtx) {
       if (window.RPT.charts['lang']) window.RPT.charts['lang'].destroy();
       const langData = {};
-      data.forEach(row => { langData[row.language] = (langData[row.language] || 0) + 1; });
+      data.forEach(row => {
+        langData[row.language] = (langData[row.language] || 0) + 1;
+      });
       window.RPT.charts['lang'] = new Chart(langCtx, {
         type: 'doughnut',
         data: {
           labels: Object.keys(langData),
-          datasets: [{ data: Object.values(langData), backgroundColor: colors }]
+          datasets: [{
+            data: Object.values(langData),
+            backgroundColor: colors
+          }]
         }
       });
     }
@@ -258,7 +271,10 @@
         type: 'pie',
         data: {
           labels: Object.keys(exclData),
-          datasets: [{ data: Object.values(exclData), backgroundColor: ['#ff6b6b', '#51cf66'] }]
+          datasets: [{
+            data: Object.values(exclData),
+            backgroundColor: ['#ff6b6b', '#51cf66']
+          }]
         }
       });
     }
@@ -266,7 +282,7 @@
 
   function renderTables() {
     const data = window.RPT.filtered;
-    
+
     // AOS Portal Issues Table
     const aosTable = document.getElementById('aos-table');
     if (aosTable) {
@@ -277,7 +293,7 @@
       const tbody = document.createElement('tbody');
       data.slice(0, MAX_DISPLAY_ROWS).forEach(row => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${row.ticket}</td><td>${row.aos}</td><td>${row.status}</td><td>${row.month}</td>`;
+        tr.innerHTML = `<td>${clean(row.ticket)}</td><td>${clean(row.aos)}</td><td>${clean(row.status)}</td><td>${clean(row.month)}</td>`;
         tbody.appendChild(tr);
       });
       aosTable.appendChild(tbody);
@@ -295,12 +311,12 @@
         const tbody = document.createElement('tbody');
         km1Data.slice(0, MAX_DISPLAY_ROWS).forEach(row => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${row.ticket}</td><td>${row.reason}</td><td>${row.language}</td><td>${row.month}</td>`;
+          tr.innerHTML = `<td>${clean(row.ticket)}</td><td>${clean(row.reason)}</td><td>${clean(row.language)}</td><td>${clean(row.month)}</td>`;
           tbody.appendChild(tr);
         });
         km1Table.appendChild(tbody);
       } else {
-        km1Table.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;">No KM-1 data available</td></tr>';
+        km1Table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No KM-1 data available</td></tr>';
       }
     }
   }
@@ -312,7 +328,6 @@
         loadFile(e.target.files[0]);
       });
     }
-    
     ['filter-week', 'filter-sla', 'filter-lang', 'filter-excl'].forEach(filterId => {
       const elem = document.getElementById(filterId);
       if (elem) {
