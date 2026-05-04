@@ -155,7 +155,15 @@ tr:hover td { background: #f9f8f5; }
 </header>
 
 <div class="main">
-  <!-- SIDEBAR -->
+<!-- UPLOAD BAR -->
+<div id="upload-bar" style="width:100%;background:var(--color-surface);padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);position:sticky;top:0;z-index:10;">
+  <label for="csvUpload" style="font-weight:600;font-size:13px;color:var(--color-text);">📂 Carica nuovo file CSV:</label>
+  <input type="file" id="csvUpload" accept=".csv"
+    style="font-size:13px;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 8px;background:var(--color-bg);color:var(--color-text);cursor:pointer;">
+  <span id="upload-status" style="font-size:12px;color:var(--color-success);"></span>
+</div>
+
+<aside class="sidebar">
   <aside class="sidebar">
     <div class="filter-section">
       <h3>Filters</h3>
@@ -231,6 +239,35 @@ let page = 1;
 const PER_PAGE = 50;
 
 // ---------- INIT ----------
+  document.getElementById('csvUpload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('upload-status');
+  status.textContent = '⏳ Caricamento...';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const text = ev.target.result;
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      const parsed = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = vals[i] ?? '');
+        return obj;
+      });
+      RAW.length = 0;
+      parsed.forEach(r => RAW.push(r));
+      buildFilters();
+      applyFilters();
+      status.textContent = `✅ ${parsed.length} righe caricate`;
+    } catch(err) {
+      status.textContent = '❌ Errore nel file';
+      console.error(err);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+});
 window.addEventListener('DOMContentLoaded', () => {
   populateFilters();
   applyFilters();
