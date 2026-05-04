@@ -1,9 +1,9 @@
-// reporter-processor.js - Reporter page: file handling, processing, filtering, KPIs
+// reporter-processor.js - Improved with smart column detection
 
 (function() {
   'use strict';
 
-  const { REPORTER_TABS, REPORTER_STORAGE_KEY, CONFIG } = window.BT || {};
+  const { CONFIG } = window.BT || {};
   const { MAX_DISPLAY_ROWS } = CONFIG;
 
   const rptState = window.RPT = {
@@ -11,41 +11,8 @@
     filtered: [],
     activeTab: 'overview',
     charts: {},
-    loadedMonths: [],
-    activeMonth: null,
   };
 
-  function debounce(fn, delay) {
-    let timer;
-    return function(...args) {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(this, args), delay);
-    };
-  }
-
-  function showStatus(msg, type) {
-    const el = document.getElementById('status');
-    if (!el) return;
-    el.textContent = msg;
-    el.className = 'status-bar ' + (type === 'error' ? 'error' : '');
-    if (type === 'loading') el.className = 'status-bar loading';
-  }
-
-  function showLoading(show, msg) {
-    const ov = document.getElementById('loading-overlay');
-    if (show) {
-      ov = document.createElement('div');
-      ov.id = 'loading-overlay';
-      ov.className = 'loading-overlay';
-      ov.innerHTML = '<div class="spinner"></div><div class="loading-text"> + (msg || 'Processing...')</div>';
-      document.body.appendChild(ov);
-    } else if (ov) {
-      const text = document.querySelector('.loading-text');
-      if (text) text.textContent = msg || 'Processing...';
-    }
-  }
-
-  // === Normalization helpers ===
   function clean(v) {
     return String(v == null ? '' : v).trim();
   }
@@ -71,44 +38,41 @@
   function normAos(v) {
     var s = clean(v).toLowerCase();
     if (!s) return 'N';
-    if (['1', 'true', 'yes', 'y', 'excluded'].indexOf(s) !== -1) return 'Y';
+    if (['1', 'true', 'yes', 'y'].indexOf(s) !== -1) return 'Y';
     return 'N';
   }
 
-  // Flexible field getter with multiple fallbacks
-  function fget(row, fields) {
-    if (!Array.isArray(fields)) {
-      fields = [fields];
-    }
+  // Intelligent column finder
+  function findColumn(row, keywords) {
+    if (!Array.isArray(keywords)) keywords = [keywords];
     
-    // Try exact match first
-    for (let i = 0; i < fields.length; i++) {
-      const f = fields[i];
-      if (row.hasOwnProperty(f) && row[f] !== undefined && row[f] !== null && row[f] !== '') {
-        return String(row[f]);
-      }
-    }
-    
-    // Try case-insensitive match
     const rowKeys = Object.keys(row);
-    for (let i = 0; i < fields.length; i++) {
-      const searchField = clean(fields[i]).toLowerCase();
-      for (let j = 0; j < rowKeys.length; j++) {
-        const key = rowKeys[j];
-        if (clean(key).toLowerCase() === searchField && row[key] !== undefined && row[key] !== null && row[key] !== '') {
-          return String(row[key]);
-        }
+    
+    // Exact match first
+    for (let keyword of keywords) {
+      if (row[keyword] !== undefined && row[keyword] !== null && row[keyword] !== '') {
+        return row[keyword];
       }
     }
     
-    // Try partial match
-    const rowKeys2 = Object.keys(row);
-    for (let i = 0; i < fields.length; i++) {
-      const searchField = clean(fields[i]).toLowerCase();
-      for (let j = 0; j < rowKeys2.length; j++) {
-        const key = rowKeys2[j];
-        if (clean(key).toLowerCase().includes(searchField) && row[key] !== undefined && row[key] !== null && row[key] !== '') {
-          return String(row[key]);
+    // Case-insensitive exact match
+    const keywordsLower = keywords.map(k => clean(k).toLowerCase());
+    for (let rowKey of rowKeys) {
+      const cleanedKey = clean(rowKey).toLowerCase();
+      if (keywordsLower.includes(cleanedKey)) {
+        const val = row[rowKey];
+        if (val !== undefined && val !== null && val !== '') return val;
+      }
+    }
+    
+    // Partial/fuzzy match
+    for (let keyword of keywords) {
+      const searchTerm = clean(keyword).toLowerCase();
+      for (let rowKey of rowKeys) {
+        const cleanedKey = clean(rowKey).toLowerCase();
+        if (cleanedKey.includes(searchTerm) || searchTerm.includes(cleanedKey)) {
+          const val = row[rowKey];
+          if (val !== undefined && val !== null && val !== '') return val;
         }
       }
     }
@@ -118,42 +82,49 @@
 
   function loadFile(file) {
     if (!file) return;
-    showLoading(true, 'Reading file...');
     const reader = new FileReader();
     reader.onload = function(e) {
-      showLoading(true, 'Processing data...');
-      setTimeout(function() {
-        try {
-          const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-          processWorkbook(wb);
-        } catch (err) {
-          showLoading(false);
-          showStatus('Error: ' + err.message, 'error');
-        }
-      }, 10);
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        processWorkbook(wb);
+      } catch (err) {
+        console.error('Error loading file:', err);
+      }
     };
     reader.readAsArrayBuffer(file);
   }
 
   function processWorkbook(wb) {
     const data = [];
+    
     wb.SheetNames.forEach(function(sn) {
-      XLSX.utils.sheet_to_json(wb.Sheets[sn]).forEach(function(r) {
-        const ticket = fget(r, ['Incident Ticket', 'Ticket']);
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
+      
+      rows.forEach(function(r) {
+        const ticket = findColumn(r, ['Incident Ticket', 'Ticket', 'ticket', 'Incident ID', 'ID']);
         if (!ticket) return;
         
-        // Build comprehensive row object
+        const monthVal = findColumn(r, ['Month', 'Date', 'Created', 'Week', 'month', 'date', 'week']);
+        const slaVal = findColumn(r, ['SLA Code', 'SLA', 'SLA_Code', 'sla', 'KSL']);
+        const km1Val = findColumn(r, ['KM-1', 'KM1', 'KM Code', 'km1', 'km-1']);
+        const aosVal = findColumn(r, ['AOS Portal', 'AOS', 'Portal', 'aos', 'aos_portal']);
+        const statusVal = findColumn(r, ['Status', 'State', 'status', 'state']);
+        const breachTypeVal = findColumn(r, ['Breach Type', 'Type', 'Application', 'breach_type', 'type', 'application']);
+        const langVal = findColumn(r, ['Language', 'Lang', 'language', 'lang', 'Language Code']);
+        const excludedVal = findColumn(r, ['Excluded', 'Exclude', 'excluded']);
+        const reasonVal = findColumn(r, ['Reason', 'Breach Reason', 'reason', 'breach_reason']);
+        
         const row = {
-          ticket: ticket,
-          month: normKey(fget(r, ['Month', 'Date', 'Created']), 'Unknown'),
-          sla: normSla(fget(r, ['SLA Code', 'SLA', 'SLA Code'])),
-          km1: normBoolLike(fget(r, ['KM-1', 'KM1', 'KM Code'])),
-          aos: normAos(fget(r, ['AOS Portal', 'AOS', 'Portal'])),
-          status: normKey(fget(r, ['Status', 'State']), 'N/A'),
-          severity: normKey(fget(r, ['Severity', 'Priority']), 'N/A'),
-          breachType: normKey(fget(r, ['Breach Type', 'Type']), 'Unknown'),
-          language: normKey(fget(r, ['Language', 'Lang']), 'Unknown'),
-          excluded: normBoolLike(fget(r, ['Excluded', 'Exclude'])),
+          ticket: clean(ticket),
+          month: normKey(monthVal, 'Unknown'),
+          sla: normSla(slaVal),
+          km1: normBoolLike(km1Val),
+          aos: normAos(aosVal),
+          status: normKey(statusVal, 'N/A'),
+          breachType: normKey(breachTypeVal, 'Unknown'),
+          language: normKey(langVal, 'Unknown'),
+          excluded: normBoolLike(excludedVal),
+          reason: normKey(reasonVal, 'Unknown'),
           details: r
         };
         data.push(row);
@@ -165,10 +136,6 @@
     applyFilters();
     renderKPIs();
     initTabs();
-    showLoading(false);
-    showStatus('Data loaded: ' + data.length + ' records');
-    
-    // Show data area, hide upload area
     document.getElementById('upload-area').style.display = 'none';
     document.getElementById('data-area').style.display = 'flex';
   }
@@ -184,9 +151,7 @@
              (!slaVal || row.sla === slaVal);
     });
 
-    console.log('Filtered to', rptState.filtered.length, 'records');
     renderActiveTab();
-    renderCharts();
   }
 
   function renderKPIs() {
@@ -200,18 +165,20 @@
 
     const monthSelect = document.getElementById('month-filter');
     const slaSelect = document.getElementById('sla-filter');
+    
     if (monthSelect) {
       monthSelect.innerHTML = '<option value="">All Months</option>';
-      Object.keys(months).forEach(function(m) {
+      Object.keys(months).sort().forEach(function(m) {
         const opt = document.createElement('option');
         opt.value = m;
         opt.text = m + ' (' + months[m] + ')';
         monthSelect.appendChild(opt);
       });
     }
+    
     if (slaSelect) {
       slaSelect.innerHTML = '<option value="">All SLAs</option>';
-      Object.keys(slas).forEach(function(s) {
+      Object.keys(slas).sort().forEach(function(s) {
         const opt = document.createElement('option');
         opt.value = s;
         opt.text = s + ' (' + slas[s] + ')';
@@ -220,20 +187,10 @@
     }
   }
 
-  function renderCharts() {
-    if (rptState.activeTab === 'overview') {
-      window.RPT.renderKPIs();
-    }
-  }
-
   function initTabs() {
     const tabBar = document.getElementById('tabs-bar');
     if (!tabBar) return;
     tabBar.style.display = 'flex';
-    const tabs = document.querySelectorAll('[id="tab-"]');
-    tabs.forEach(function(el) {
-      el.style.display = 'none';
-    });
   }
 
   function renderActiveTab() {
@@ -241,36 +198,6 @@
     const el = document.getElementById('tab-' + tab);
     if (!el) return;
     el.style.display = 'flex';
-
-    if (tab === 'aos') {
-      renderAosTable();
-    } else if (tab === 'km1') {
-      renderKm1Table();
-    }
-  }
-
-  function renderAosTable() {
-    const container = document.getElementById('tab-aos');
-    if (!container) return;
-    const filtered = rptState.filtered.filter(function(r) { return r.aos === 'Y'; });
-    let html = '<table class="data-table"><thead><tr><th>Ticket</th><th>Month</th><th>SLA</th><th>Status</th></tr></thead><tbody>';
-    filtered.slice(0, MAX_DISPLAY_ROWS).forEach(function(r) {
-      html += '<tr><td>' + clean(r.ticket) + '</td><td>' + clean(r.month) + '</td><td>' + clean(r.sla) + '</td><td>' + clean(r.status) + '</td></tr>';
-    });
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  }
-
-  function renderKm1Table() {
-    const container = document.getElementById('tab-km1');
-    if (!container) return;
-    const filtered = rptState.filtered.filter(function(r) { return r.km1 === '1'; });
-    let html = '<table class="data-table"><thead><tr><th>Ticket</th><th>Month</th><th>SLA</th><th>Status</th></tr></thead><tbody>';
-    filtered.slice(0, MAX_DISPLAY_ROWS).forEach(function(r) {
-      html += '<tr><td>' + clean(r.ticket) + '</td><td>' + clean(r.month) + '</td><td>' + clean(r.sla) + '</td><td>' + clean(r.status) + '</td></tr>';
-    });
-    html += '</tbody></table>';
-    container.innerHTML = html;
   }
 
   // === Exports ===
