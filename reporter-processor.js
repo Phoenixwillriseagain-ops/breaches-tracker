@@ -52,7 +52,7 @@
         var f = fields[i];
         if (row.hasOwnProperty(f) && row[f] !== undefined && row[f] !== null && row[f] !== '') return String(row[f]);
       }
-      return '';
+      return String(row[f]);
     }
     return String(row[fields] || '');
   }
