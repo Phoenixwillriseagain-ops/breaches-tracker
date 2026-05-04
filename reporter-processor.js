@@ -6,8 +6,12 @@
   const { MAX_DISPLAY_ROWS } = CONFIG;
 
   const rptState = window.RPT = {
-    allData: [], filtered: [], activeTab: 'overview',
-    charts: {}, loadedMonths: [], activeMonth: null,
+    allData: [],
+    filtered: [],
+    activeTab: 'overview',
+    charts: {},
+    loadedMonths: [],
+    activeMonth: null,
   };
 
   function debounce(fn, delay) {
@@ -31,7 +35,8 @@
     if (show) {
       if (!ov) {
         ov = document.createElement('div');
-        ov.id = 'loading-overlay'; ov.className = 'loading-overlay';
+        ov.id = 'loading-overlay';
+        ov.className = 'loading-overlay';
         ov.innerHTML = '<div class="spinner"></div><div class="loading-text">' + (msg || 'Processing...') + '</div>';
         document.body.appendChild(ov);
       } else {
@@ -51,7 +56,35 @@
     }
     return String(row[fields] || '');
   }
-  
+
+  // === Normalization helpers ===
+  function clean(v) {
+    return String(v == null ? '' : v).trim();
+  }
+
+  function normKey(v, fallback) {
+    var s = clean(v);
+    return s ? s : fallback;
+  }
+
+  function normBoolLike(v) {
+    var s = clean(v).toLowerCase();
+    if (!s) return '0';
+    if (['1', 'true', 'yes', 'y', 'excluded'].indexOf(s) !== -1) return '1';
+    return '0';
+  }
+
+  function normSla(v) {
+    var s = clean(v).toUpperCase().replace(/\s+/g, '');
+    if (s === 'KM1' || s === 'KM-1') return 'KM-1';
+    return clean(v).toUpperCase();
+  }
+
+  function normAos(v) {
+    var s = clean(v).toLowerCase();
+    if (!s || s === '0' || s === 'no' || s === 'false' || s === 'n') return '0';
+    return '1';
+  }
 
   function loadFile(file) {
     if (!file) return;
@@ -64,7 +97,8 @@
           const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
           processWorkbook(wb);
         } catch (err) {
-          showLoading(false); showStatus('Error: ' + err.message, 'error');
+          showLoading(false);
+          showStatus('Error: ' + err.message, 'error');
         }
       }, 10);
     };
@@ -75,41 +109,57 @@
     const data = [];
     wb.SheetNames.forEach(function(sn) {
       XLSX.utils.sheet_to_json(wb.Sheets[sn]).forEach(function(r) {
-        const ticket = fget(r, ['Incident Ticket','Ticket']);
+        const ticket = fget(r, ['Incident Ticket', 'Ticket']);
         if (!ticket) return;
         data.push({
-          ticket: ticket, sla_code: fget(r,['SLA_Code','SLA Code']),
-          excluded: fget(r,['Excluded','excluded','EXCLUDED']),
-          week: fget(r,['Week','week']), reason: fget(r,['Reason','reason','Breach_Description']),
-          application: fget(r,['Application','application','APP']),
-          language: fget(r,['Language','ISO_Language','lang']),
-          date_close: fget(r,['DATE_CLOSE','Closure Date']),
-          remote: fget(r,['Remote','remote']), callback: fget(r,['Callback','callback']),
-          aos: fget(r,['AOS','aos']), month: fget(r,['Month','month']),
-          date_breach: fget(r,['DATE_TIME_Breach','Breach Time']),
+          ticket: ticket,
+          sla_code: normSla(fget(r, ['SLA_Code', 'SLA Code'])),
+          excluded: normBoolLike(fget(r, ['Excluded', 'excluded', 'EXCLUDED'])),
+          week: normKey(fget(r, ['Week', 'week']), 'Unknown'),
+          reason: normKey(fget(r, ['Reason', 'reason', 'Breach_Description']), 'Unknown'),
+          application: normKey(fget(r, ['Application', 'application', 'APP']), 'Unknown'),
+          language: normKey(fget(r, ['Language', 'ISO_Language', 'lang']), 'Unknown'),
+          date_close: clean(fget(r, ['DATE_CLOSE', 'Closure Date'])),
+          remote: normKey(fget(r, ['Remote', 'remote']), 'Unknown'),
+          callback: normKey(fget(r, ['Callback', 'callback']), 'Unknown'),
+          aos: normAos(fget(r, ['AOS', 'aos'])),
+          month: normKey(fget(r, ['Month', 'month']), 'Unknown'),
+          date_breach: clean(fget(r, ['DATE_TIME_Breach', 'Breach Time'])),
+          agent: normKey(fget(r, ['Agent', 'Assignee', 'Owner']), ''),
         });
       });
     });
     rptState.allData = data;
     rptState.loadedMonths = [];
-    data.forEach(function(d) { if (d.month && rptState.loadedMonths.indexOf(d.month) === -1) rptState.loadedMonths.push(d.month); });
-    saveData(); showLoading(false);
+    data.forEach(function(d) {
+      if (d.month && rptState.loadedMonths.indexOf(d.month) === -1) rptState.loadedMonths.push(d.month);
+    });
+    saveData();
+    showLoading(false);
     showStatus('Loaded ' + data.length + ' records');
     renderAll();
   }
 
   function saveData() {
-    try { localStorage.setItem(REPORTER_STORAGE_KEY, JSON.stringify(rptState.allData)); }
-    catch (e) { console.warn('Cannot save:', e); }
+    try {
+      localStorage.setItem(REPORTER_STORAGE_KEY, JSON.stringify(rptState.allData));
+    } catch (e) {
+      console.warn('Cannot save:', e);
+    }
   }
 
   function loadSavedData() {
     try {
       const d = localStorage.getItem(REPORTER_STORAGE_KEY);
-      if (d) { rptState.allData = JSON.parse(d); showStatus('Restored ' + rptState.allData.length + ' records'); renderAll(); }
-    } catch (e) { console.warn('Cannot load:', e); }
+      if (d) {
+        rptState.allData = JSON.parse(d);
+        showStatus('Restored ' + rptState.allData.length + ' records');
+        renderAll();
+      }
+    } catch (e) {
+      console.warn('Cannot load:', e);
+    }
   }
-  
 
   function applyFilters() {
     var wk = document.getElementById('filter-week').value;
@@ -125,17 +175,19 @@
       if (excl && d.excluded !== excl) return false;
       return true;
     });
-    renderKPIs(); renderActiveTab();
+    renderKPIs();
+    renderActiveTab();
   }
 
   var debouncedApply = debounce(applyFilters, 200);
 
   function renderKPIs() {
-    var c = document.getElementById('kpi-area'); if (!c) return;
+    var c = document.getElementById('kpi-area');
+    if (!c) return;
     var d = rptState.filtered;
     var total = d.length;
     var excl = d.filter(function(r) { return r.excluded === '1'; }).length;
-    var aos = d.filter(function(r) { return r.aos && r.aos !== '0'; }).length;
+    var aos = d.filter(function(r) { return r.aos === '1'; }).length;
     var kpis = [
       { l: 'Total', v: total, s: 'records' },
       { l: 'Counted', v: total - excl, s: 'tickets' },
@@ -145,19 +197,23 @@
       { l: 'Weeks', v: uniqueCount(d, 'week'), s: 'span' },
     ];
     c.innerHTML = kpis.map(function(k) {
-      return '<div class="kpi"><div class="kpi-label">' + k.l + '</div><div class="kpi-value">' + k.v + '</div><div class="kpi-sub">' + k.s + '</div></div>';
+      return '<div class="kpi-card"><div class="kpi-value">' + k.v + '</div><div class="kpi-label">' + k.l + '</div><div class="kpi-sub">' + k.s + '</div></div>';
     }).join('');
   }
 
   function uniqueCount(data, key) {
     var seen = {};
-    data.forEach(function(d) { if (d[key]) seen[d[key]] = true; });
+    data.forEach(function(d) {
+      if (d[key]) seen[d[key]] = true;
+    });
     return Object.keys(seen).length;
   }
 
   function uniqueValues(data, key) {
     var seen = {};
-    data.forEach(function(d) { if (d[key] && d[key] !== '') seen[d[key]] = true; });
+    data.forEach(function(d) {
+      if (d[key] && d[key] !== '') seen[d[key]] = true;
+    });
     return Object.keys(seen).sort();
   }
 
@@ -169,19 +225,22 @@
   }
 
   function buildTable(tableId, rows, cols) {
-    var tbl = document.getElementById(tableId); if (!tbl) return;
+    var tbl = document.getElementById(tableId);
+    if (!tbl) return;
     tbl.innerHTML = '';
     if (!rows || !rows.length) {
-      tbl.innerHTML = '<tr><td colspan="' + cols.length + '" style="text-align:center;padding:3rem;color:var(--muted)">No data</td></tr>';
+      tbl.innerHTML = 'No data';
       return;
     }
     var thead = document.createElement('thead');
     var trh = document.createElement('tr');
     cols.forEach(function(col) {
-      var th = document.createElement('th'); th.textContent = col;
+      var th = document.createElement('th');
+      th.textContent = col;
       trh.appendChild(th);
     });
-    thead.appendChild(trh); tbl.appendChild(thead);
+    thead.appendChild(trh);
+    tbl.appendChild(thead);
     var tbody = document.createElement('tbody');
     var frag = document.createDocumentFragment();
     var limit = Math.min(rows.length, MAX_DISPLAY_ROWS);
@@ -195,20 +254,23 @@
       });
       frag.appendChild(tr);
     }
-    tbody.appendChild(frag); tbl.appendChild(tbody);
+    tbody.appendChild(frag);
+    tbl.appendChild(tbody);
     if (rows.length > MAX_DISPLAY_ROWS) {
       var note = document.createElement('tr');
-      note.innerHTML = '<td colspan="' + cols.length + '" style="text-align:center;color:var(--muted);font-size:0.75rem;">Showing ' + limit + ' of ' + rows.length + '</td>';
+      note.innerHTML = '<td colspan="' + cols.length + '" style="text-align:center;color:#888;">Showing ' + limit + ' of ' + rows.length + '</td>';
       tbody.appendChild(note);
     }
   }
-  
 
   function renderMonths() {
     var mArea = document.getElementById('months-area');
     if (!mArea) return;
     var months = rptState.loadedMonths.sort();
-    if (!months.length) { mArea.innerHTML = ''; return; }
+    if (!months.length) {
+      mArea.innerHTML = '';
+      return;
+    }
     mArea.innerHTML = months.map(function(m) {
       var active = m === rptState.activeMonth ? ' active' : '';
       return '<span class="month-badge' + active + '" data-month="' + m + '">' + m + '</span>';
@@ -241,11 +303,15 @@
           return '<button class="tab-btn' + (t.id === id ? ' active' : '') + '" data-tab="' + t.id + '">' + t.label + '</button>';
         }).join('');
         bar.querySelectorAll('.tab-btn').forEach(function(b) {
-          b.addEventListener('click', function() { switchRptTab(b.dataset.tab); });
+          b.addEventListener('click', function() {
+            switchRptTab(b.dataset.tab);
+          });
         });
       }
     }
-    document.querySelectorAll('[id^="tab-"]').forEach(function(el) { el.style.display = 'none'; });
+    document.querySelectorAll('[id^="tab-"]').forEach(function(el) {
+      el.style.display = 'none';
+    });
     var tEl = document.getElementById('tab-' + id);
     if (tEl) tEl.style.display = '';
     renderActiveTab();
@@ -263,7 +329,7 @@
   }
 
   function renderAllRecords() {
-    buildTable('report-table', rptState.filtered, ['ticket','sla_code','excluded','week','reason','language','date_close']);
+    buildTable('report-table', rptState.filtered, ['ticket', 'sla_code', 'excluded', 'week', 'reason', 'language', 'date_close']);
   }
 
   function renderAll() {
@@ -273,15 +339,23 @@
     document.getElementById('months-area').style.display = has ? '' : 'none';
     document.querySelector('.toolbar').style.display = has ? '' : 'none';
     document.getElementById('tabs-bar').style.display = has ? '' : 'none';
-    if (has) { renderFilters(); applyFilters(); switchRptTab('overview'); }
+    if (has) {
+      renderFilters();
+      applyFilters();
+      switchRptTab('overview');
+    }
   }
-  
 
-  function today() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+  function today() {
+    return new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  }
 
   function exportFiltered() {
     var d = rptState.filtered;
-    if (!d.length) { showStatus('No data to export.', 'error'); return; }
+    if (!d.length) {
+      showStatus('No data to export.', 'error');
+      return;
+    }
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d), 'Filtered');
     XLSX.writeFile(wb, 'Breaches_Filtered_' + today() + '.xlsx');
@@ -295,8 +369,10 @@
       if (!d.reason) d.reason = 'Unknown';
       rm[d.reason] = (rm[d.reason] || 0) + 1;
     });
-    var rd = Object.keys(rm).map(function(k) { return { Reason: k, Count: rm[k] }; });
-    rd.sort(function(a,b) { return b.Count - a.Count; });
+    var rd = Object.keys(rm).map(function(k) {
+      return { Reason: k, Count: rm[k] };
+    });
+    rd.sort(function(a, b) { return b.Count - a.Count; });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rd), 'Reasons');
     XLSX.writeFile(wb, 'Breaches_FullReport_' + today() + '.xlsx');
   }
@@ -304,9 +380,13 @@
   function setupUpload() {
     var input = document.getElementById('reporter-file-input');
     var btn = document.querySelector('.upload-btn');
-    if (input) input.addEventListener('change', function() { loadFile(input.files[0]); });
-    if (btn) btn.addEventListener('click', function() { input.click(); });
-    ['filter-week','filter-sla','filter-lang','filter-excl'].forEach(function(id) {
+    if (input) input.addEventListener('change', function() {
+      loadFile(input.files[0]);
+    });
+    if (btn) btn.addEventListener('click', function() {
+      input.click();
+    });
+    ['filter-week', 'filter-sla', 'filter-lang', 'filter-excl'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('change', debouncedApply);
     });
@@ -324,7 +404,9 @@
   }
 
   function init() {
-    initTheme(); setupUpload(); loadSavedData();
+    initTheme();
+    setupUpload();
+    loadSavedData();
     if (!rptState.allData.length) {
       document.getElementById('kpi-area').style.display = 'none';
       document.getElementById('months-area').style.display = 'none';
@@ -333,6 +415,44 @@
     }
   }
 
+  // === Fixed clearFilters: works with <select> elements ===
+  function clearFilters() {
+    ['filter-week', 'filter-sla', 'filter-lang', 'filter-excl'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    rptState.activeMonth = null;
+    document.querySelectorAll('.month-badge').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    rptState.filtered = rptState.allData.slice();
+    renderFilters();
+    applyFilters();
+    showStatus('Filters cleared');
+  }
+
+  // === New: resetToUpload - clears data and shows upload area ===
+  function resetToUpload() {
+    rptState.allData = [];
+    rptState.filtered = [];
+    rptState.loadedMonths = [];
+    rptState.activeMonth = null;
+    try {
+      localStorage.removeItem(REPORTER_STORAGE_KEY);
+    } catch (e) {}
+    document.getElementById('reporter-file-input').value = '';
+    document.getElementById('upload-area').style.display = '';
+    document.getElementById('kpi-area').style.display = 'none';
+    document.getElementById('months-area').style.display = 'none';
+    document.querySelector('.toolbar').style.display = 'none';
+    document.getElementById('tabs-bar').style.display = 'none';
+    document.querySelectorAll('[id^="tab-"]').forEach(function(el) {
+      el.style.display = 'none';
+    });
+    showStatus('Upload a new Excel file');
+  }
+
+  // === Exports ===
   window.RPT.loadFile = loadFile;
   window.RPT.applyFilters = applyFilters;
   window.RPT.exportFiltered = exportFiltered;
@@ -340,16 +460,6 @@
   window.RPT.switchTab = switchRptTab;
   window.RPT.renderKPIs = renderKPIs;
   window.RPT.init = init;
-
-
-  	// Clear filters function
-	function clearFilters() {
-		rptState.filtered = [];
-		rptState.allData = rptState.allData.map(item => ({...item, visible: true}));
-		document.querySelectorAll('.filter-btn.active').forEach(btn => btn.classList.remove('active'));
-		document.querySelectorAll('.data-table tbody tr').forEach(row => row.style.display = '');
-		showStatus('Filters cleared', 'success');
-	}
-	
-	window.RPT.clearFilters = clearFilters;
+  window.RPT.clearFilters = clearFilters;
+  window.RPT.resetToUpload = resetToUpload;
 })();
