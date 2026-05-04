@@ -25,21 +25,8 @@
 
   function normBoolLike(v) {
     var s = clean(v).toLowerCase();
-    if (!s) return '0';
-    if (['1', 'true', 'yes', 'y'].indexOf(s) !== -1) return '1';
-    return '0';
-  }
-
-  function normSla(v) {
-    var s = clean(v).toLowerCase().replace(/\s+/g, '');
-    if (s === 'kmi' || s === 'km-i') return 'KM-I';
-    return clean(v).toUpperCase();
-  }
-
-  function normAos(v) {
-    var s = clean(v).toLowerCase();
     if (!s) return 'N';
-    if (['1', 'true', 'yes', 'y'].indexOf(s) !== -1) return 'Y';
+    if (['t', 'true', 'yes', 'y'].indexOf(s) !== -1) return 'Y';
     return 'N';
   }
 
@@ -60,131 +47,208 @@
   function processWorkbook(wb) {
     const data = [];
     let colMap = {};
-    
+
     wb.SheetNames.forEach(function(sn) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-      
       rows.forEach(function(r, idx) {
-        // On first row, detect column mappings
+        const lower = {};
+        Object.keys(r).forEach(key => {
+          lower[key.toLowerCase()] = key;
+        });
+        
+        // Detect columns from header (first row)
         if (idx === 0) {
-          const keys = Object.keys(r);
-          console.log('Excel columns:', keys);
-          
-          // Try to find columns by partial matching on keys
-          keys.forEach(function(key) {
-            const lower = key.toLowerCase();
-            if (lower.includes('ticket') || lower.includes('incident')) colMap.ticket = key;
-            if (lower.includes('week') || lower.includes('month') || lower.includes('date')) colMap.month = key;
-            if (lower.includes('sla') || lower.includes('code')) colMap.sla = key;
-            if (lower.includes('km')) colMap.km1 = key;
-            if (lower.includes('aos') || lower.includes('portal')) colMap.aos = key;
-            if (lower.includes('reason') || lower.includes('breach')) colMap.reason = key;
-            if (lower.includes('lang')) colMap.lang = key;
-            if (lower.includes('type') || lower.includes('app')) colMap.type = key;
-            if (lower.includes('status')) colMap.status = key;
-            if (lower.includes('exclude')) colMap.excluded = key;
+          Object.keys(lower).forEach(lowerKey => {
+            const origKey = lower[lowerKey];
+            
+            // Ticket/Incident detection
+            if (lowerKey.includes('ticket') || lowerKey.includes('incident')) {
+              colMap.ticket = origKey;
+            }
+            // Week/Month/Date detection
+            if ((lowerKey.includes('week') || lowerKey.includes('month')) || lowerKey.includes('date')) {
+              if (!colMap.month) colMap.month = origKey;
+            }
+            // SLA detection
+            if (lowerKey.includes('sla') || lowerKey.includes('code')) {
+              colMap.sla = origKey;
+            }
+            // KM detection
+            if (lowerKey.includes('km')) {
+              colMap.kml = origKey;
+            }
+            // AOS/Portal detection
+            if (lowerKey.includes('aos') || lowerKey.includes('portal')) {
+              colMap.aos = origKey;
+            }
+            // Reason detection
+            if (lowerKey.includes('reason') || lowerKey.includes('breach')) {
+              colMap.reason = origKey;
+            }
+            // Language detection
+            if (lowerKey.includes('lang')) {
+              colMap.lang = origKey;
+            }
+            // Type/App detection
+            if (lowerKey.includes('type') || lowerKey.includes('app')) {
+              colMap.type = origKey;
+            }
+            // Status detection
+            if (lowerKey.includes('status')) {
+              colMap.status = origKey;
+            }
+            // Excluded detection
+            if (lowerKey.includes('excluded')) {
+              colMap.excluded = origKey;
+            }
           });
-          
-          // If we still don't have mappings, use first columns as defaults
-          if (!colMap.ticket) colMap.ticket = keys[0];
-          if (!colMap.month) colMap.month = keys[1];
-          if (!colMap.sla) colMap.sla = keys[2];
-          
-          console.log('Detected mappings:', colMap);
-          rptState.columnMap = colMap;
         }
         
         const ticket = clean(r[colMap.ticket] || '');
         if (!ticket) return;
-        
-        const row = {
+
+        const prow = {
           ticket: ticket,
           month: normKey(clean(r[colMap.month] || ''), 'Unknown'),
           sla: normSla(clean(r[colMap.sla] || '')),
-          km1: normBoolLike(clean(r[colMap.km1] || '')),
+          kml: normBoolLike(clean(r[colMap.kml] || '')),
           aos: normAos(clean(r[colMap.aos] || '')),
           status: normKey(clean(r[colMap.status] || ''), 'N/A'),
           breachType: normKey(clean(r[colMap.type] || ''), 'Unknown'),
           language: normKey(clean(r[colMap.lang] || ''), 'Unknown'),
-          excluded: normBoolLike(clean(r[colMap.excluded] || '')),
-          reason: normKey(clean(r[colMap.reason] || ''), 'Unknown'),
-          details: r
+          excluded: normBoolLike(clean(r[colMap.excluded] || ''))
         };
-        data.push(row);
+        data.push(prow);
       });
     });
 
-    console.log('Processed', data.length, 'records');
+    console.log('Detected mappings:', colMap);
+    rptState.columnMap = colMap;
     rptState.allData = data;
+    rptState.filtered = data.slice();
     applyFilters();
-    renderKPIs();
-    initTabs();
-    document.getElementById('upload-area').style.display = 'none';
-    document.getElementById('data-area').style.display = 'flex';
+    renderCharts();
+    renderTables();
+  }
+
+  function normSla(v) {
+    if (!v) return 'Unknown';
+    const lower = v.toLowerCase();
+    const cleaned = lower.replace(/\D/g, '');
+    if (lower.includes('critical')) return 'Critical';
+    if (lower.includes('high')) return 'High';
+    if (lower.includes('medium')) return 'Medium';
+    if (lower.includes('low')) return 'Low';
+    return v.toUpperCase();
+  }
+
+  function normAos(v) {
+    if (!v) return 'Unknown';
+    const lower = v.toLowerCase();
+    if (lower.includes('tick')) return 'Ticket';
+    if (lower.includes('incident')) return 'Incident';
+    if (lower.includes('request')) return 'Request';
+    return v;
   }
 
   function applyFilters() {
-    const monthSelect = document.getElementById('month-filter');
-    const slaSelect = document.getElementById('sla-filter');
-    const monthVal = monthSelect ? monthSelect.value : '';
-    const slaVal = slaSelect ? slaSelect.value : '';
+    const weekFilter = document.getElementById('week-filter')?.value || 'All';
+    const slaFilter = document.getElementById('sla-filter')?.value || 'All';
+    const langFilter = document.getElementById('lang-filter')?.value || 'All';
+    const excludedFilter = document.getElementById('excluded-filter')?.value || 'All';
 
-    rptState.filtered = rptState.allData.filter(function(row) {
-      return (!monthVal || row.month === monthVal) &&
-             (!slaVal || row.sla === slaVal);
+    rptState.filtered = rptState.allData.filter(row => {
+      if (weekFilter !== 'All' && row.month !== weekFilter) return false;
+      if (slaFilter !== 'All' && row.sla !== slaFilter) return false;
+      if (langFilter !== 'All' && row.language !== langFilter) return false;
+      if (excludedFilter === 'Y' && row.excluded !== 'Y') return false;
+      if (excludedFilter === 'N' && row.excluded !== 'N') return false;
+      return true;
     });
-
-    renderActiveTab();
   }
 
-  function renderKPIs() {
-    const months = {};
-    const slas = {};
+  function renderCharts() {
+    const bpwCtx = document.getElementById('chart-breaches-week')?.getContext('2d');
+    const slaCatCtx = document.getElementById('chart-sla-category')?.getContext('2d');
+    const langCtx = document.getElementById('chart-language')?.getContext('2d');
+    const excCtx = document.getElementById('chart-excluded')?.getContext('2d');
 
-    rptState.allData.forEach(function(row) {
-      months[row.month] = (months[row.month] || 0) + 1;
-      slas[row.sla] = (slas[row.sla] || 0) + 1;
-    });
+    if (bpwCtx) {
+      const weekData = {};
+      rptState.filtered.forEach(row => {
+        weekData[row.month] = (weekData[row.month] || 0) + 1;
+      });
+      new Chart(bpwCtx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(weekData),
+          datasets: [{ label: 'Breaches', data: Object.values(weekData), backgroundColor: '#0099cc' }]
+        }
+      });
+    }
 
-    const monthSelect = document.getElementById('month-filter');
-    const slaSelect = document.getElementById('sla-filter');
-    
-    if (monthSelect) {
-      monthSelect.innerHTML = '<option value="">All Months</option>';
-      Object.keys(months).sort().forEach(function(m) {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.text = m + ' (' + months[m] + ')';
-        monthSelect.appendChild(opt);
+    if (slaCatCtx) {
+      const slaData = {};
+      rptState.filtered.forEach(row => {
+        slaData[row.sla] = (slaData[row.sla] || 0) + 1;
+      });
+      new Chart(slaCatCtx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(slaData),
+          datasets: [{ data: Object.values(slaData), backgroundColor: ['#ff6b6b', '#ffa500', '#4ecdc4', '#45b7d1'] }]
+        }
+      });
+    }
+  }
+
+  function renderTables() {
+    // AOS Portal Issues
+    const aosTable = document.getElementById('aos-table');
+    if (aosTable) {
+      aosTable.innerHTML = '';
+      const th = document.createElement('thead');
+      th.innerHTML = '<tr><th>Ticket</th><th>AOS</th><th>Status</th><th>Month</th></tr>';
+      aosTable.appendChild(th);
+      
+      const tb = document.createElement('tbody');
+      rptState.filtered.forEach((row, i) => {
+        if (i >= MAX_DISPLAY_ROWS) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${row.ticket}</td><td>${row.aos}</td><td>${row.status}</td><td>${row.month}</td>`;
+        tb.appendChild(tr);
+      });
+      aosTable.appendChild(tb);
+    }
+  }
+
+  window.addEventListener('load', function() {
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) {
+      fileInput.addEventListener('change', function(e) {
+        loadFile(e.target.files[0]);
       });
     }
     
-    if (slaSelect) {
-      slaSelect.innerHTML = '<option value="">All SLAs</option>';
-      Object.keys(slas).sort().forEach(function(s) {
-        const opt = document.createElement('option');
-        opt.value = s;
-        opt.text = s + ' (' + slas[s] + ')';
-        slaSelect.appendChild(opt);
-      });
-    }
-  }
-
-  function initTabs() {
-    const tabBar = document.getElementById('tabs-bar');
-    if (!tabBar) return;
-    tabBar.style.display = 'flex';
-  }
-
-  function renderActiveTab() {
-    const tab = rptState.activeTab;
-    const el = document.getElementById('tab-' + tab);
-    if (!el) return;
-    el.style.display = 'flex';
-  }
-
-  // === Exports ===
-  window.RPT.loadFile = loadFile;
-  window.RPT.applyFilters = applyFilters;
-  window.RPT.renderKPIs = renderKPIs;
+    document.getElementById('week-filter')?.addEventListener('change', function() {
+      applyFilters();
+      renderCharts();
+      renderTables();
+    });
+    document.getElementById('sla-filter')?.addEventListener('change', function() {
+      applyFilters();
+      renderCharts();
+      renderTables();
+    });
+    document.getElementById('lang-filter')?.addEventListener('change', function() {
+      applyFilters();
+      renderCharts();
+      renderTables();
+    });
+    document.getElementById('excluded-filter')?.addEventListener('change', function() {
+      applyFilters();
+      renderCharts();
+      renderTables();
+    });
+  });
 })();
