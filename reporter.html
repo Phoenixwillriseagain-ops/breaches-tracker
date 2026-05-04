@@ -247,13 +247,40 @@ document.getElementById('csvUpload').addEventListener('change', function(e) {
   reader.onload = function(ev) {
     try {
       const wb = XLSX.read(ev.target.result, {type:'array'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const parsed = XLSX.utils.sheet_to_json(ws, {defval:''});
+      const sheetMap = {
+        'KSL-4 |WRI':'KSL-4 GR','KSL-4 | DE':'KSL-4 DE',
+        'KM-1 | Reopen':'KM-1 GR','KM-1 DE':'KM-1 DE',
+        'KSL-5a GR':'KSL-5a GR','KSL-5a DE':'KSL-5a DE',
+        'KM-2 GR':'KM-2 GR','KM-2 DE':'KM-2 DE'
+      };
+      const colMap = {
+        'Incident Ticket':'ticket','DATE_CLOSE':'date_close','Queue':'queue',
+        'ISO_Language':'lang','Topic':'topic','TOPIC':'topic',
+        'SLA CODE':'sla_code','SLA_Code':'sla_code','SLA_CODE':'sla_code',
+        'Reason':'reason','Affected application':'application','Affected Application':'application',
+        'Agent':'agent','BMS ID':'bms','Excluded':'excluded',
+        'Week':'week','Week ':'week','Comment':'comment'
+      };
+      const allRows = [];
+      Object.entries(sheetMap).forEach(([sheetName, label]) => {
+        if (!wb.Sheets[sheetName]) return;
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:''});
+        rows.forEach(r => {
+          if (!r['Unique'] && r['Unique'] !== undefined) return;
+          if (r['Unique'] !== undefined && r['Unique'] != 1) return;
+          const obj = {sheet: label, application:'', agent:'', bms:'0', comment:''};
+          Object.entries(colMap).forEach(([from, to]) => { if (r[from] !== undefined) obj[to] = r[from]; });
+          if (!obj.ticket) return;
+          obj.excluded = obj.excluded ? 1 : 0;
+          obj.week = parseInt(obj.week) || 0;
+          allRows.push(obj);
+        });
+      });
       RAW.length = 0;
-      parsed.forEach(r => RAW.push(r));
+      allRows.forEach(r => RAW.push(r));
       populateFilters();
       applyFilters();
-      status.textContent = `✅ ${parsed.length} righe caricate`;
+      status.textContent = `✅ ${allRows.length} righe caricate`;
     } catch(err) {
       status.textContent = '❌ Errore nel file';
       console.error(err);
