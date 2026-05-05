@@ -80,7 +80,17 @@
       showLoading(true, 'Parsing CSV...');
       setTimeout(function() {
         const text = e.target.result;
-        const rows = text.trim().split(/\r?\n/).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*(?!,))/));
+        const rows = text.trim().split(/\r?\n/).map(r => {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < r.length; i++) {
+    if (r[i] === '"') { inQ = !inQ; }
+    else if (r[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+    else { cur += r[i]; }
+  }
+  result.push(cur.trim());
+  return result;
+});
         processRows(rows.slice(1), C_CSV, 'csv');
       }, 10);
     };
