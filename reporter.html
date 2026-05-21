@@ -1,584 +1,498 @@
 <!DOCTYPE html>
-<html lang="en">
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Breaches Reporter</title>
-<style>
-:root {
-  --color-bg: #f7f6f2;
-  --color-surface: #ffffff;
-  --color-surface-2: #f3f0ec;
-  --color-border: #d4d1ca;
-  --color-divider: #e0ddd8;
-  --color-text: #28251d;
-  --color-text-muted: #7a7974;
-  --color-primary: #01696f;
-  --color-primary-hover: #0c4e54;
-  --color-primary-light: #cedcd8;
-  --color-error: #a12c7b;
-  --color-warning: #964219;
-  --color-success: #437a22;
-  --color-km1: #006494;
-  --color-km2: #7a39bb;
-  --color-ksl4: #01696f;
-  --color-ksl5a: #964219;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.08);
-  --radius: 8px;
-  --radius-sm: 5px;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--color-bg); color: var(--color-text); font-size: 14px; }
-a { color: var(--color-primary); text-decoration: none; }
-a:hover { text-decoration: underline; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Breaches Reporter</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
+  <style>
+    /* ── Reporter-specific overrides ─────────────────────────────── */
+    .reporter-layout { display:flex; flex:1; min-height:0; }
+    .reporter-sidebar {
+      width:220px; min-width:220px; flex-shrink:0;
+      background:var(--color-surface);
+      border-right:1px solid var(--color-border);
+      padding:var(--space-4);
+      display:flex; flex-direction:column; gap:var(--space-4);
+      overflow-y:auto;
+    }
+    .reporter-sidebar h3 {
+      font-size:11px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--color-text-muted);
+      margin-bottom:var(--space-2);
+    }
+    .filter-block { display:flex; flex-direction:column; gap:var(--space-2); }
+    .filter-block label { font-size:11px; color:var(--color-text-muted); }
+    .filter-block select {
+      width:100%; padding:6px 8px;
+      border:1px solid var(--color-border);
+      border-radius:6px; background:var(--color-bg);
+      font-size:12px; color:var(--color-text); font-family:inherit;
+    }
+    .filter-block select:focus { outline:none; border-color:var(--color-primary); }
+    .reporter-main { flex:1; overflow-y:auto; padding:var(--space-6); display:flex; flex-direction:column; gap:var(--space-5); }
 
-/* LAYOUT */
-.app { display: flex; flex-direction: column; min-height: 100vh; }
-header { background: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: 0 24px; display: flex; align-items: center; gap: 16px; height: 56px; box-shadow: var(--shadow-sm); }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; color: var(--color-text); }
-.logo svg { color: var(--color-primary); }
-.header-meta { margin-left: auto; color: var(--color-text-muted); font-size: 12px; }
-.main { display: flex; flex: 1; gap: 0; flex-wrap: wrap; align-content: flex-start; }
-.sidebar { width: 260px; min-width: 260px; background: var(--color-surface); border-right: 1px solid var(--color-border); padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
-.content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+    /* ── Upload section ──────────────────────────────────────────── */
+    #upload-section {
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; flex:1; gap:var(--space-4);
+      min-height:340px;
+    }
+    .upload-zone {
+      width:100%; max-width:480px;
+      border:2px dashed var(--color-border);
+      border-radius:12px; padding:48px 32px;
+      text-align:center; cursor:pointer;
+      transition:border-color .15s, background .15s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color:var(--color-primary);
+      background:var(--color-primary-highlight, #cedcd8);
+    }
+    .upload-zone svg { color:var(--color-text-faint); margin:0 auto var(--space-3); display:block; }
+    .upload-zone p { font-size:15px; font-weight:600; margin-bottom:var(--space-1); }
+    .upload-zone span { font-size:12px; color:var(--color-text-muted); }
+    #upload-status { font-size:13px; }
+    #upload-status.ok  { color:var(--color-success); }
+    #upload-status.err { color:var(--color-error); }
 
-/* SIDEBAR FILTERS */
-.filter-section h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); margin-bottom: 8px; }
-.filter-group { display: flex; flex-direction: column; gap: 6px; }
-select, input[type=text] {
-  width: 100%; padding: 7px 10px; border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text);
-  font-size: 13px; font-family: inherit; outline: none; transition: border-color .15s;
-}
-select:focus, input:focus { border-color: var(--color-primary); }
-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 2px; }
-.btn { padding: 8px 14px; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 500; transition: background .15s; }
-.btn-primary { background: var(--color-primary); color: #fff; }
-.btn-primary:hover { background: var(--color-primary-hover); }
-.btn-ghost { background: transparent; color: var(--color-text-muted); border: 1px solid var(--color-border); }
-.btn-ghost:hover { background: var(--color-surface-2); }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
-.filter-actions { display: flex; gap: 8px; margin-top: 4px; }
+    /* ── Data section ────────────────────────────────────────────── */
+    #data-section { display:none; }
 
-/* TABS */
-.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--color-border); }
-.tab { padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; color: var(--color-text-muted); transition: color .15s, border-color .15s; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
-.tab:hover { color: var(--color-text); }
-.tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+    /* ── KPI row ─────────────────────────────────────────────────── */
+    .kpi-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--space-3); }
+    .kpi-card {
+      background:var(--color-surface); border:1px solid var(--color-border);
+      border-radius:10px; padding:var(--space-4);
+      box-shadow:0 1px 3px rgba(0,0,0,.05);
+    }
+    .kpi-card .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted); margin-bottom:var(--space-1); }
+    .kpi-card .kpi-value { font-size:28px; font-weight:700; line-height:1; }
+    .kpi-card .kpi-sub   { font-size:11px; color:var(--color-text-muted); margin-top:var(--space-1); }
+    .kpi-card.c-total  .kpi-value { color:var(--color-text); }
+    .kpi-card.c-ksl4   .kpi-value { color:#006494; }
+    .kpi-card.c-km1    .kpi-value { color:#006494; }
+    .kpi-card.c-ksl5a  .kpi-value { color:#964219; }
+    .kpi-card.c-km2    .kpi-value { color:#7a39bb; }
+    .kpi-card.c-excl   .kpi-value { color:var(--color-text-muted); }
+    .kpi-card.c-aos    .kpi-value { color:var(--color-primary); }
 
-/* KPI CARDS */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-.kpi-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-sm); }
-.kpi-label { font-size: 11px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
-.kpi-value { font-size: 26px; font-weight: 700; line-height: 1; }
-.kpi-sub { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; }
-.kpi-card.km1 .kpi-value { color: var(--color-km1); }
-.kpi-card.km2 .kpi-value { color: var(--color-km2); }
-.kpi-card.ksl4 .kpi-value { color: var(--color-ksl4); }
-.kpi-card.ksl5a .kpi-value { color: var(--color-ksl5a); }
-.kpi-card.total .kpi-value { color: var(--color-text); }
+    /* ── Section card ────────────────────────────────────────────── */
+    .section-card {
+      background:var(--color-surface); border:1px solid var(--color-border);
+      border-radius:10px; overflow:hidden;
+      box-shadow:0 1px 3px rgba(0,0,0,.05);
+    }
+    .section-card-head {
+      padding:12px 18px; border-bottom:1px solid var(--color-border);
+      display:flex; align-items:center; gap:10px;
+    }
+    .section-card-head h2 { font-size:14px; font-weight:600; }
+    .section-card-head .badge {
+      margin-left:auto; background:var(--color-surface-2,#f3f0ec);
+      border:1px solid var(--color-border); border-radius:20px;
+      padding:2px 10px; font-size:12px; color:var(--color-text-muted);
+    }
+    .section-card-body { padding:16px 18px; overflow-x:auto; }
 
-/* SECTION CARD */
-.section-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
-.section-card-header { padding: 14px 18px; border-bottom: 1px solid var(--color-divider); display: flex; align-items: center; gap: 10px; }
-.section-card-header h2 { font-size: 14px; font-weight: 600; }
-.section-card-header .badge { margin-left: auto; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 20px; padding: 2px 10px; font-size: 12px; color: var(--color-text-muted); }
-.section-card-body { padding: 16px 18px; }
+    /* ── Bar chart ───────────────────────────────────────────────── */
+    .bar-chart { display:flex; flex-direction:column; gap:8px; }
+    .bar-row   { display:flex; align-items:center; gap:10px; font-size:12px; }
+    .bar-label { width:180px; min-width:120px; text-align:right; color:var(--color-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .bar-track { flex:1; height:13px; background:var(--color-surface-2,#f3f0ec); border-radius:4px; overflow:hidden; }
+    .bar-fill  { height:100%; border-radius:4px; transition:width .4s; }
+    .bar-count { width:36px; font-weight:600; font-size:12px; text-align:right; }
 
-/* TABLE */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { background: var(--color-bg); padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); white-space: nowrap; cursor: pointer; user-select: none; }
-th:hover { background: var(--color-surface-2); }
-th .sort-icon { opacity: .4; margin-left: 4px; font-size: 10px; }
-th.sorted .sort-icon { opacity: 1; }
-td { padding: 8px 12px; border-bottom: 1px solid var(--color-divider); vertical-align: top; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: #f9f8f5; }
-.chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.chip-km1 { background: #dce9f3; color: var(--color-km1); }
-.chip-km2 { background: #ede3f8; color: var(--color-km2); }
-.chip-ksl4 { background: #d6ecec; color: var(--color-ksl4); }
-.chip-ksl5a { background: #f2e3d7; color: var(--color-ksl5a); }
-.chip-excl { background: #f2f0ec; color: var(--color-text-muted); }
-.chip-gr { background: #e8f4d6; color: var(--color-success); }
-.chip-de { background: #f5e6d3; color: var(--color-warning); }
-.ticket-link { font-family: monospace; font-size: 12px; }
-.text-muted { color: var(--color-text-muted); }
-.excl-row td { opacity: .5; }
+    /* ── Data tables ─────────────────────────────────────────────── */
+    .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .data-table th {
+      background:var(--color-bg); padding:7px 10px;
+      text-align:left; font-size:11px; font-weight:600;
+      text-transform:uppercase; letter-spacing:.04em;
+      color:var(--color-text-muted); border-bottom:1px solid var(--color-border);
+      white-space:nowrap;
+    }
+    .data-table td { padding:7px 10px; border-bottom:1px solid var(--color-divider,#e8e5e0); vertical-align:top; }
+    .data-table tr:last-child td { border-bottom:none; }
+    .data-table tr:hover td { background:#f9f8f5; }
+    .data-table tr.excl-row td { opacity:.45; }
+    .chip {
+      display:inline-block; padding:2px 8px; border-radius:20px;
+      font-size:11px; font-weight:600;
+    }
+    .chip-ksl4  { background:#dce9f3; color:#006494; }
+    .chip-km1   { background:#dce9f3; color:#006494; }
+    .chip-ksl5a { background:#f2e3d7; color:#964219; }
+    .chip-km2   { background:#ede3f8; color:#7a39bb; }
+    .chip-excl  { background:#f0eeea; color:var(--color-text-muted); }
+    .chip-y     { background:#d6ecec; color:var(--color-primary); }
+    .chip-n     { background:#f0eeea; color:var(--color-text-muted); }
 
-/* AOS TABLE */
-.aos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.mini-table { font-size: 12px; }
-.mini-table th { font-size: 10px; padding: 6px 10px; }
-.mini-table td { padding: 6px 10px; }
+    /* ── Tabs ────────────────────────────────────────────────────── */
+    .tabs { display:flex; gap:0; border-bottom:2px solid var(--color-border); flex-wrap:wrap; }
+    .tab-btn {
+      padding:9px 16px; font-size:13px; font-weight:500; cursor:pointer;
+      border:none; background:none; font-family:inherit;
+      color:var(--color-text-muted);
+      border-bottom:2px solid transparent; margin-bottom:-2px;
+      transition:color .15s, border-color .15s;
+    }
+    .tab-btn:hover  { color:var(--color-text); }
+    .tab-btn.active { color:var(--color-primary); border-bottom-color:var(--color-primary); }
 
-/* CHART BARS */
-.bar-chart { display: flex; flex-direction: column; gap: 8px; }
-.bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.bar-label { width: 200px; min-width: 140px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text-muted); text-align: right; }
-.bar-track { flex: 1; height: 14px; background: var(--color-bg); border-radius: 4px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 4px; transition: width .4s; }
-.bar-count { width: 40px; font-weight: 600; font-size: 13px; }
+    /* ── Pagination ──────────────────────────────────────────────── */
+    .pagination { display:flex; align-items:center; gap:6px; margin-top:10px; justify-content:flex-end; font-size:12px; color:var(--color-text-muted); }
+    .pg-btn {
+      padding:3px 9px; border:1px solid var(--color-border);
+      border-radius:5px; background:var(--color-surface);
+      cursor:pointer; font-size:12px; font-family:inherit;
+    }
+    .pg-btn:hover   { background:var(--color-surface-2,#f3f0ec); }
+    .pg-btn.active  { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+    .pg-btn:disabled { opacity:.4; cursor:not-allowed; }
 
-/* PAGINATION */
-.pagination { display: flex; align-items: center; gap: 8px; margin-top: 12px; justify-content: flex-end; font-size: 12px; color: var(--color-text-muted); }
-.page-btn { padding: 4px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); cursor: pointer; font-size: 12px; }
-.page-btn:hover { background: var(--color-surface-2); }
-.page-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-.page-btn:disabled { opacity: .4; cursor: not-allowed; }
+    /* ── Action bar ──────────────────────────────────────────────── */
+    .action-bar { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
+    .action-bar .record-count { font-size:12px; color:var(--color-text-muted); margin-left:auto; }
 
-/* EMPTY STATE */
-.empty { text-align: center; padding: 40px; color: var(--color-text-muted); }
-.empty svg { margin-bottom: 10px; opacity: .3; }
-
-/* DASHBOARD GRID */
-.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media(max-width:900px) { .dashboard-grid { grid-template-columns: 1fr; } }
-
-/* RESPONSIVE */
-@media(max-width:900px) {
-  .main { flex-direction: column; }
-  .sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--color-border); }
-  .aos-grid { grid-template-columns: 1fr; }
-}
-</style>
+    /* ── Dashboard grid ──────────────────────────────────────────── */
+    .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); }
+    @media(max-width:860px) { .dash-grid { grid-template-columns:1fr; } }
+    @media(max-width:720px) {
+      .reporter-layout { flex-direction:column; }
+      .reporter-sidebar { width:100%; min-width:unset; border-right:none; border-bottom:1px solid var(--color-border); }
+    }
+  </style>
 </head>
 <body>
 <div class="app">
 
-<header>
-  <div class="logo">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-    </svg>
-    Breaches Reporter
+  <!-- NAV -->
+  <nav class="app-nav">
+    <a href="index.html">Breaches Tracker</a>
+    <a href="reporter.html" class="active">Reporter</a>
+  </nav>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button id="import-btn" class="file-label" type="button">Import V2 File</button>
+      <input type="file" id="file-input" accept=".xlsx"
+             style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+    </div>
+    <div class="btn-group" id="export-btns" style="display:none;">
+      <button class="btn-outline" onclick="window.RPT.exportFiltered()">Export Filtered</button>
+      <button class="btn-outline" onclick="window.RPT.exportReport()">Export All</button>
+      <button class="btn-outline" onclick="window.RPT.resetToUpload()">Load New File</button>
+    </div>
+    <span id="record-count" style="font-size:12px;color:var(--color-text-muted);margin-left:auto;"></span>
   </div>
-  <div class="header-meta" id="headerMeta">Loading…</div>
-</header>
 
-<div class="main">
-<!-- UPLOAD BAR -->
-<div id="upload-bar" style="width:100%;background:var(--color-surface);padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--color-border);flex:0 0 100%;order:-1;">
-  <label for="csvUpload" style="font-weight:600;font-size:13px;color:var(--color-text);">📂 Upload new file here:</label>
-  <input type="file" id="csvUpload" accept=".xlsx"
-    style="font-size:13px;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 8px;background:var(--color-bg);color:var(--color-text);cursor:pointer;">
-  <span id="upload-status" style="font-size:12px;color:var(--color-success);"></span>
-</div>
-  <aside class="sidebar">
-    <div class="filter-section">
-      <h3>Filters</h3>
-      <div class="filter-group">
-        <label for="fWeek">Week</label>
-        <select id="fWeek"><option value="">All Weeks</option></select>
+  <div class="reporter-layout">
 
-        <label for="fSLA" style="margin-top:8px">SLA Category</label>
-        <select id="fSLA"><option value="">All Categories</option></select>
-
-        <label for="fSheet" style="margin-top:8px">Group (GR / DE)</label>
-        <select id="fSheet"><option value="">All Groups</option></select>
-
-        <label for="fLang" style="margin-top:8px">Language</label>
-        <select id="fLang"><option value="">All Languages</option></select>
-
-        <label for="fAgent" style="margin-top:8px">Agent</label>
-        <select id="fAgent"><option value="">All Agents</option></select>
-
-        <label for="fExcluded" style="margin-top:8px">Show Excluded</label>
-        <select id="fExcluded">
-          <option value="0">Hide Excluded</option>
-          <option value="1">Show All</option>
-          <option value="2">Only Excluded</option>
-        </select>
-
-        <label for="fSearch" style="margin-top:8px">Search Ticket</label>
-        <input type="text" id="fSearch" placeholder="INC000…">
+    <!-- SIDEBAR FILTERS (hidden until file loaded) -->
+    <aside class="reporter-sidebar" id="reporter-sidebar" style="display:none;">
+      <div>
+        <h3>Filters</h3>
+        <div class="filter-block">
+          <label>Week</label>
+          <select id="filter-week"><option value="All">All</option></select>
+          <label>SLA</label>
+          <select id="filter-sla"><option value="All">All</option></select>
+          <label>Language</label>
+          <select id="filter-lang"><option value="All">All</option></select>
+          <label>Tool</label>
+          <select id="filter-tool"><option value="All">All</option></select>
+          <label>Queue</label>
+          <select id="filter-queue"><option value="All">All</option></select>
+          <label>Sheet / Group</label>
+          <select id="filter-sheet"><option value="All">All</option></select>
+          <label>Excluded</label>
+          <select id="filter-excl"><option value="All">All</option></select>
+          <label>AOS</label>
+          <select id="filter-aos"><option value="All">All</option></select>
+        </div>
       </div>
-      <div class="filter-actions" style="margin-top:12px">
-        <button class="btn btn-primary btn-sm" onclick="applyFilters()">Apply</button>
-        <button class="btn btn-ghost btn-sm" onclick="resetFilters()">Reset</button>
+      <button class="btn-outline" style="margin-top:auto;" onclick="window.RPT.clearFilters()">Reset Filters</button>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="reporter-main">
+
+      <!-- ── UPLOAD STATE ─────────────────────────────────────── -->
+      <div id="upload-section">
+        <div class="upload-zone" id="drop-zone-reporter">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="12" y1="11" x2="12" y2="17"/>
+            <polyline points="9,14 12,11 15,14"/>
+          </svg>
+          <p>Drop your V2-Breaches.xlsx here</p>
+          <span>…or click to browse &nbsp;·&nbsp; accepts .xlsx only</span>
+        </div>
+        <div id="upload-status"></div>
       </div>
-    </div>
 
-    <div class="filter-section" style="margin-top:8px">
-      <h3>Quick Stats</h3>
-      <div id="sideStats" style="font-size:12px; color:var(--color-text-muted); line-height:1.8;"></div>
-    </div>
-  </aside>
+      <!-- ── DATA STATE ────────────────────────────────────────── -->
+      <div id="data-section">
 
-  <!-- MAIN CONTENT -->
-  <main class="content">
+        <!-- KPIs -->
+        <div class="kpi-row" id="kpi-row"></div>
 
-    <!-- KPI ROW -->
-    <div class="kpi-row" id="kpiRow"></div>
+        <!-- Tabs -->
+        <div class="tabs" id="tab-bar">
+          <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+          <button class="tab-btn" data-tab="overview">Overview</button>
+          <button class="tab-btn" data-tab="all">All Records</button>
+          <button class="tab-btn" data-tab="ksl4">KSL-4</button>
+          <button class="tab-btn" data-tab="km1">KM-1</button>
+          <button class="tab-btn" data-tab="ksl5a">KSL-5a</button>
+          <button class="tab-btn" data-tab="km2">KM-2</button>
+          <button class="tab-btn" data-tab="aos">AOS</button>
+        </div>
+        <div id="tab-content" style="margin-top:16px;"></div>
 
-    <!-- TABS -->
-    <div>
-      <div class="tabs">
-        <button class="tab active" onclick="showTab('dashboard',this)">Dashboard</button>
-        <button class="tab" onclick="showTab('overview',this)">Overview</button>
-        <button class="tab" onclick="showTab('ksl4',this)">KSL-4</button>
-        <button class="tab" onclick="showTab('km1',this)">KM-1</button>
-        <button class="tab" onclick="showTab('ksl5a',this)">KSL-5a</button>
-        <button class="tab" onclick="showTab('km2',this)">KM-2</button>
-        <button class="tab" onclick="showTab('aos',this)">AOS Portal</button>
-        <button class="tab" onclick="showTab('all',this)">All Records</button>
-      </div>
-      <div id="tabContent" style="margin-top:16px;"></div>
-    </div>
+      </div><!-- /data-section -->
+    </div><!-- /reporter-main -->
+  </div><!-- /reporter-layout -->
+</div><!-- /app -->
 
-  </main>
-</div><!-- end .main -->
-</div><!-- end .app -->
+<!-- Scripts -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="reporter-processor.js"></script>
+<script src="reporter-exporter.js"></script>
 
 <script>
-// ─── CET date formatter (UTC+2) ─────────────────────────────────────────────
-function formatDateCET(val) {
-  if (!val) return '';
-  const d = (val instanceof Date) ? val : new Date(String(val));
-  if (isNaN(d.getTime())) return String(val);
-  const local = new Date(d.getTime() + 2 * 3600 * 1000);
-  return [
-    String(local.getUTCDate()).padStart(2,'0'),
-    String(local.getUTCMonth()+1).padStart(2,'0'),
-    local.getUTCFullYear()
-  ].join('.') + ' ' + [
-    String(local.getUTCHours()).padStart(2,'0'),
-    String(local.getUTCMinutes()).padStart(2,'0'),
-    String(local.getUTCSeconds()).padStart(2,'0')
-  ].join(':');
-}
+// ─── File wiring ───────────────────────────────────────────────────────────
+(function () {
+  var fileInput  = document.getElementById('file-input');
+  var importBtn  = document.getElementById('import-btn');
+  var dropZone   = document.getElementById('drop-zone-reporter');
+  var exportBtns = document.getElementById('export-btns');
+  var sidebar    = document.getElementById('reporter-sidebar');
 
-const RAW = [{"ticket": "INC000109027757", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#SW#AWP", "sla_code": "KSL-4", "reason": "Escalation from MC", "application": "AWP", "agent": "", "bms": "0", "excluded": 1, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "Ticket opened by US MC", "sheet": "KSL-4 GR"}, {"ticket": "INC000109107202", "queue": "FT_use-aos-en", "lang": "en", "topic": "#SW#AOS", "sla_code": "KSL-4", "reason": "AOS Portal issue", "application": "AOS Portal", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "Issue with eSH entry", "sheet": "KSL-4 GR"}, {"ticket": "INC000109108716", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#SW#ISPA-MOBILE", "sla_code": "KSL-4", "reason": "Solution Request", "application": "ISPA Mobile", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109142912", "queue": "FT_use-aos-en", "lang": "en", "topic": "#SW#AOS", "sla_code": "KSL-4", "reason": "AOS Portal issue", "application": "AOS Portal", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "AOS Access Denied", "sheet": "KSL-4 GR"}, {"ticket": "INC000109135180", "queue": "FT_use-aos-en", "lang": "en", "topic": "#SW#AOS", "sla_code": "KSL-4", "reason": "AOS Portal issue", "application": "AOS Portal", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "Issue with eSH entry", "sheet": "KSL-4 GR"}, {"ticket": "INC000109135180", "queue": "FT_use-aos-en", "lang": "en", "topic": "#SW#AOS", "sla_code": "KSL-4", "reason": "AOS Portal issue", "application": "AOS Portal", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "Issue with eSH entry", "sheet": "KSL-4 GR"}, {"ticket": "INC000109132136", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#SW#AWP", "sla_code": "KSL-4", "reason": "Solution Request", "application": "AWP", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109160745", "queue": "FT_use-aos-en", "lang": "en", "topic": "#SW#AOS", "sla_code": "KSL-4", "reason": "AOS Portal issue", "application": "AOS Portal", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "AOS Registration", "sheet": "KSL-4 GR"}, {"ticket": "INC000109165168", "queue": "FT_use-aos-en", "lang": "en", "topic": "#SW#INTERFACE", "sla_code": "KSL-4", "reason": "Hardware", "application": "ICOM", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "Escalation after REM that was not performed correctly", "sheet": "KSL-4 GR"}, {"ticket": "INC000109171425", "queue": "FT_use-ilz-pt", "lang": "pt", "topic": "#SW#KAI", "sla_code": "KSL-4", "reason": "Software", "application": "KAI", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109185855", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#SW#AWP", "sla_code": "KSL-4", "reason": "Solution Request", "application": "AWP", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109189061", "queue": "FT_use-ilz-nl", "lang": "nl", "topic": "#SW#AWP", "sla_code": "KSL-4", "reason": "Software", "application": "AWP", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109189188", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#SW#AWP", "sla_code": "KSL-4", "reason": "Solution Request", "application": "AWP", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109190675", "queue": "FT_use-ilz-nl", "lang": "nl", "topic": "#SW#AWP", "sla_code": "KSL-4", "reason": "Solution Request", "application": "AWP", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109226479", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#HW#KEYREADER-PLUS", "sla_code": "KSL-4", "reason": "Hardware", "application": "Keyreader Plus", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109226479", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#HW#KEYREADER-PLUS", "sla_code": "KSL-4", "reason": "Hardware", "application": "Keyreader Plus", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}, {"ticket": "INC000109226479", "queue": "FT_use-ilz-en", "lang": "en", "topic": "#HW#KEYREADER-PLUS", "sla_code": "KSL-4", "reason": "Hardware", "application": "Keyreader Plus", "agent": "", "bms": "0", "excluded": 0, "week": 14, "date_close": "2026-04-01 00:00:00", "comment": "", "sheet": "KSL-4 GR"}];
-
-let DATA = RAW.map(r => Object.assign({}, r));
-let filteredData = [];
-let currentTab = 'dashboard';
-let sortCol = null, sortDir = 1;
-let currentPage = 1;
-const PAGE_SIZE = 50;
-
-// ─── UPLOAD HANDLER ──────────────────────────────────────────────────────────
-document.getElementById('csvUpload').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    try {
-      const wb = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      if (rows.length < 2) { document.getElementById('upload-status').textContent = 'No data rows found.'; return; }
-      const headers = rows[0].map(h => String(h).toLowerCase().trim());
-      // Column index helpers
-      const ci = name => headers.findIndex(h => h.includes(name));
-      const iTicket   = ci('ticket');
-      const iQueue    = ci('queue');
-      const iLang     = ci('lang');
-      const iTopic    = ci('topic');
-      const iSla      = ci('sla_code') >= 0 ? ci('sla_code') : ci('sla');
-      const iReason   = ci('reason');
-      const iApp      = ci('application');
-      const iAgent    = ci('agent');
-      const iBms      = ci('bms');
-      const iExcluded = ci('excluded');
-      const iWeek     = ci('week');
-      const iDate     = ci('date_close') >= 0 ? ci('date_close') : ci('date');
-      const iComment  = ci('comment');
-      const iSheet    = ci('sheet');
-      DATA = rows.slice(1).filter(r => r[iTicket]).map(r => ({
-        ticket:      String(r[iTicket] || ''),
-        queue:       String(r[iQueue]  || ''),
-        lang:        String(r[iLang]   || ''),
-        topic:       String(r[iTopic]  || ''),
-        sla_code:    String(r[iSla]    || ''),
-        reason:      String(r[iReason] || ''),
-        application: String(r[iApp]    || ''),
-        agent:       String(r[iAgent]  || ''),
-        bms:         String(r[iBms]    || '0'),
-        excluded:    parseInt(r[iExcluded]) || 0,
-        week:        parseInt(r[iWeek])     || 0,
-        date_close:  formatDateCET(r[iDate]),
-        comment:     String(r[iComment]|| ''),
-        sheet:       String(r[iSheet]  || '')
-      }));
-      document.getElementById('upload-status').textContent = '✓ Loaded ' + DATA.length + ' rows';
-      populateFilters();
-      applyFilters();
-    } catch(err) {
-      document.getElementById('upload-status').textContent = '✗ Error: ' + err.message;
+  function loadFile(f) {
+    if (!f) return;
+    if (!f.name.match(/\.xlsx$/i)) {
+      setStatus('Only .xlsx files are accepted.', true);
+      return;
     }
-  };
-  reader.readAsArrayBuffer(file);
+    setStatus('Loading ' + f.name + '…', false);
+    window.RPT.loadFile(f);
+    // Show export buttons & sidebar after load
+    exportBtns.style.display = '';
+    sidebar.style.display = '';
+  }
+
+  function setStatus(msg, isErr) {
+    var el = document.getElementById('upload-status');
+    el.textContent = msg;
+    el.className   = isErr ? 'err' : 'ok';
+  }
+
+  importBtn.addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function (e) {
+    loadFile(e.target.files[0]);
+    fileInput.value = '';
+  });
+
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', function () {
+    dropZone.classList.remove('drag-over');
+  });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    loadFile(e.dataTransfer.files[0]);
+  });
+
+  // Global drop fallback
+  document.addEventListener('dragover', function (e) { e.preventDefault(); });
+  document.addEventListener('drop', function (e) {
+    e.preventDefault();
+    if (e.target === dropZone || dropZone.contains(e.target)) return;
+    loadFile(e.dataTransfer.files[0]);
+  });
+})();
+
+// ─── Tab switching ─────────────────────────────────────────────────────────
+document.getElementById('tab-bar').addEventListener('click', function (e) {
+  var btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderTab(btn.dataset.tab);
 });
 
-// ─── FILTER POPULATION ───────────────────────────────────────────────────────
-function populateFilters() {
-  const weeks    = [...new Set(DATA.map(r => r.week))].sort((a,b) => a-b);
-  const slas     = [...new Set(DATA.map(r => r.sla_code).filter(Boolean))].sort();
-  const sheets   = [...new Set(DATA.map(r => r.sheet).filter(Boolean))].sort();
-  const langs    = [...new Set(DATA.map(r => r.lang).filter(Boolean))].sort();
-  const agents   = [...new Set(DATA.map(r => r.agent).filter(Boolean))].sort();
-  fillSelect('fWeek',  weeks,  'All Weeks',      v => 'Week ' + v);
-  fillSelect('fSLA',   slas,   'All Categories', v => v);
-  fillSelect('fSheet', sheets, 'All Groups',     v => v);
-  fillSelect('fLang',  langs,  'All Languages',  v => v.toUpperCase());
-  fillSelect('fAgent', agents, 'All Agents',     v => v);
-}
-function fillSelect(id, vals, placeholder, label) {
-  const sel = document.getElementById(id);
-  const cur = sel.value;
-  sel.innerHTML = `<option value="">${placeholder}</option>`
-    + vals.map(v => `<option value="${v}">${label(v)}</option>`).join('');
-  sel.value = cur;
-}
+var currentTab  = 'dashboard';
+var currentPage = 1;
+var PAGE_SIZE   = 50;
 
-// ─── FILTERS ─────────────────────────────────────────────────────────────────
-function applyFilters() {
-  const week    = document.getElementById('fWeek').value;
-  const sla     = document.getElementById('fSLA').value;
-  const sheet   = document.getElementById('fSheet').value;
-  const lang    = document.getElementById('fLang').value;
-  const agent   = document.getElementById('fAgent').value;
-  const excl    = document.getElementById('fExcluded').value;
-  const search  = document.getElementById('fSearch').value.trim().toLowerCase();
-  filteredData = DATA.filter(r => {
-    if (week   && String(r.week)     !== week)    return false;
-    if (sla    && r.sla_code         !== sla)     return false;
-    if (sheet  && r.sheet            !== sheet)   return false;
-    if (lang   && r.lang             !== lang)    return false;
-    if (agent  && r.agent            !== agent)   return false;
-    if (excl === '0' && r.excluded)              return false;
-    if (excl === '2' && !r.excluded)             return false;
-    if (search && !r.ticket.toLowerCase().includes(search)) return false;
-    return true;
-  });
+function renderTab(name) {
+  currentTab  = name;
   currentPage = 1;
-  renderKPIs(filteredData);
-  renderSideStats(filteredData);
-  renderTab(currentTab);
-}
-function resetFilters() {
-  ['fWeek','fSLA','fSheet','fLang','fAgent'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fExcluded').value = '0';
-  document.getElementById('fSearch').value = '';
-  applyFilters();
+  var data = window.RPT ? window.RPT.filtered : [];
+  var el   = document.getElementById('tab-content');
+  switch (name) {
+    case 'dashboard': el.innerHTML = buildDashboard(data); break;
+    case 'overview':  el.innerHTML = buildOverview(data);  break;
+    case 'all':       el.innerHTML = buildTable('All Records', data); break;
+    case 'ksl4':      el.innerHTML = buildTable('KSL-4',  data.filter(function(r){return r.sla==='KSL-4';}));  break;
+    case 'km1':       el.innerHTML = buildTable('KM-1',   data.filter(function(r){return r.sla==='KM-1';}));   break;
+    case 'ksl5a':     el.innerHTML = buildTable('KSL-5a', data.filter(function(r){return r.sla==='KSL-5a';})); break;
+    case 'km2':       el.innerHTML = buildTable('KM-2',   data.filter(function(r){return r.sla==='KM-2';}));   break;
+    case 'aos':       el.innerHTML = buildTable('AOS Records', data.filter(function(r){return r.isAos;})); break;
+  }
 }
 
-// ─── KPI CARDS ───────────────────────────────────────────────────────────────
-function renderKPIs(data) {
-  const total  = data.length;
-  const excl   = data.filter(r => r.excluded).length;
-  const active = total - excl;
-  const ksl4   = data.filter(r => r.sla_code === 'KSL-4' && !r.excluded).length;
-  const km1    = data.filter(r => r.sla_code === 'KM-1'  && !r.excluded).length;
-  const ksl5a  = data.filter(r => r.sla_code === 'KSL-5a'&& !r.excluded).length;
-  const km2    = data.filter(r => r.sla_code === 'KM-2'  && !r.excluded).length;
-  const weeks  = new Set(data.map(r => r.week)).size;
-  document.getElementById('kpiRow').innerHTML = [
-    kpiCard('total',  'Total Breaches', total,  weeks + ' week' + (weeks!==1?'s':'')),
-    kpiCard('ksl4',   'KSL-4',  ksl4,  pct(ksl4,active)),
-    kpiCard('km1',    'KM-1',   km1,   pct(km1, active)),
-    kpiCard('ksl5a',  'KSL-5a', ksl5a, pct(ksl5a,active)),
-    kpiCard('km2',    'KM-2',   km2,   pct(km2, active)),
-    kpiCard('chip-excl','Excluded', excl, pct(excl,total)),
-  ].join('');
+// Called by reporter-processor after data loads / filters change
+window.renderTables = function () {
+  var data = window.RPT ? window.RPT.filtered : [];
+  buildKPIs(data);
+  renderTab(currentTab);
+};
+window.renderCharts = function () { /* charts handled inline in dashboard */ };
+
+// ─── KPIs ──────────────────────────────────────────────────────────────────
+function buildKPIs(data) {
+  var total  = data.length;
+  var active = data.filter(function(r){return r.excluded==='N';}).length;
+  var excl   = total - active;
+  function bySla(s) { return data.filter(function(r){return r.sla===s && r.excluded==='N';}).length; }
+  var aos   = data.filter(function(r){return r.isAos && r.excluded==='N';}).length;
+  var weeks = new Set(data.map(function(r){return r.week;}));
+  document.getElementById('kpi-row').innerHTML =
+    kpiCard('c-total', 'Total',   total,  weeks.size + ' week(s)') +
+    kpiCard('c-ksl4',  'KSL-4',  bySla('KSL-4'),  pct(bySla('KSL-4'),  active)) +
+    kpiCard('c-km1',   'KM-1',   bySla('KM-1'),   pct(bySla('KM-1'),   active)) +
+    kpiCard('c-ksl5a', 'KSL-5a', bySla('KSL-5a'), pct(bySla('KSL-5a'), active)) +
+    kpiCard('c-km2',   'KM-2',   bySla('KM-2'),   pct(bySla('KM-2'),   active)) +
+    kpiCard('c-aos',   'AOS',    aos,  pct(aos, active)) +
+    kpiCard('c-excl',  'Excluded', excl, pct(excl, total));
 }
 function kpiCard(cls, label, val, sub) {
-  return `<div class="kpi-card ${cls}"><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
+  return '<div class="kpi-card '+cls+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div><div class="kpi-sub">'+sub+'</div></div>';
 }
-function pct(n, d) { return d ? Math.round(n/d*100) + '%' : '0%'; }
+function pct(n, d) { return d ? Math.round(n/d*100)+'%' : '0%'; }
 
-// ─── SIDE STATS ──────────────────────────────────────────────────────────────
-function renderSideStats(data) {
-  const active = data.filter(r => !r.excluded);
-  const aosCnt = active.filter(r => r.application === 'AOS Portal').length;
-  const agentCnt = active.filter(r => r.agent).length;
-  const langs = [...new Set(active.map(r => r.lang).filter(Boolean))].length;
-  document.getElementById('sideStats').innerHTML =
-    `<div>Active: <strong>${active.length}</strong></div>` +
-    `<div>AOS Portal: <strong>${aosCnt}</strong></div>` +
-    `<div>Agent breaches: <strong>${agentCnt}</strong></div>` +
-    `<div>Languages: <strong>${langs}</strong></div>`;
+// ─── Dashboard ─────────────────────────────────────────────────────────────
+function buildDashboard(data) {
+  var active = data.filter(function(r){return r.excluded==='N';});
+  var appMap={}, reasonMap={}, langMap={}, slaMap={};
+  active.forEach(function(r){
+    if(r.tool)     appMap[r.tool]         = (appMap[r.tool]||0)+1;
+    if(r.reason)   reasonMap[r.reason]    = (reasonMap[r.reason]||0)+1;
+    if(r.language) langMap[r.language]    = (langMap[r.language]||0)+1;
+    if(r.sla)      slaMap[r.sla]          = (slaMap[r.sla]||0)+1;
+  });
+  return '<div class="dash-grid">'+
+    card('Top Tools',    barChart(topN(appMap,10),   '#006494'))+
+    card('Breach Reasons', barChart(topN(reasonMap,8), '#964219'))+
+    card('Languages',    barChart(topN(langMap,10),  '#437a22'))+
+    card('SLA Breakdown', barChart(topN(slaMap,6),   '#7a39bb'))+
+  '</div>';
 }
-
-// ─── TABS ────────────────────────────────────────────────────────────────────
-function showTab(name, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  currentTab = name;
-  currentPage = 1;
-  renderTab(name);
-}
-function renderTab(name) {
-  const el = document.getElementById('tabContent');
-  switch(name) {
-    case 'dashboard': el.innerHTML = renderDashboard(filteredData); break;
-    case 'overview':  el.innerHTML = renderOverview(filteredData);  break;
-    case 'ksl4':      el.innerHTML = renderSLATable(filteredData, 'KSL-4');  break;
-    case 'km1':       el.innerHTML = renderSLATable(filteredData, 'KM-1');   break;
-    case 'ksl5a':     el.innerHTML = renderSLATable(filteredData, 'KSL-5a'); break;
-    case 'km2':       el.innerHTML = renderSLATable(filteredData, 'KM-2');   break;
-    case 'aos':       el.innerHTML = renderAOS(filteredData);       break;
-    case 'all':       el.innerHTML = renderAll(filteredData);       break;
-  }
-}
-
-// ─── DASHBOARD TAB ───────────────────────────────────────────────────────────
-function renderDashboard(data) {
-  const active = data.filter(r => !r.excluded);
-
-  // Top Applications
-  const appMap = {};
-  active.forEach(r => { if (r.application) appMap[r.application] = (appMap[r.application]||0)+1; });
-  const topApps = Object.entries(appMap).sort((a,b) => b[1]-a[1]).slice(0,10);
-
-  // Reasons
-  const reasonMap = {};
-  active.forEach(r => { if (r.reason) reasonMap[r.reason] = (reasonMap[r.reason]||0)+1; });
-  const topReasons = Object.entries(reasonMap).sort((a,b) => b[1]-a[1]).slice(0,8);
-
-  // Languages
-  const langMap = {};
-  active.forEach(r => { if (r.lang) langMap[r.lang.toUpperCase()] = (langMap[r.lang.toUpperCase()]||0)+1; });
-  const topLangs = Object.entries(langMap).sort((a,b) => b[1]-a[1]).slice(0,10);
-
-  // SLA breakdown
-  const slaMap = {};
-  active.forEach(r => { if (r.sla_code) slaMap[r.sla_code] = (slaMap[r.sla_code]||0)+1; });
-  const slaEntries = Object.entries(slaMap).sort((a,b) => b[1]-a[1]);
-
-  return `<div class="dashboard-grid">
-    <div class="section-card">
-      <div class="section-card-header"><h2>Top Applications</h2><span class="badge">${topApps.length}</span></div>
-      <div class="section-card-body">${barChart(topApps, 'var(--color-ksl4)')}</div>
-    </div>
-    <div class="section-card">
-      <div class="section-card-header"><h2>Breach Reasons</h2><span class="badge">${topReasons.length}</span></div>
-      <div class="section-card-body">${barChart(topReasons, 'var(--color-warning)')}</div>
-    </div>
-    <div class="section-card">
-      <div class="section-card-header"><h2>Languages</h2><span class="badge">${topLangs.length}</span></div>
-      <div class="section-card-body">${barChart(topLangs, 'var(--color-km1)')}</div>
-    </div>
-    <div class="section-card">
-      <div class="section-card-header"><h2>SLA Categories</h2><span class="badge">${slaEntries.length}</span></div>
-      <div class="section-card-body">${barChart(slaEntries, 'var(--color-km2)')}</div>
-    </div>
-  </div>`;
+function topN(map, n) {
+  return Object.entries(map).sort(function(a,b){return b[1]-a[1];}).slice(0,n);
 }
 function barChart(entries, color) {
-  if (!entries.length) return '<div class="empty">No data</div>';
-  const max = entries[0][1];
-  return '<div class="bar-chart">' + entries.map(([label, count]) =>
-    `<div class="bar-row">
-      <div class="bar-label" title="${label}">${label}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(count/max*100)}%;background:${color}"></div></div>
-      <div class="bar-count">${count}</div>
-    </div>`
-  ).join('') + '</div>';
+  if (!entries.length) return '<p style="color:var(--color-text-muted);font-size:12px;">No data</p>';
+  var max = entries[0][1];
+  return '<div class="bar-chart">'+entries.map(function(e){
+    return '<div class="bar-row">'+
+      '<div class="bar-label" title="'+e[0]+'">'+e[0]+'</div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+Math.round(e[1]/max*100)+'%;background:'+color+'"></div></div>'+
+      '<div class="bar-count">'+e[1]+'</div>'+
+    '</div>';
+  }).join('')+'</div>';
+}
+function card(title, body) {
+  return '<div class="section-card"><div class="section-card-head"><h2>'+title+'</h2></div><div class="section-card-body">'+body+'</div></div>';
 }
 
-// ─── OVERVIEW TAB ────────────────────────────────────────────────────────────
-function renderOverview(data) {
-  const bySLA = {};
-  data.forEach(r => {
-    if (!bySLA[r.sla_code]) bySLA[r.sla_code] = { total:0, excl:0 };
-    bySLA[r.sla_code].total++;
-    if (r.excluded) bySLA[r.sla_code].excl++;
+// ─── Overview ──────────────────────────────────────────────────────────────
+function buildOverview(data) {
+  var map = {};
+  data.forEach(function(r){
+    if (!map[r.sla]) map[r.sla] = {total:0, active:0, excl:0, aos:0};
+    map[r.sla].total++;
+    if (r.excluded==='N') map[r.sla].active++; else map[r.sla].excl++;
+    if (r.isAos && r.excluded==='N') map[r.sla].aos++;
   });
-  const rows = Object.entries(bySLA).map(([sla, s]) =>
-    `<tr><td><span class="chip chip-${sla.toLowerCase().replace('-','').replace('a','a')}">${sla}</span></td><td>${s.total}</td><td>${s.total - s.excl}</td><td>${s.excl}</td><td>${pct(s.total-s.excl,s.total)}</td></tr>`
-  ).join('');
-  return `<div class="section-card">
-    <div class="section-card-header"><h2>SLA Overview</h2><span class="badge">${data.length} records</span></div>
-    <div class="section-card-body table-wrap">
-      <table>
-        <thead><tr><th>SLA</th><th>Total</th><th>Active</th><th>Excluded</th><th>Active %</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="5" class="empty">No data</td></tr>'}</tbody>
-      </table>
-    </div>
-  </div>`;
+  var rows = Object.entries(map).sort(function(a,b){return b[1].total-a[1].total;}).map(function(e){
+    var s=e[1];
+    return '<tr><td>'+chipSla(e[0])+'</td><td>'+s.total+'</td><td>'+s.active+'</td><td>'+s.excl+'</td><td>'+s.aos+'</td><td>'+pct(s.active,s.total)+'</td></tr>';
+  }).join('');
+  return '<div class="section-card"><div class="section-card-head"><h2>SLA Overview</h2><span class="badge">'+data.length+' records</span></div>'+
+    '<div class="section-card-body"><table class="data-table"><thead><tr><th>SLA</th><th>Total</th><th>Active</th><th>Excl</th><th>AOS</th><th>Active%</th></tr></thead>'+
+    '<tbody>'+(rows||'<tr><td colspan="6" style="color:var(--color-text-muted);text-align:center;padding:20px;">No data</td></tr>')+'</tbody></table></div></div>';
 }
 
-// ─── SLA TABLE ───────────────────────────────────────────────────────────────
-function renderSLATable(data, sla) {
-  const rows = data.filter(r => r.sla_code === sla);
-  return sectionTable('Breaches — ' + sla, rows, rows.length);
-}
-function sectionTable(title, rows, total) {
-  const start = (currentPage-1)*PAGE_SIZE;
-  const page  = rows.slice(start, start+PAGE_SIZE);
-  const trs = page.map(r =>
-    `<tr class="${r.excluded ? 'excl-row' : ''}">
-      <td class="ticket-link">${r.ticket}</td>
-      <td>${r.date_close}</td>
-      <td><span class="chip chip-${r.sla_code.toLowerCase().replace('-','').replace('a','a')}">${r.sla_code}</span></td>
-      <td>${r.application}</td>
-      <td>${r.reason}</td>
-      <td>${r.lang.toUpperCase()}</td>
-      <td>${r.sheet}</td>
-      <td>${r.excluded ? '<span class="chip chip-excl">Excl</span>' : ''}</td>
-    </tr>`
-  ).join('');
-  return `<div class="section-card">
-    <div class="section-card-header"><h2>${title}</h2><span class="badge">${total}</span></div>
-    <div class="section-card-body table-wrap">
-      <table>
-        <thead><tr>
-          <th>Ticket</th><th>Date Close (CET)</th><th>SLA</th><th>Application</th><th>Reason</th><th>Lang</th><th>Group</th><th>Excl</th>
-        </tr></thead>
-        <tbody>${trs || '<tr><td colspan="8" class="empty">No records</td></tr>'}</tbody>
-      </table>
-      ${pagination(total)}
-    </div>
-  </div>`;
+// ─── Generic table ─────────────────────────────────────────────────────────
+function buildTable(title, rows) {
+  var total = rows.length;
+  var start = (currentPage-1)*PAGE_SIZE;
+  var page  = rows.slice(start, start+PAGE_SIZE);
+  var trs = page.map(function(r){
+    return '<tr class="'+(r.excluded==='Y'?'excl-row':'')+'">'+
+      '<td style="font-family:monospace;font-size:11px;">'+r.ticket+'</td>'+
+      '<td>'+r.dateClosed+'</td>'+
+      '<td>'+r.dateTimeBreach+'</td>'+
+      '<td>'+chipSla(r.sla)+'</td>'+
+      '<td>'+r.tool+'</td>'+
+      '<td>'+r.reason+'</td>'+
+      '<td>'+r.language+'</td>'+
+      '<td>'+r.sheet+'</td>'+
+      '<td>'+(r.excluded==='Y'?'<span class="chip chip-excl">Excl</span>':'')+'</td>'+
+      '<td>'+(r.isAos?'<span class="chip chip-y">Y</span>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+  return '<div class="section-card">'+
+    '<div class="section-card-head"><h2>'+title+'</h2><span class="badge">'+total+' records</span></div>'+
+    '<div class="section-card-body">'+
+      '<table class="data-table"><thead><tr>'+
+        '<th>Ticket</th><th>Date Close (CET)</th><th>Breach Time (CET)</th>'+
+        '<th>SLA</th><th>Tool</th><th>Reason</th><th>Lang</th><th>Sheet</th><th>Excl</th><th>AOS</th>'+
+      '</tr></thead>'+
+      '<tbody>'+(trs||'<tr><td colspan="10" style="color:var(--color-text-muted);text-align:center;padding:20px;">No records</td></tr>')+'</tbody>'+
+      '</table>'+
+      buildPagination(total)+
+    '</div></div>';
 }
 
-// ─── AOS TAB ─────────────────────────────────────────────────────────────────
-function renderAOS(data) {
-  const aos = data.filter(r => r.application === 'AOS Portal' && !r.excluded);
-  return sectionTable('AOS Portal Issues', aos, aos.length);
+function chipSla(sla) {
+  var map = {'KSL-4':'chip-ksl4','KM-1':'chip-km1','KSL-5a':'chip-ksl5a','KM-2':'chip-km2'};
+  var cls = map[sla] || 'chip-excl';
+  return '<span class="chip '+cls+'">'+sla+'</span>';
 }
 
-// ─── ALL RECORDS TAB ─────────────────────────────────────────────────────────
-function renderAll(data) {
-  return sectionTable('All Records', data, data.length);
-}
-
-// ─── PAGINATION ──────────────────────────────────────────────────────────────
-function pagination(total) {
-  const pages = Math.ceil(total / PAGE_SIZE);
-  if (pages <= 1) return '';
-  let btns = '';
-  for (let i = 1; i <= Math.min(pages, 10); i++) {
-    btns += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+// ─── Pagination ─────────────────────────────────────────────────────────────
+function buildPagination(total) {
+  var pages = Math.ceil(total/PAGE_SIZE);
+  if (pages<=1) return '';
+  var btns='';
+  for (var i=1;i<=Math.min(pages,10);i++) {
+    btns += '<button class="pg-btn'+(i===currentPage?' active':'')+'" onclick="goPage('+i+')">'+i+'</button>';
   }
-  return `<div class="pagination">
-    <button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>
-    ${btns}
-    <button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button>
-    <span>${(currentPage-1)*PAGE_SIZE+1}–${Math.min(currentPage*PAGE_SIZE,total)} of ${total}</span>
-  </div>`;
+  return '<div class="pagination">'+
+    '<button class="pg-btn" onclick="goPage('+(currentPage-1)+')" '+(currentPage===1?'disabled':'')+'>‹</button>'+
+    btns+
+    '<button class="pg-btn" onclick="goPage('+(currentPage+1)+')" '+(currentPage===pages?'disabled':'')+'>›</button>'+
+    '<span>'+((currentPage-1)*PAGE_SIZE+1)+'–'+Math.min(currentPage*PAGE_SIZE,total)+' of '+total+'</span>'+
+  '</div>';
 }
-function goPage(n) {
-  const pages = Math.ceil(filteredData.length / PAGE_SIZE);
-  currentPage = Math.max(1, Math.min(n, pages));
+window.goPage = function(n) {
+  var pages = Math.ceil((window.RPT?window.RPT.filtered:[]).length/PAGE_SIZE);
+  currentPage = Math.max(1,Math.min(n,pages));
   renderTab(currentTab);
-}
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-function init() {
-  populateFilters();
-  applyFilters();
-  const weeks = [...new Set(DATA.map(r => r.week))].sort((a,b)=>a-b);
-  const minW = weeks[0], maxW = weeks[weeks.length-1];
-  document.getElementById('headerMeta').textContent =
-    DATA.length + ' records · Weeks ' + minW + '–' + maxW;
-}
-init();
+};
 </script>
 </body>
 </html>
