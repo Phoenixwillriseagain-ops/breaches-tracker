@@ -35,9 +35,7 @@
     resetToUpload: function() { location.reload(); },
     exportFiltered: function() { alert('Export feature coming soon'); },
     exportReport: function() { alert('Export feature coming soon'); },
-    // Callback function for custom data processing
     processDataCallback: function(data, callback) {
-      // This allows external systems to hook into data processing
       if (typeof callback === 'function') {
         return callback(data);
       }
@@ -49,13 +47,14 @@
     return String(v == null ? '' : v).trim();
   }
 
-  // Format date as dd.mm.yyyy hh:mm:ss in CET (UTC+2)
+  // Format date as dd.mm.yyyy hh:mm:ss in UTC+3
   function formatDate(val) {
     if (!val) return '';
     const d = new Date(val);
     if (isNaN(d.getTime())) return clean(val);
-    const CET_OFFSET_MS = 2 * 60 * 60 * 1000;
-    const local = new Date(d.getTime() + CET_OFFSET_MS);
+    // Offset to UTC+3 (180 minutes)
+    const TZ_OFFSET_MS = 3 * 60 * 60 * 1000;
+    const local = new Date(d.getTime() + TZ_OFFSET_MS);
     const dd   = String(local.getUTCDate()).padStart(2, '0');
     const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
     const yyyy = local.getUTCFullYear();
@@ -99,14 +98,12 @@
     return 'N';
   }
 
-  // Helper function to detect AOS Portal Issues
   function isAosIssue(ticketGroup) {
     if (!ticketGroup) return false;
     const lower = String(ticketGroup).toLowerCase();
     return lower.includes('aos') || lower.includes('portal');
   }
 
-  // Callback-enabled remote data processor
   function remoteDataProcessor(rowData, callback) {
     const processed = {
       ticket: clean(rowData.ticket || ''),
@@ -122,8 +119,6 @@
       reason: clean(rowData.reason || 'Unknown'),
       excluded: normBoolLike(rowData.excluded)
     };
-    
-    // If callback provided, use it for custom processing
     if (typeof callback === 'function') {
       return callback(processed);
     }
@@ -172,7 +167,7 @@
         }
         const ticket = clean(r[colMap.ticket] || '');
         if (!ticket) return;
-        
+
         const rawRow = {
           ticket: ticket,
           month: extractWeek(r[colMap.month]),
@@ -188,8 +183,7 @@
           dateClosed: r[colMap.dateClosed] || '',
           excluded: normBoolLike(r[colMap.excluded])
         };
-        
-        // Process through callback-enabled remote processor
+
         const prow = remoteDataProcessor(rawRow, null);
         data.push(prow);
       });
@@ -199,11 +193,9 @@
     window.RPT.columnMap = colMap;
     window.RPT.allData = data;
     window.RPT.filtered = data.slice();
-    
-    // Filter AOS Portal Issues separately
     window.RPT.aosFiltered = data.filter(row => row.isAos === true);
     console.log('AOS Portal Issues found:', window.RPT.aosFiltered.length);
-    
+
     populateUniqueValues();
     updateFilterDropdowns();
     applyFilters();
@@ -220,18 +212,10 @@
       excluded: ['Y', 'N']
     };
     window.RPT.allData.forEach(row => {
-      if (window.RPT.uniqueValues.months.indexOf(row.month) === -1) {
-        window.RPT.uniqueValues.months.push(row.month);
-      }
-      if (window.RPT.uniqueValues.slas.indexOf(row.sla) === -1) {
-        window.RPT.uniqueValues.slas.push(row.sla);
-      }
-      if (window.RPT.uniqueValues.languages.indexOf(row.language) === -1) {
-        window.RPT.uniqueValues.languages.push(row.language);
-      }
-      if (window.RPT.uniqueValues.ticketGroups.indexOf(row.ticketGroup) === -1) {
-        window.RPT.uniqueValues.ticketGroups.push(row.ticketGroup);
-      }
+      if (window.RPT.uniqueValues.months.indexOf(row.month) === -1) window.RPT.uniqueValues.months.push(row.month);
+      if (window.RPT.uniqueValues.slas.indexOf(row.sla) === -1) window.RPT.uniqueValues.slas.push(row.sla);
+      if (window.RPT.uniqueValues.languages.indexOf(row.language) === -1) window.RPT.uniqueValues.languages.push(row.language);
+      if (window.RPT.uniqueValues.ticketGroups.indexOf(row.ticketGroup) === -1) window.RPT.uniqueValues.ticketGroups.push(row.ticketGroup);
     });
     window.RPT.uniqueValues.months.sort();
     window.RPT.uniqueValues.slas.sort();
@@ -244,25 +228,10 @@
     const slaSelect = document.getElementById('filter-sla');
     const langSelect = document.getElementById('filter-lang');
     const exclSelect = document.getElementById('filter-excl');
-
-    if (weekSelect) {
-      const html = '<option value="All">All</option>' +
-        window.RPT.uniqueValues.months.map(m => `<option value="${m}">${m}</option>`).join('');
-      weekSelect.innerHTML = html;
-    }
-    if (slaSelect) {
-      const html = '<option value="All">All</option>' +
-        window.RPT.uniqueValues.slas.map(s => `<option value="${s}">${s}</option>`).join('');
-      slaSelect.innerHTML = html;
-    }
-    if (langSelect) {
-      const html = '<option value="All">All</option>' +
-        window.RPT.uniqueValues.languages.map(l => `<option value="${l}">${l}</option>`).join('');
-      langSelect.innerHTML = html;
-    }
-    if (exclSelect) {
-      exclSelect.innerHTML = '<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
-    }
+    if (weekSelect) weekSelect.innerHTML = '<option value="All">All</option>' + window.RPT.uniqueValues.months.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (slaSelect) slaSelect.innerHTML = '<option value="All">All</option>' + window.RPT.uniqueValues.slas.map(s => `<option value="${s}">${s}</option>`).join('');
+    if (langSelect) langSelect.innerHTML = '<option value="All">All</option>' + window.RPT.uniqueValues.languages.map(l => `<option value="${l}">${l}</option>`).join('');
+    if (exclSelect) exclSelect.innerHTML = '<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
   }
 
   function applyFilters() {
@@ -270,7 +239,6 @@
     const slaFilter = document.getElementById('filter-sla')?.value || 'All';
     const langFilter = document.getElementById('filter-lang')?.value || 'All';
     const excludedFilter = document.getElementById('filter-excl')?.value || 'All';
-
     window.RPT.filtered = window.RPT.allData.filter(row => {
       if (weekFilter !== 'All' && row.month !== weekFilter) return false;
       if (slaFilter !== 'All' && row.sla !== slaFilter) return false;
@@ -286,99 +254,47 @@
     const data = window.RPT.filtered;
     if (!data.length) return;
 
-    // Chart 1: Breaches per Week
     const bpwCtx = document.getElementById('chart-week')?.getContext('2d');
     if (bpwCtx) {
       if (window.RPT.charts['week']) window.RPT.charts['week'].destroy();
       const weekData = {};
-      data.forEach(row => {
-        weekData[row.month] = (weekData[row.month] || 0) + 1;
-      });
+      data.forEach(row => { weekData[row.month] = (weekData[row.month] || 0) + 1; });
       const labels = Object.keys(weekData).sort();
-      window.RPT.charts['week'] = new Chart(bpwCtx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Breaches',
-            data: labels.map(l => weekData[l]),
-            backgroundColor: '#0099cc'
-          }]
-        }
-      });
+      window.RPT.charts['week'] = new Chart(bpwCtx, { type: 'bar', data: { labels, datasets: [{ label: 'Breaches', data: labels.map(l => weekData[l]), backgroundColor: '#0099cc' }] } });
     }
 
-    // Chart 2: SLA Category
     const slaCatCtx = document.getElementById('chart-sla')?.getContext('2d');
     if (slaCatCtx) {
       if (window.RPT.charts['sla']) window.RPT.charts['sla'].destroy();
       const slaData = {};
-      data.forEach(row => {
-        slaData[row.sla] = (slaData[row.sla] || 0) + 1;
-      });
-      window.RPT.charts['sla'] = new Chart(slaCatCtx, {
-        type: 'pie',
-        data: {
-          labels: Object.keys(slaData),
-          datasets: [{
-            data: Object.values(slaData),
-            backgroundColor: colors
-          }]
-        }
-      });
+      data.forEach(row => { slaData[row.sla] = (slaData[row.sla] || 0) + 1; });
+      window.RPT.charts['sla'] = new Chart(slaCatCtx, { type: 'pie', data: { labels: Object.keys(slaData), datasets: [{ data: Object.values(slaData), backgroundColor: colors }] } });
     }
 
-    // Chart 3: Language Split
     const langCtx = document.getElementById('chart-lang')?.getContext('2d');
     if (langCtx) {
       if (window.RPT.charts['lang']) window.RPT.charts['lang'].destroy();
       const langData = {};
-      data.forEach(row => {
-        langData[row.language] = (langData[row.language] || 0) + 1;
-      });
-      window.RPT.charts['lang'] = new Chart(langCtx, {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(langData),
-          datasets: [{
-            data: Object.values(langData),
-            backgroundColor: colors
-          }]
-        }
-      });
+      data.forEach(row => { langData[row.language] = (langData[row.language] || 0) + 1; });
+      window.RPT.charts['lang'] = new Chart(langCtx, { type: 'doughnut', data: { labels: Object.keys(langData), datasets: [{ data: Object.values(langData), backgroundColor: colors }] } });
     }
 
-    // Chart 4: Excluded vs Counted
     const exclCtx = document.getElementById('chart-excl')?.getContext('2d');
     if (exclCtx) {
       if (window.RPT.charts['excl']) window.RPT.charts['excl'].destroy();
       const exclData = { 'Excluded': 0, 'Counted': 0 };
-      data.forEach(row => {
-        if (row.excluded === 'Y') exclData['Excluded']++;
-        else exclData['Counted']++;
-      });
-      window.RPT.charts['excl'] = new Chart(exclCtx, {
-        type: 'pie',
-        data: {
-          labels: Object.keys(exclData),
-          datasets: [{
-            data: Object.values(exclData),
-            backgroundColor: ['#ff6b6b', '#51cf66']
-          }]
-        }
-      });
+      data.forEach(row => { if (row.excluded === 'Y') exclData['Excluded']++; else exclData['Counted']++; });
+      window.RPT.charts['excl'] = new Chart(exclCtx, { type: 'pie', data: { labels: Object.keys(exclData), datasets: [{ data: Object.values(exclData), backgroundColor: ['#ff6b6b', '#51cf66'] }] } });
     }
   }
 
   function renderTables() {
     const data = window.RPT.filtered;
 
-    // AOS Portal Issues Table - filtered to show ONLY AOS issues
     const aosTable = document.getElementById('aos-table');
     if (aosTable) {
       aosTable.innerHTML = '';
       const aosData = data.filter(row => row.isAos === true);
-      
       if (aosData.length > 0) {
         const thead = document.createElement('thead');
         thead.innerHTML = '<tr><th>Ticket</th><th>Group</th><th>Status</th><th>SLA</th><th>Week</th></tr>';
@@ -397,7 +313,6 @@
       }
     }
 
-    // KM-1 Table
     const km1Table = document.getElementById('km1-table');
     if (km1Table) {
       km1Table.innerHTML = '';
@@ -424,9 +339,7 @@
   window.addEventListener('load', function() {
     const fileInput = document.getElementById('reporter-file-input');
     if (fileInput) {
-      fileInput.addEventListener('change', function(e) {
-        loadFile(e.target.files[0]);
-      });
+      fileInput.addEventListener('change', function(e) { loadFile(e.target.files[0]); });
     }
     ['filter-week', 'filter-sla', 'filter-lang', 'filter-excl'].forEach(filterId => {
       const elem = document.getElementById(filterId);
