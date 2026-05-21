@@ -5,7 +5,6 @@
   const { TAB_DEFS, C_XLSX, C_CSV, OUT_COLS, MANUAL_COLS, CONFIG } = window.BT;
   const { MAX_DISPLAY_ROWS, EXPORT_PREFIXES } = CONFIG;
 
-  // Shared state for index.html
   const trackerState = {
     tabs: {},
     activeTab: '',
@@ -17,7 +16,6 @@
 
   window.BT.trackerState = trackerState;
 
-  // Debounce helper
   function debounce(fn, delay) {
     let timer;
     return function(...args) {
@@ -27,13 +25,12 @@
   }
   window.BT.debounce = debounce;
 
-  // Format date helper — output: dd.mm.yyyy hh:mm:ss in CET (UTC+2)
+  // Format date → dd.mm.yyyy hh:mm:ss in CET (UTC+2)
   function formatDate(val) {
     if (!val) return '';
     const d = new Date(val);
     if (isNaN(d.getTime())) return String(val);
-    // Offset to CET (UTC+2) — 120 minutes
-    const TZ_OFFSET_MS = 2 * 60 * 60 * 1000;
+    const TZ_OFFSET_MS = 2 * 60 * 60 * 1000; // CET = UTC+2
     const local = new Date(d.getTime() + TZ_OFFSET_MS);
     const dd   = String(local.getUTCDate()).padStart(2, '0');
     const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
@@ -44,15 +41,6 @@
     return `${dd}.${mm}.${yyyy} ${hh}:${min}:${ss}`;
   }
 
-  // Get week number from date
-  function getWeek(dateStr) {
-    const d = new Date(dateStr);
-    const firstDay = new Date(d.getFullYear(), 0, 1);
-    const wkNum = Math.ceil((((d - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
-    return 'W' + wkNum + '/' + d.getFullYear();
-  }
-
-  // Show status message
   function showStatus(msg, type = 'ok') {
     const el = document.getElementById('status');
     if (!el) return;
@@ -62,7 +50,6 @@
   }
   window.BT.showStatus = showStatus;
 
-  // Show/hide loading
   function showLoading(show, msg) {
     let overlay = document.getElementById('loading-overlay');
     if (show) {
@@ -82,7 +69,6 @@
   }
   window.BT.showLoading = showLoading;
 
-  // Process CSV file
   function loadCSV(file) {
     showLoading(true, 'Reading CSV...');
     const reader = new FileReader();
@@ -91,23 +77,22 @@
       setTimeout(function() {
         const text = e.target.result;
         const rows = text.trim().split(/\r?\n/).map(r => {
-  const result = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < r.length; i++) {
-    if (r[i] === '"') { inQ = !inQ; }
-    else if (r[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-    else { cur += r[i]; }
-  }
-  result.push(cur.trim());
-  return result;
-});
+          const result = [];
+          let cur = '', inQ = false;
+          for (let i = 0; i < r.length; i++) {
+            if (r[i] === '"') { inQ = !inQ; }
+            else if (r[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+            else { cur += r[i]; }
+          }
+          result.push(cur.trim());
+          return result;
+        });
         processRows(rows.slice(1), C_CSV, 'csv');
       }, 10);
     };
     reader.readAsText(file, 'UTF-8');
   }
 
-  // Process XLSX file
   function loadXLSX(file) {
     showLoading(true, 'Reading XLSX...');
     const reader = new FileReader();
@@ -115,41 +100,52 @@
       showLoading(true, 'Parsing spreadsheet...');
       setTimeout(function() {
         const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-        processRows(rows.slice(1), C_XLSX, 'xlsx');
+        // V2 model: read ALL sheets except "Instructions", merge rows
+        const allRows = [];
+        wb.SheetNames.forEach(function(sn) {
+          if (sn === 'Instructions') return;
+          const sheet = wb.Sheets[sn];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          // Skip header row (index 0), push data rows
+          rows.slice(1).forEach(function(r) { allRows.push(r); });
+        });
+        processRows(allRows, C_XLSX, 'xlsx');
       }, 10);
     };
     reader.readAsArrayBuffer(file);
   }
 
-  // Map row to output format
+  // Map a V2 row array to output column object
   function mapRow(row, C) {
     return {
-      'Incident Ticket':      String(row[C.ticket] || ''),
-      'DATE_CLOSE':           formatDate(row[C.date_close] || ''),
-      'Status':               String(row[C.status] || ''),
-      'Queue':                String(row[C.queue] || ''),
-      'Priority':             String(row[C.priority] || ''),
-      'ISO_Language':         String(row[C.lang] || ''),
-      'Tool':                 String(row[C.tool] || ''),
-      'TOPIC':                String(row[C.topic] || ''),
-      'SLA_Code':             String(row[C.sla_code] || ''),
-      'SLA_N':                String(row[C.sla_n] || ''),
-      'Breach_Description':   String(row[C.breach_desc] || ''),
-      'DATE_TIME_Breach':     formatDate(row[C.breach_dt] || ''),
-      'Agent':                '',
-      'BMS ID':               '',
-      'Comment if excluded':  '',
-      'Additional comment':   '',
-      'Excluded':             '',
-      'Jira':                 '',
-      'Week':                 '',
-      'Unique':               '',
+      'Incident Ticket':    String(row[C.ticket]      || ''),
+      'DATE_CLOSE':         formatDate(row[C.date_close] || ''),
+      'Status':             String(row[C.status]      || ''),
+      'Queue':              String(row[C.queue]        || ''),
+      'Priority':           String(row[C.priority]    || ''),
+      'ISO_Language':       String(row[C.lang]         || ''),
+      'Tool':               String(row[C.tool]         || ''),
+      'TOPIC':              String(row[C.topic]        || ''),
+      'SLA_Code':           String(row[C.sla_code]     || ''),
+      'SLA_N':              String(row[C.sla_n]        || ''),
+      'Breach_Description': String(row[C.breach_desc]  || ''),
+      'DATE_TIME_Breach':   formatDate(row[C.breach_dt]  || ''),
+      'Munich time':        C.munich_time !== undefined ? formatDate(row[C.munich_time] || '') : '',
+      'COMPASS ID':         C.compass_id  !== undefined ? String(row[C.compass_id]  || '') : '',
+      'Reason':             C.reason      !== undefined ? String(row[C.reason]       || '') : '',
+      'AOS':                C.aos         !== undefined ? String(row[C.aos]          || '') : '',
+      'Agent':              C.agent       !== undefined ? String(row[C.agent]        || '') : '',
+      'BMS ID':             C.bms_id      !== undefined ? String(row[C.bms_id]       || '') : '',
+      'Comment':            C.comment     !== undefined ? String(row[C.comment]      || '') : '',
+      'AOS Issue':          C.aos_issue   !== undefined ? String(row[C.aos_issue]    || '') : '',
+      'Excluded':           C.excluded    !== undefined ? String(row[C.excluded]     || '') : '',
+      'Jira':               C.jira        !== undefined ? String(row[C.jira]         || '') : '',
+      'Week':               C.week        !== undefined ? String(row[C.week]         || '') : '',
+      'Unique':             C.unique      !== undefined ? String(row[C.unique]       || '') : '',
     };
   }
 
-  // Core processing - distribute rows across tabs
+  // Distribute rows across tabs based on SLA_Code + language split
   function processRows(rows, C, source) {
     const tabs = {};
     TAB_DEFS.forEach(t => { tabs[t.id] = []; });
@@ -157,17 +153,17 @@
 
     rows.forEach(function(row) {
       if (!row[C.ticket]) return;
-      const sla = String(row[C.sla_code] || '').trim();
-      const lang = String(row[C.lang] || '').trim().toLowerCase();
-      const nok = parseInt(row[C.nok]) || 0;
+      const sla  = String(row[C.sla_code] || '').trim();
+      const lang = String(row[C.lang]     || '').trim().toLowerCase();
+      const nok  = parseInt(row[C.nok])   || 0;
       const mapped = mapRow(row, C);
 
       TAB_DEFS.forEach(function(t) {
         if (t.code !== sla) return;
         const isDE = lang === 'de';
-        if (t.lang === 'de' && !isDE) return;
-        if (t.lang === '!de' && isDE) return;
-        if (t.nokFilter && nok !== 1) return;
+        if (t.lang === 'de'  && !isDE) return;
+        if (t.lang === '!de' && isDE)  return;
+        if (t.nokFilter && nok !== 1)  return;
         tabs[t.id].push(mapped);
       });
     });
@@ -181,7 +177,6 @@
     }
   }
 
-  // Handle file upload
   function handleFile(file) {
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
@@ -195,7 +190,6 @@
   }
   window.BT.handleFile = handleFile;
 
-  // Export single tab
   function exportTab(tabId) {
     const data = trackerState.tabs[tabId];
     if (!data || !data.length) { showStatus('No data.', 'error'); return; }
@@ -207,7 +201,6 @@
   }
   window.BT.exportTab = exportTab;
 
-  // Export all tabs
   function exportAll() {
     const wb = XLSX.utils.book_new();
     TAB_DEFS.forEach(function(t) {
@@ -220,7 +213,6 @@
   }
   window.BT.exportAll = exportAll;
 
-  // Setup drag-drop
   function setupDropZone() {
     const dz = document.getElementById('drop-zone');
     if (!dz) return;
@@ -237,7 +229,6 @@
   }
   window.BT.setupDropZone = setupDropZone;
 
-  // Initialize on load
   function init() {
     showLoading(false);
   }

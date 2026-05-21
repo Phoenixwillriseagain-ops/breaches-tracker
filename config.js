@@ -16,24 +16,42 @@
     { id: 'km2-de',   label: 'KM-2 DE',   code: 'KM-2',  lang: 'de' },
   ];
 
-  // Column index mappings for XLSX input
+  // ─── V2 XLSX column mappings (0-based index) ─────────────────────────────────────
+  // V2 "Breaches" file headers (all sheets share this structure):
+  // 0:Incident Ticket  1:DATE_CLOSE  2:Status  3:Queue  4:Priority
+  // 5:ISO_Language  6:Tool  7:TOPIC  8:SLA_Code  9:SLA_N
+  // 10:Breach_Description  11:DATE_TIME_Breach  12:Munich time
+  // 13:COMPASS ID  14:Reason  15:AOS  16:Agent  17:BMS ID
+  // 18:Comment  19:AOS Issue  20:Excluded  21:Jira  22:Week  23:Unique
   const C_XLSX = {
-    ticket: 0,
-    date_close: 3,
-    status: 4,
-    queue: 5,
-    priority: 6,
-    lang: 12,
-    tool: 14,
-    topic: 15,
-    sla_code: 19,
-    sla_n: 24,
-    breach_desc: 25,
-    breach_dt: 26,
-    nok: 27,
+    ticket:     0,
+    date_close: 1,
+    status:     2,
+    queue:      3,
+    priority:   4,
+    lang:       5,
+    tool:       6,
+    topic:      7,
+    sla_code:   8,
+    sla_n:      9,
+    breach_desc:10,
+    breach_dt:  11,
+    munich_time:12,
+    compass_id: 13,
+    reason:     14,
+    aos:        15,
+    agent:      16,
+    bms_id:     17,
+    comment:    18,
+    aos_issue:  19,
+    excluded:   20,
+    jira:       21,
+    week:       22,
+    unique:     23,
+    nok:        19,
   };
 
-  // Column index mappings for CSV input
+  // CSV column mappings (ServiceNow SLAs-Details export — unchanged)
   const C_CSV = {
     sla_code: 0,
     priority: 8,
@@ -54,31 +72,26 @@
   const OUT_COLS = [
     'Incident Ticket', 'DATE_CLOSE', 'Status', 'Queue', 'Priority',
     'ISO_Language', 'Tool', 'TOPIC', 'SLA_Code', 'SLA_N',
-    'Breach_Description', 'DATE_TIME_Breach', 'Agent', 'BMS ID',
-    'Comment if excluded', 'Additional comment', 'Excluded',
-    'Jira', 'Week', 'Unique',
+    'Breach_Description', 'DATE_TIME_Breach', 'Munich time', 'COMPASS ID',
+    'Reason', 'AOS', 'Agent', 'BMS ID', 'Comment', 'AOS Issue',
+    'Excluded', 'Jira', 'Week', 'Unique',
   ];
 
   // Columns that are manually editable (highlighted in table)
   const MANUAL_COLS = [
-    'Agent', 'BMS ID', 'Comment if excluded', 'Additional comment',
+    'Agent', 'BMS ID', 'Comment', 'AOS Issue',
     'Excluded', 'Jira', 'Week', 'Unique',
   ];
 
-  // Debounce delay for filter inputs (ms)
   const FILTER_DEBOUNCE_MS = 200;
-
-  // Max rows to display in tables (prevents DOM overload)
   const MAX_DISPLAY_ROWS = 500;
 
-  // Export filename prefixes
   const EXPORT_PREFIXES = {
     tab: 'Breaches_',
     all: 'Breaches_All_',
     report: 'Breaches_FullReport_',
   };
 
-  // Chart color palettes (theme-aware, used by reporter)
   const CHART_COLORS = {
     primary: ['#01696f', '#4f98a3', '#0c4e54', '#227f8b'],
     success: ['#437a22', '#6daa45'],
@@ -88,7 +101,6 @@
     light:   ['#cedcd8', '#313b3b'],
   };
 
-  // Reporter tab definitions
   const REPORTER_TABS = [
     { id: 'overview', label: 'Overview' },
     { id: 'reasons',  label: 'Breach Reasons' },
@@ -98,13 +110,10 @@
     { id: 'all',      label: 'All Records' },
   ];
 
-  // Reporter SLA codes for that page
-  const REPORTER_SLA_CODES = ['KSL-4', 'KM-1', 'KSL-5a', 'KM-2', 'AOS'];
+  const REPORTER_SLA_CODES = ['KSL-4', 'KM-1', 'KSL-5a', 'KM-2'];
 
-  // LocalStorage key for reporter data persistence
   const REPORTER_STORAGE_KEY = 'reporter_data';
 
-  // Expose to global scope for HTML scripts
   window.BT = window.BT || {};
   window.BT.TAB_DEFS = TAB_DEFS;
   window.BT.C_XLSX = C_XLSX;

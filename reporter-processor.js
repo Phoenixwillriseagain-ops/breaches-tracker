@@ -1,22 +1,8 @@
-// reporter-processor.js - Enhanced processor with AOS filtering and callback support
+// reporter-processor.js - V2 model processor for Breaches Reporter
 (function() {
   'use strict';
   const { CONFIG } = window.BT || {};
   const { MAX_DISPLAY_ROWS } = CONFIG || { MAX_DISPLAY_ROWS: 100 };
-
-  // Column name mapping for actual Google Sheets columns
-  const COLUMN_MAPPING = {
-    'Incident Ticket': 'ticket',
-    'Element eingegangen am': 'dateReceived',
-    'Element gelöst am': 'dateResolved',
-    'DATE_CLOSED': 'dateClosed',
-    'Element Status': 'status',
-    'Ticket Gruppe': 'ticketGroup',
-    'SLA Kennzahl': 'slaCode',
-    'SLA Prüfung': 'slaReview',
-    'SLA Prüfung Name': 'slaName',
-    'SLA Prüfung ist OK/NOK?': 'slaResult'
-  };
 
   window.RPT = {
     allData: [],
@@ -29,31 +15,30 @@
     clearFilters: function() {
       document.querySelectorAll('.filter-group select').forEach(s => s.value = 'All');
       applyFilters();
-      renderCharts();
-      renderTables();
+      if (typeof renderCharts === 'function') renderCharts();
+      if (typeof renderTables === 'function') renderTables();
     },
     resetToUpload: function() { location.reload(); },
-    exportFiltered: function() { alert('Export feature coming soon'); },
-    exportReport: function() { alert('Export feature coming soon'); },
-    processDataCallback: function(data, callback) {
-      if (typeof callback === 'function') {
-        return callback(data);
-      }
-      return data;
-    }
+    exportFiltered: function() {
+      if (window.EXPORTER) window.EXPORTER.exportAsExcel(window.RPT.filtered);
+      else alert('Exporter not loaded');
+    },
+    exportReport: function() {
+      if (window.EXPORTER) window.EXPORTER.exportAsExcel(window.RPT.allData, 'Breaches_FullReport_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.xlsx');
+      else alert('Exporter not loaded');
+    },
   };
 
   function clean(v) {
     return String(v == null ? '' : v).trim();
   }
 
-  // Format date as dd.mm.yyyy hh:mm:ss in UTC+3
+  // Format date → dd.mm.yyyy hh:mm:ss in CET (UTC+2)
   function formatDate(val) {
     if (!val) return '';
     const d = new Date(val);
     if (isNaN(d.getTime())) return clean(val);
-    // Offset to UTC+3 (180 minutes)
-    const TZ_OFFSET_MS = 3 * 60 * 60 * 1000;
+    const TZ_OFFSET_MS = 2 * 60 * 60 * 1000; // CET = UTC+2
     const local = new Date(d.getTime() + TZ_OFFSET_MS);
     const dd   = String(local.getUTCDate()).padStart(2, '0');
     const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
@@ -64,33 +49,6 @@
     return `${dd}.${mm}.${yyyy} ${hh}:${min}:${ss}`;
   }
 
-  function extractWeek(v) {
-    if (!v) return 'Unknown';
-    const s = String(v).toLowerCase();
-    const weekMatch = s.match(/w(\d+)|week[\s-]*(\d+)/);
-    if (weekMatch) return 'W' + (weekMatch[1] || weekMatch[2]);
-    const monthMatch = s.match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{1,2}[\/\-]\d{1,2}/);
-    if (monthMatch) return monthMatch[0];
-    if (s.includes('summer time') || s.includes('gmt')) {
-      return s.split('(')[0].trim().split(' ').slice(0, 3).join(' ');
-    }
-    return clean(v).substring(0, 20);
-  }
-
-  function normSla(v) {
-    if (!v) return 'Unknown';
-    const lower = String(v).toLowerCase();
-    if (lower === '1' || lower.includes('1.')) return 'SLA-1';
-    if (lower === '2' || lower.includes('2.')) return 'SLA-2';
-    if (lower === '3' || lower.includes('3.')) return 'SLA-3';
-    if (lower === 'unknown' || lower === '') return 'Unknown';
-    if (lower.includes('critical')) return 'Critical';
-    if (lower.includes('high')) return 'High';
-    if (lower.includes('medium')) return 'Medium';
-    if (lower.includes('low')) return 'Low';
-    return clean(v).toUpperCase();
-  }
-
   function normBoolLike(v) {
     const s = clean(v).toLowerCase();
     if (!s) return 'N';
@@ -98,31 +56,69 @@
     return 'N';
   }
 
-  function isAosIssue(ticketGroup) {
-    if (!ticketGroup) return false;
-    const lower = String(ticketGroup).toLowerCase();
-    return lower.includes('aos') || lower.includes('portal');
-  }
+  // ─── V2 MODEL: processWorkbook ────────────────────────────────────────────────────────
+  // V2 headers (same across all sheets):
+  // 0:Incident Ticket  1:DATE_CLOSE  2:Status  3:Queue  4:Priority
+  // 5:ISO_Language  6:Tool  7:TOPIC  8:SLA_Code  9:SLA_N
+  // 10:Breach_Description  11:DATE_TIME_Breach  12:Munich time
+  // 13:COMPASS ID  14:Reason  15:AOS  16:Agent  17:BMS ID
+  // 18:Comment  19:AOS Issue  20:Excluded  21:Jira  22:Week  23:Unique
+  function processWorkbook(wb) {
+    const data = [];
 
-  function remoteDataProcessor(rowData, callback) {
-    const processed = {
-      ticket: clean(rowData.ticket || ''),
-      dateReceived: formatDate(rowData.dateReceived || ''),
-      dateResolved: formatDate(rowData.dateResolved || ''),
-      dateClosed: formatDate(rowData.dateClosed || ''),
-      status: clean(rowData.status || 'N/A'),
-      ticketGroup: clean(rowData.ticketGroup || 'Unknown'),
-      month: extractWeek(rowData.month),
-      sla: normSla(rowData.sla),
-      isAos: isAosIssue(rowData.ticketGroup),
-      language: clean(rowData.language || 'Unknown'),
-      reason: clean(rowData.reason || 'Unknown'),
-      excluded: normBoolLike(rowData.excluded)
-    };
-    if (typeof callback === 'function') {
-      return callback(processed);
-    }
-    return processed;
+    wb.SheetNames.forEach(function(sn) {
+      if (sn === 'Instructions') return;
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '' });
+
+      rows.forEach(function(r) {
+        const ticket = clean(r['Incident Ticket'] || '');
+        if (!ticket) return;
+
+        const aosFlag  = normBoolLike(r['AOS']       || '');
+        const aosIssue = normBoolLike(r['AOS Issue'] || '');
+
+        const prow = {
+          ticket:         ticket,
+          dateClosed:     formatDate(r['DATE_CLOSE']       || ''),
+          dateTimeBreach: formatDate(r['DATE_TIME_Breach'] || ''),
+          munichTime:     formatDate(r['Munich time']      || ''),
+          status:         clean(r['Status']        || 'N/A'),
+          queue:          clean(r['Queue']         || ''),
+          priority:       clean(r['Priority']      || ''),
+          language:       clean(r['ISO_Language']  || 'Unknown'),
+          tool:           clean(r['Tool']          || 'Unknown'),
+          topic:          clean(r['TOPIC']         || ''),
+          sla:            clean(r['SLA_Code']      || 'Unknown'),
+          slaN:           clean(r['SLA_N']         || ''),
+          breachDesc:     clean(r['Breach_Description'] || ''),
+          compassId:      clean(r['COMPASS ID']    || ''),
+          reason:         clean(r['Reason']        || ''),
+          aos:            aosFlag,
+          agent:          clean(r['Agent']         || ''),
+          bmsId:          clean(r['BMS ID']        || ''),
+          comment:        clean(r['Comment']       || ''),
+          aosIssue:       aosIssue,
+          excluded:       normBoolLike(r['Excluded'] || ''),
+          jira:           clean(r['Jira']          || ''),
+          week:           clean(r['Week']          || ''),
+          unique:         clean(r['Unique']        || ''),
+          sheet:          sn,
+          isAos:          aosFlag === 'Y' || aosIssue === 'Y',
+        };
+        data.push(prow);
+      });
+    });
+
+    console.log('V2 Reporter loaded', data.length, 'records');
+    window.RPT.allData    = data;
+    window.RPT.filtered   = data.slice();
+    window.RPT.aosFiltered = data.filter(r => r.isAos);
+
+    populateUniqueValues();
+    updateFilterDropdowns();
+    applyFilters();
+    if (typeof renderCharts === 'function') renderCharts();
+    if (typeof renderTables === 'function') renderTables();
   }
 
   function loadFile(file) {
@@ -140,216 +136,79 @@
     reader.readAsArrayBuffer(file);
   }
 
-  function processWorkbook(wb) {
-    const data = [];
-    let colMap = {};
-
-    wb.SheetNames.forEach(function(sn) {
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-      rows.forEach(function(r, idx) {
-        if (idx === 0) {
-          Object.keys(r).forEach(key => {
-            const lower = key.toLowerCase();
-            if (lower.includes('ticket') || lower.includes('incident')) colMap.ticket = key;
-            if (lower.includes('week') || lower.includes('month') || lower.includes('date')) colMap.month = key;
-            if (lower.includes('sla') || lower.includes('code')) colMap.sla = key;
-            if (lower.includes('km')) colMap.kml = key;
-            if (lower.includes('gruppe') || lower.includes('group')) colMap.ticketGroup = key;
-            if (lower.includes('reason') || lower.includes('breach') || lower.includes('type')) colMap.reason = key;
-            if (lower.includes('lang')) colMap.lang = key;
-            if (lower.includes('app')) colMap.type = key;
-            if (lower.includes('status')) colMap.status = key;
-            if (lower.includes('excluded')) colMap.excluded = key;
-            if (lower.includes('eingegangen') || lower.includes('received')) colMap.dateReceived = key;
-            if (lower.includes('gelöst') || lower.includes('resolved')) colMap.dateResolved = key;
-            if (lower.includes('closed')) colMap.dateClosed = key;
-          });
-        }
-        const ticket = clean(r[colMap.ticket] || '');
-        if (!ticket) return;
-
-        const rawRow = {
-          ticket: ticket,
-          month: extractWeek(r[colMap.month]),
-          sla: normSla(r[colMap.sla]),
-          kml: normBoolLike(r[colMap.kml]),
-          ticketGroup: clean(r[colMap.ticketGroup] || 'Unknown'),
-          status: clean(r[colMap.status] || 'N/A'),
-          breachType: clean(r[colMap.type] || 'Unknown'),
-          language: clean(r[colMap.lang] || 'Unknown'),
-          reason: clean(r[colMap.reason] || 'Unknown'),
-          dateReceived: r[colMap.dateReceived] || '',
-          dateResolved: r[colMap.dateResolved] || '',
-          dateClosed: r[colMap.dateClosed] || '',
-          excluded: normBoolLike(r[colMap.excluded])
-        };
-
-        const prow = remoteDataProcessor(rawRow, null);
-        data.push(prow);
-      });
-    });
-
-    console.log('Loaded', data.length, 'records');
-    window.RPT.columnMap = colMap;
-    window.RPT.allData = data;
-    window.RPT.filtered = data.slice();
-    window.RPT.aosFiltered = data.filter(row => row.isAos === true);
-    console.log('AOS Portal Issues found:', window.RPT.aosFiltered.length);
-
-    populateUniqueValues();
-    updateFilterDropdowns();
-    applyFilters();
-    renderCharts();
-    renderTables();
-  }
-
   function populateUniqueValues() {
-    window.RPT.uniqueValues = {
-      months: [],
-      slas: [],
-      languages: [],
-      ticketGroups: [],
-      excluded: ['Y', 'N']
-    };
-    window.RPT.allData.forEach(row => {
-      if (window.RPT.uniqueValues.months.indexOf(row.month) === -1) window.RPT.uniqueValues.months.push(row.month);
-      if (window.RPT.uniqueValues.slas.indexOf(row.sla) === -1) window.RPT.uniqueValues.slas.push(row.sla);
-      if (window.RPT.uniqueValues.languages.indexOf(row.language) === -1) window.RPT.uniqueValues.languages.push(row.language);
-      if (window.RPT.uniqueValues.ticketGroups.indexOf(row.ticketGroup) === -1) window.RPT.uniqueValues.ticketGroups.push(row.ticketGroup);
+    const uv = { weeks: [], slas: [], languages: [], tools: [], queues: [], sheets: [] };
+    window.RPT.allData.forEach(function(row) {
+      if (uv.weeks.indexOf(row.week)         === -1 && row.week)     uv.weeks.push(row.week);
+      if (uv.slas.indexOf(row.sla)           === -1 && row.sla)      uv.slas.push(row.sla);
+      if (uv.languages.indexOf(row.language) === -1 && row.language) uv.languages.push(row.language);
+      if (uv.tools.indexOf(row.tool)         === -1 && row.tool)     uv.tools.push(row.tool);
+      if (uv.queues.indexOf(row.queue)       === -1 && row.queue)    uv.queues.push(row.queue);
+      if (uv.sheets.indexOf(row.sheet)       === -1 && row.sheet)    uv.sheets.push(row.sheet);
     });
-    window.RPT.uniqueValues.months.sort();
-    window.RPT.uniqueValues.slas.sort();
-    window.RPT.uniqueValues.languages.sort();
-    window.RPT.uniqueValues.ticketGroups.sort();
+    uv.weeks.sort(); uv.slas.sort(); uv.languages.sort(); uv.tools.sort(); uv.queues.sort();
+    window.RPT.uniqueValues = uv;
   }
 
   function updateFilterDropdowns() {
-    const weekSelect = document.getElementById('filter-week');
-    const slaSelect = document.getElementById('filter-sla');
-    const langSelect = document.getElementById('filter-lang');
-    const exclSelect = document.getElementById('filter-excl');
-    if (weekSelect) weekSelect.innerHTML = '<option value="All">All</option>' + window.RPT.uniqueValues.months.map(m => `<option value="${m}">${m}</option>`).join('');
-    if (slaSelect) slaSelect.innerHTML = '<option value="All">All</option>' + window.RPT.uniqueValues.slas.map(s => `<option value="${s}">${s}</option>`).join('');
-    if (langSelect) langSelect.innerHTML = '<option value="All">All</option>' + window.RPT.uniqueValues.languages.map(l => `<option value="${l}">${l}</option>`).join('');
-    if (exclSelect) exclSelect.innerHTML = '<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
+    const uv = window.RPT.uniqueValues;
+    const sel = (id, arr) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '<option value="All">All</option>' + arr.map(v => `<option value="${v}">${v}</option>`).join('');
+    };
+    sel('filter-week',  uv.weeks);
+    sel('filter-sla',   uv.slas);
+    sel('filter-lang',  uv.languages);
+    sel('filter-tool',  uv.tools);
+    sel('filter-queue', uv.queues);
+    sel('filter-sheet', uv.sheets);
+    const exclEl = document.getElementById('filter-excl');
+    if (exclEl) exclEl.innerHTML = '<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
+    const aosEl = document.getElementById('filter-aos');
+    if (aosEl) aosEl.innerHTML = '<option value="All">All</option><option value="Y">AOS Only</option><option value="N">Non-AOS</option>';
+
+    const uploadSection = document.getElementById('upload-section');
+    const dataSection   = document.getElementById('data-section');
+    if (uploadSection) uploadSection.style.display = 'none';
+    if (dataSection)   dataSection.style.display   = '';
   }
 
   function applyFilters() {
-    const weekFilter = document.getElementById('filter-week')?.value || 'All';
-    const slaFilter = document.getElementById('filter-sla')?.value || 'All';
-    const langFilter = document.getElementById('filter-lang')?.value || 'All';
-    const excludedFilter = document.getElementById('filter-excl')?.value || 'All';
-    window.RPT.filtered = window.RPT.allData.filter(row => {
-      if (weekFilter !== 'All' && row.month !== weekFilter) return false;
-      if (slaFilter !== 'All' && row.sla !== slaFilter) return false;
-      if (langFilter !== 'All' && row.language !== langFilter) return false;
-      if (excludedFilter === 'Y' && row.excluded !== 'Y') return false;
-      if (excludedFilter === 'N' && row.excluded !== 'N') return false;
+    const g = id => (document.getElementById(id)?.value || 'All');
+    const weekF  = g('filter-week');
+    const slaF   = g('filter-sla');
+    const langF  = g('filter-lang');
+    const exclF  = g('filter-excl');
+    const aosF   = g('filter-aos');
+    const toolF  = g('filter-tool');
+    const queueF = g('filter-queue');
+    const sheetF = g('filter-sheet');
+
+    window.RPT.filtered = window.RPT.allData.filter(function(row) {
+      if (weekF  !== 'All' && row.week     !== weekF)  return false;
+      if (slaF   !== 'All' && row.sla      !== slaF)   return false;
+      if (langF  !== 'All' && row.language !== langF)  return false;
+      if (exclF  !== 'All' && row.excluded !== exclF)  return false;
+      if (aosF   !== 'All' && (row.isAos ? 'Y' : 'N') !== aosF) return false;
+      if (toolF  !== 'All' && row.tool     !== toolF)  return false;
+      if (queueF !== 'All' && row.queue    !== queueF) return false;
+      if (sheetF !== 'All' && row.sheet    !== sheetF) return false;
       return true;
     });
+
+    const countEl = document.getElementById('record-count');
+    if (countEl) countEl.textContent = window.RPT.filtered.length + ' records';
+
+    if (typeof renderCharts === 'function') renderCharts();
+    if (typeof renderTables === 'function') renderTables();
   }
 
-  function renderCharts() {
-    const colors = ['#ff6b6b', '#ffa500', '#4ecdc4', '#45b7d1', '#96ceb4', '#dda15e', '#a8dadc', '#f1faee'];
-    const data = window.RPT.filtered;
-    if (!data.length) return;
-
-    const bpwCtx = document.getElementById('chart-week')?.getContext('2d');
-    if (bpwCtx) {
-      if (window.RPT.charts['week']) window.RPT.charts['week'].destroy();
-      const weekData = {};
-      data.forEach(row => { weekData[row.month] = (weekData[row.month] || 0) + 1; });
-      const labels = Object.keys(weekData).sort();
-      window.RPT.charts['week'] = new Chart(bpwCtx, { type: 'bar', data: { labels, datasets: [{ label: 'Breaches', data: labels.map(l => weekData[l]), backgroundColor: '#0099cc' }] } });
-    }
-
-    const slaCatCtx = document.getElementById('chart-sla')?.getContext('2d');
-    if (slaCatCtx) {
-      if (window.RPT.charts['sla']) window.RPT.charts['sla'].destroy();
-      const slaData = {};
-      data.forEach(row => { slaData[row.sla] = (slaData[row.sla] || 0) + 1; });
-      window.RPT.charts['sla'] = new Chart(slaCatCtx, { type: 'pie', data: { labels: Object.keys(slaData), datasets: [{ data: Object.values(slaData), backgroundColor: colors }] } });
-    }
-
-    const langCtx = document.getElementById('chart-lang')?.getContext('2d');
-    if (langCtx) {
-      if (window.RPT.charts['lang']) window.RPT.charts['lang'].destroy();
-      const langData = {};
-      data.forEach(row => { langData[row.language] = (langData[row.language] || 0) + 1; });
-      window.RPT.charts['lang'] = new Chart(langCtx, { type: 'doughnut', data: { labels: Object.keys(langData), datasets: [{ data: Object.values(langData), backgroundColor: colors }] } });
-    }
-
-    const exclCtx = document.getElementById('chart-excl')?.getContext('2d');
-    if (exclCtx) {
-      if (window.RPT.charts['excl']) window.RPT.charts['excl'].destroy();
-      const exclData = { 'Excluded': 0, 'Counted': 0 };
-      data.forEach(row => { if (row.excluded === 'Y') exclData['Excluded']++; else exclData['Counted']++; });
-      window.RPT.charts['excl'] = new Chart(exclCtx, { type: 'pie', data: { labels: Object.keys(exclData), datasets: [{ data: Object.values(exclData), backgroundColor: ['#ff6b6b', '#51cf66'] }] } });
-    }
-  }
-
-  function renderTables() {
-    const data = window.RPT.filtered;
-
-    const aosTable = document.getElementById('aos-table');
-    if (aosTable) {
-      aosTable.innerHTML = '';
-      const aosData = data.filter(row => row.isAos === true);
-      if (aosData.length > 0) {
-        const thead = document.createElement('thead');
-        thead.innerHTML = '<tr><th>Ticket</th><th>Group</th><th>Status</th><th>SLA</th><th>Week</th></tr>';
-        aosTable.appendChild(thead);
-        const tbody = document.createElement('tbody');
-        aosData.slice(0, MAX_DISPLAY_ROWS).forEach(row => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${clean(row.ticket)}</td><td>${clean(row.ticketGroup)}</td><td>${clean(row.status)}</td><td>${clean(row.sla)}</td><td>${clean(row.month)}</td>`;
-          tbody.appendChild(tr);
-        });
-        aosTable.appendChild(tbody);
-      } else {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = '<td colspan="5" style="text-align: center; padding: 20px;">No AOS Portal Issues found in current filters</td>';
-        aosTable.appendChild(emptyRow);
-      }
-    }
-
-    const km1Table = document.getElementById('km1-table');
-    if (km1Table) {
-      km1Table.innerHTML = '';
-      const km1Data = data.filter(r => r.kml === 'Y');
-      if (km1Data.length > 0) {
-        const thead = document.createElement('thead');
-        thead.innerHTML = '<tr><th>Ticket</th><th>Reason</th><th>Language</th><th>Week</th></tr>';
-        km1Table.appendChild(thead);
-        const tbody = document.createElement('tbody');
-        km1Data.slice(0, MAX_DISPLAY_ROWS).forEach(row => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${clean(row.ticket)}</td><td>${clean(row.reason)}</td><td>${clean(row.language)}</td><td>${clean(row.month)}</td>`;
-          tbody.appendChild(tr);
-        });
-        km1Table.appendChild(tbody);
-      } else {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = '<td colspan="4" style="text-align: center; padding: 20px;">No KM-1 data available</td>';
-        km1Table.appendChild(emptyRow);
-      }
-    }
-  }
-
-  window.addEventListener('load', function() {
-    const fileInput = document.getElementById('reporter-file-input');
-    if (fileInput) {
-      fileInput.addEventListener('change', function(e) { loadFile(e.target.files[0]); });
-    }
-    ['filter-week', 'filter-sla', 'filter-lang', 'filter-excl'].forEach(filterId => {
-      const elem = document.getElementById(filterId);
-      if (elem) {
-        elem.addEventListener('change', function() {
-          applyFilters();
-          renderCharts();
-          renderTables();
-        });
-      }
+  document.addEventListener('DOMContentLoaded', function() {
+    ['filter-week','filter-sla','filter-lang','filter-excl','filter-aos','filter-tool','filter-queue','filter-sheet'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', applyFilters);
     });
   });
+
 })();
