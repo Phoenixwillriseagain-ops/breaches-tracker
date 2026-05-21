@@ -49,6 +49,22 @@
     return String(v == null ? '' : v).trim();
   }
 
+  // Format date as dd.mm.yyyy hh:mm:ss in CET (UTC+2)
+  function formatDate(val) {
+    if (!val) return '';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return clean(val);
+    const CET_OFFSET_MS = 2 * 60 * 60 * 1000;
+    const local = new Date(d.getTime() + CET_OFFSET_MS);
+    const dd   = String(local.getUTCDate()).padStart(2, '0');
+    const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = local.getUTCFullYear();
+    const hh   = String(local.getUTCHours()).padStart(2, '0');
+    const min  = String(local.getUTCMinutes()).padStart(2, '0');
+    const ss   = String(local.getUTCSeconds()).padStart(2, '0');
+    return `${dd}.${mm}.${yyyy} ${hh}:${min}:${ss}`;
+  }
+
   function extractWeek(v) {
     if (!v) return 'Unknown';
     const s = String(v).toLowerCase();
@@ -94,9 +110,9 @@
   function remoteDataProcessor(rowData, callback) {
     const processed = {
       ticket: clean(rowData.ticket || ''),
-      dateReceived: clean(rowData.dateReceived || ''),
-      dateResolved: clean(rowData.dateResolved || ''),
-      dateClosed: clean(rowData.dateClosed || ''),
+      dateReceived: formatDate(rowData.dateReceived || ''),
+      dateResolved: formatDate(rowData.dateResolved || ''),
+      dateClosed: formatDate(rowData.dateClosed || ''),
       status: clean(rowData.status || 'N/A'),
       ticketGroup: clean(rowData.ticketGroup || 'Unknown'),
       month: extractWeek(rowData.month),
@@ -167,9 +183,9 @@
           breachType: clean(r[colMap.type] || 'Unknown'),
           language: clean(r[colMap.lang] || 'Unknown'),
           reason: clean(r[colMap.reason] || 'Unknown'),
-          dateReceived: clean(r[colMap.dateReceived] || ''),
-          dateResolved: clean(r[colMap.dateResolved] || ''),
-          dateClosed: clean(r[colMap.dateClosed] || ''),
+          dateReceived: r[colMap.dateReceived] || '',
+          dateResolved: r[colMap.dateResolved] || '',
+          dateClosed: r[colMap.dateClosed] || '',
           excluded: normBoolLike(r[colMap.excluded])
         };
         
