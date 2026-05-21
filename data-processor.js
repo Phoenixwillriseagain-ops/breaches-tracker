@@ -27,11 +27,21 @@
   }
   window.BT.debounce = debounce;
 
-  // Format date helper
+  // Format date helper — output: dd.mm.yyyy hh:mm:ss in CET (UTC+2)
   function formatDate(val) {
     if (!val) return '';
     const d = new Date(val);
-    return d.toISOString().slice(0, 19).replace('T', ' ');
+    if (isNaN(d.getTime())) return String(val);
+    // Offset to CET = UTC+2 (120 minutes)
+    const CET_OFFSET_MS = 2 * 60 * 60 * 1000;
+    const local = new Date(d.getTime() + CET_OFFSET_MS);
+    const dd   = String(local.getUTCDate()).padStart(2, '0');
+    const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = local.getUTCFullYear();
+    const hh   = String(local.getUTCHours()).padStart(2, '0');
+    const min  = String(local.getUTCMinutes()).padStart(2, '0');
+    const ss   = String(local.getUTCSeconds()).padStart(2, '0');
+    return `${dd}.${mm}.${yyyy} ${hh}:${min}:${ss}`;
   }
 
   // Get week number from date
