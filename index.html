@@ -9,65 +9,80 @@
 </head>
 <body>
 <div class="app">
+
+  <!-- NAV -->
   <nav class="app-nav">
     <a href="index.html" class="active">Breaches Tracker</a>
     <a href="reporter.html">Reporter</a>
   </nav>
 
-  <div class="toolbar">
+  <!-- TOOLBAR (hidden until file loaded, shown by ui-renderer) -->
+  <div class="toolbar" style="display:none;">
     <div class="toolbar-left">
-      <!-- visible button triggers hidden file input -->
       <button class="file-label" id="import-btn" type="button">Import File</button>
       <input type="file" id="file-input" accept=".csv,.xlsx,.xls"
              style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
     </div>
     <div class="btn-group">
       <button class="btn-outline" onclick="window.BT.exportTab(window.BT.trackerState.activeTab)" title="Export current tab (Ctrl+E)">Export Tab</button>
-      <button id="export-all-btn" class="btn-outline" onclick="window.BT.exportAll()" title="Export all tabs (Ctrl+Shift+E)" style="display:none">Export All</button>
-      <a href="reporter.html" class="btn-outline" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;" title="Open Breaches Reporter">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      <button id="export-all-btn" class="btn-outline" onclick="window.BT.exportAll()" title="Export all tabs" style="display:none;">Export All</button>
+      <a href="reporter.html" class="btn-outline"
+         style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;"
+         title="Open Breaches Reporter">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
         Open Reporter
       </a>
     </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:var(--space-4,16px);">
+      <span id="row-count" style="font-size:12px;color:var(--color-text-muted);"></span>
+      <input type="text" id="search-input" placeholder="Search…"
+             style="padding:5px 10px;border:1px solid var(--color-border);border-radius:6px;
+                    font-size:12px;background:var(--color-bg);color:var(--color-text);width:200px;"
+             oninput="window.searchTable && window.searchTable(this.value)">
+    </div>
   </div>
 
-  <div id="status" class="status-bar" style="display:none"></div>
+  <!-- STATUS BAR -->
+  <div id="status" class="status-bar" style="display:none;"></div>
 
-  <div class="tabs-wrapper">
-    <div class="tabs" id="tabs-container"></div>
-  </div>
+  <!-- KPI AREA (hidden until data loaded) -->
+  <div id="kpi-area" class="kpi-row" style="display:none;padding:16px 20px 0;"></div>
 
+  <!-- TABS BAR (hidden until data loaded) -->
+  <div id="tabs-bar" class="tabs" style="display:none;"></div>
+
+  <!-- TABLE AREA -->
   <div class="table-area" id="table-area">
+
     <!-- Empty / drop-zone state -->
-    <div id="drop-zone" class="empty-state" style="cursor:pointer;border:2px dashed var(--color-border);border-radius:12px;padding:48px 32px;transition:border-color .15s,background .15s;">
+    <div id="empty-state"
+         style="cursor:pointer;border:2px dashed var(--color-border);border-radius:12px;
+                padding:48px 32px;text-align:center;
+                transition:border-color .15s,background .15s;
+                margin:24px;">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-           style="color:var(--color-text-faint);margin-bottom:12px">
+           style="color:var(--color-text-faint);margin:0 auto 12px;display:block;">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14,2 14,8 20,8"/>
         <line x1="16" y1="13" x2="8" y2="13"/>
         <line x1="16" y1="17" x2="8" y2="17"/>
-        <polyline points="10,9 9,9 8,9"/>
       </svg>
-      <p style="font-size:15px;font-weight:500;margin-bottom:6px;">Drop your CSV or XLSX here</p>
+      <p style="font-size:15px;font-weight:600;margin-bottom:6px;">Drop your CSV or XLSX here</p>
       <span style="font-size:12px;color:var(--color-text-faint)">&hellip;or click to browse for a file</span>
     </div>
 
-    <!-- Data table (hidden until file loaded) -->
-    <div id="data-table-wrap" style="display:none">
-      <div class="table-toolbar">
-        <input type="text" id="search-input" placeholder="Search&hellip;" style="width:220px">
-        <span id="row-count" class="muted-label"></span>
-      </div>
-      <div class="table-scroll">
-        <table id="data-table">
-          <thead id="data-thead"></thead>
-          <tbody id="data-tbody"></tbody>
-        </table>
-      </div>
+    <!-- Data table (shown after file loaded) -->
+    <div class="table-wrap" style="display:none;">
+      <table id="data-table" class="data-table"></table>
     </div>
-  </div>
-</div>
 
+  </div>
+</div><!-- /app -->
+
+<!-- Scripts -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="config.js"></script>
 <script src="data-processor.js"></script>
@@ -76,67 +91,60 @@
 document.addEventListener('DOMContentLoaded', function () {
   window.BT.init();
 
-  var fileInput = document.getElementById('file-input');
-  var dropZone  = document.getElementById('drop-zone');
-  var importBtn = document.getElementById('import-btn');
+  var fileInput  = document.getElementById('file-input');
+  var emptyState = document.getElementById('empty-state');
+  var importBtn  = document.getElementById('import-btn');
 
   function loadFile(f) {
     if (f) window.BT.handleFile(f);
   }
 
   // Toolbar "Import File" button
-  if (importBtn) {
-    importBtn.addEventListener('click', function () {
-      fileInput.click();
-    });
-  }
+  importBtn.addEventListener('click', function () { fileInput.click(); });
 
   // Hidden file input change
-  if (fileInput) {
-    fileInput.addEventListener('change', function (e) {
-      loadFile(e.target.files[0]);
-      fileInput.value = '';
-    });
-  }
+  fileInput.addEventListener('change', function (e) {
+    loadFile(e.target.files[0]);
+    fileInput.value = '';
+  });
 
-  // Drop-zone click → open picker
-  if (dropZone) {
-    dropZone.addEventListener('click', function () {
-      fileInput.click();
-    });
+  // Empty-state drop zone: click to browse
+  emptyState.addEventListener('click', function () { fileInput.click(); });
 
-    // Drag visual feedback
-    dropZone.addEventListener('dragover', function (e) {
-      e.preventDefault();
-      dropZone.style.borderColor = 'var(--color-primary)';
-      dropZone.style.background  = 'var(--color-primary-highlight)';
-    });
-    dropZone.addEventListener('dragleave', function () {
-      dropZone.style.borderColor = '';
-      dropZone.style.background  = '';
-    });
-    dropZone.addEventListener('drop', function (e) {
-      e.preventDefault();
-      dropZone.style.borderColor = '';
-      dropZone.style.background  = '';
-      loadFile(e.dataTransfer.files[0]);
-    });
-  }
+  // Empty-state drop zone: drag visual feedback
+  emptyState.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    emptyState.style.borderColor = 'var(--color-primary)';
+    emptyState.style.background  = 'var(--color-primary-highlight, #cedcd8)';
+  });
+  emptyState.addEventListener('dragleave', function () {
+    emptyState.style.borderColor = '';
+    emptyState.style.background  = '';
+  });
+  emptyState.addEventListener('drop', function (e) {
+    e.preventDefault();
+    emptyState.style.borderColor = '';
+    emptyState.style.background  = '';
+    loadFile(e.dataTransfer.files[0]);
+  });
 
   // Global drag-and-drop fallback (anywhere on the page)
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
   document.addEventListener('drop', function (e) {
     e.preventDefault();
-    if (e.target === dropZone || (dropZone && dropZone.contains(e.target))) return;
+    if (e.target === emptyState || emptyState.contains(e.target)) return;
     loadFile(e.dataTransfer.files[0]);
   });
 
   // Keyboard shortcuts
   document.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'e') {
       e.preventDefault();
-      if (e.shiftKey) window.BT.exportAll();
-      else window.BT.exportTab(window.BT.trackerState.activeTab);
+      window.BT.exportTab(window.BT.trackerState.activeTab);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E') {
+      e.preventDefault();
+      window.BT.exportAll();
     }
   });
 });
