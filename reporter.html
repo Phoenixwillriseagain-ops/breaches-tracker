@@ -11,111 +11,111 @@
     .reporter-layout { display:flex; flex:1; min-height:0; }
     .reporter-sidebar {
       width:220px; min-width:220px; flex-shrink:0;
-      background:var(--color-surface);
-      border-right:1px solid var(--color-border);
-      padding:var(--space-4);
-      display:flex; flex-direction:column; gap:var(--space-4);
+      background:var(--surface);
+      border-right:1px solid var(--border);
+      padding:16px;
+      display:flex; flex-direction:column; gap:16px;
       overflow-y:auto;
     }
     .reporter-sidebar h3 {
       font-size:11px; font-weight:700; text-transform:uppercase;
-      letter-spacing:.06em; color:var(--color-text-muted);
-      margin-bottom:var(--space-2);
+      letter-spacing:.06em; color:var(--muted);
+      margin-bottom:8px;
     }
-    .filter-block { display:flex; flex-direction:column; gap:var(--space-2); }
-    .filter-block label { font-size:11px; color:var(--color-text-muted); }
+    .filter-block { display:flex; flex-direction:column; gap:6px; }
+    .filter-block label { font-size:11px; color:var(--muted); }
     .filter-block select {
       width:100%; padding:6px 8px;
-      border:1px solid var(--color-border);
-      border-radius:6px; background:var(--color-bg);
-      font-size:12px; color:var(--color-text); font-family:inherit;
+      border:1px solid var(--border);
+      border-radius:6px; background:var(--bg);
+      font-size:12px; color:var(--text); font-family:inherit;
     }
-    .filter-block select:focus { outline:none; border-color:var(--color-primary); }
-    .reporter-main { flex:1; overflow-y:auto; padding:var(--space-6); display:flex; flex-direction:column; gap:var(--space-5); }
+    .filter-block select:focus { outline:none; border-color:var(--primary); }
+    .reporter-main { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px; }
 
     /* ── Upload section ──────────────────────────────────────────── */
     #upload-section {
       display:flex; flex-direction:column; align-items:center;
-      justify-content:center; flex:1; gap:var(--space-4);
+      justify-content:center; flex:1; gap:16px;
       min-height:340px;
     }
     .upload-zone {
       width:100%; max-width:480px;
-      border:2px dashed var(--color-border);
+      border:2px dashed var(--border);
       border-radius:12px; padding:48px 32px;
       text-align:center; cursor:pointer;
       transition:border-color .15s, background .15s;
     }
     .upload-zone:hover, .upload-zone.drag-over {
-      border-color:var(--color-primary);
-      background:var(--color-primary-highlight, #cedcd8);
+      border-color:var(--primary);
+      background:var(--primary-hi);
     }
-    .upload-zone svg { color:var(--color-text-faint); margin:0 auto var(--space-3); display:block; }
-    .upload-zone p { font-size:15px; font-weight:600; margin-bottom:var(--space-1); }
-    .upload-zone span { font-size:12px; color:var(--color-text-muted); }
+    .upload-zone svg { color:var(--faint); margin:0 auto 12px; display:block; }
+    .upload-zone p { font-size:15px; font-weight:600; margin-bottom:4px; }
+    .upload-zone span { font-size:12px; color:var(--muted); }
     #upload-status { font-size:13px; }
-    #upload-status.ok  { color:var(--color-success); }
-    #upload-status.err { color:var(--color-error); }
+    #upload-status.ok  { color:var(--success); }
+    #upload-status.err { color:var(--error); }
 
     /* ── Data section ────────────────────────────────────────────── */
     #data-section { display:none; }
 
     /* ── KPI row ─────────────────────────────────────────────────── */
-    .kpi-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--space-3); }
+    .kpi-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
     .kpi-card {
-      background:var(--color-surface); border:1px solid var(--color-border);
-      border-radius:10px; padding:var(--space-4);
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; padding:16px;
       box-shadow:0 1px 3px rgba(0,0,0,.05);
     }
-    .kpi-card .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted); margin-bottom:var(--space-1); }
+    .kpi-card .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:4px; }
     .kpi-card .kpi-value { font-size:28px; font-weight:700; line-height:1; }
-    .kpi-card .kpi-sub   { font-size:11px; color:var(--color-text-muted); margin-top:var(--space-1); }
-    .kpi-card.c-total  .kpi-value { color:var(--color-text); }
+    .kpi-card .kpi-sub   { font-size:11px; color:var(--muted); margin-top:4px; }
+    .kpi-card.c-total  .kpi-value { color:var(--text); }
     .kpi-card.c-ksl4   .kpi-value { color:#006494; }
     .kpi-card.c-km1    .kpi-value { color:#006494; }
     .kpi-card.c-ksl5a  .kpi-value { color:#964219; }
     .kpi-card.c-km2    .kpi-value { color:#7a39bb; }
-    .kpi-card.c-excl   .kpi-value { color:var(--color-text-muted); }
-    .kpi-card.c-aos    .kpi-value { color:var(--color-primary); }
+    .kpi-card.c-excl   .kpi-value { color:var(--muted); }
+    .kpi-card.c-aos    .kpi-value { color:var(--primary); }
 
     /* ── Section card ────────────────────────────────────────────── */
     .section-card {
-      background:var(--color-surface); border:1px solid var(--color-border);
+      background:var(--surface); border:1px solid var(--border);
       border-radius:10px; overflow:hidden;
       box-shadow:0 1px 3px rgba(0,0,0,.05);
     }
     .section-card-head {
-      padding:12px 18px; border-bottom:1px solid var(--color-border);
+      padding:12px 18px; border-bottom:1px solid var(--border);
       display:flex; align-items:center; gap:10px;
     }
     .section-card-head h2 { font-size:14px; font-weight:600; }
     .section-card-head .badge {
-      margin-left:auto; background:var(--color-surface-2,#f3f0ec);
-      border:1px solid var(--color-border); border-radius:20px;
-      padding:2px 10px; font-size:12px; color:var(--color-text-muted);
+      margin-left:auto; background:var(--surface-2,#f3f0ec);
+      border:1px solid var(--border); border-radius:20px;
+      padding:2px 10px; font-size:12px; color:var(--muted);
     }
     .section-card-body { padding:16px 18px; overflow-x:auto; }
 
     /* ── Bar chart ───────────────────────────────────────────────── */
     .bar-chart { display:flex; flex-direction:column; gap:8px; }
     .bar-row   { display:flex; align-items:center; gap:10px; font-size:12px; }
-    .bar-label { width:180px; min-width:120px; text-align:right; color:var(--color-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .bar-track { flex:1; height:13px; background:var(--color-surface-2,#f3f0ec); border-radius:4px; overflow:hidden; }
+    .bar-label { width:180px; min-width:120px; text-align:right; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .bar-track { flex:1; height:13px; background:var(--divider); border-radius:4px; overflow:hidden; }
     .bar-fill  { height:100%; border-radius:4px; transition:width .4s; }
     .bar-count { width:36px; font-weight:600; font-size:12px; text-align:right; }
 
     /* ── Data tables ─────────────────────────────────────────────── */
     .data-table { width:100%; border-collapse:collapse; font-size:12px; }
     .data-table th {
-      background:var(--color-bg); padding:7px 10px;
+      background:var(--bg); padding:7px 10px;
       text-align:left; font-size:11px; font-weight:600;
       text-transform:uppercase; letter-spacing:.04em;
-      color:var(--color-text-muted); border-bottom:1px solid var(--color-border);
+      color:var(--muted); border-bottom:1px solid var(--border);
       white-space:nowrap;
     }
-    .data-table td { padding:7px 10px; border-bottom:1px solid var(--color-divider,#e8e5e0); vertical-align:top; }
+    .data-table td { padding:7px 10px; border-bottom:1px solid var(--divider); vertical-align:top; }
     .data-table tr:last-child td { border-bottom:none; }
-    .data-table tr:hover td { background:#f9f8f5; }
+    .data-table tr:hover td { background:var(--surface-2,#f9f8f5); }
     .data-table tr.excl-row td { opacity:.45; }
     .chip {
       display:inline-block; padding:2px 8px; border-radius:20px;
@@ -125,43 +125,39 @@
     .chip-km1   { background:#dce9f3; color:#006494; }
     .chip-ksl5a { background:#f2e3d7; color:#964219; }
     .chip-km2   { background:#ede3f8; color:#7a39bb; }
-    .chip-excl  { background:#f0eeea; color:var(--color-text-muted); }
-    .chip-y     { background:#d6ecec; color:var(--color-primary); }
-    .chip-n     { background:#f0eeea; color:var(--color-text-muted); }
+    .chip-excl  { background:#f0eeea; color:var(--muted); }
+    .chip-y     { background:#d6ecec; color:var(--primary); }
+    .chip-n     { background:#f0eeea; color:var(--muted); }
 
     /* ── Tabs ────────────────────────────────────────────────────── */
-    .tabs { display:flex; gap:0; border-bottom:2px solid var(--color-border); flex-wrap:wrap; }
-    .tab-btn {
+    .rpt-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); flex-wrap:wrap; }
+    .rpt-tab-btn {
       padding:9px 16px; font-size:13px; font-weight:500; cursor:pointer;
       border:none; background:none; font-family:inherit;
-      color:var(--color-text-muted);
+      color:var(--muted);
       border-bottom:2px solid transparent; margin-bottom:-2px;
       transition:color .15s, border-color .15s;
     }
-    .tab-btn:hover  { color:var(--color-text); }
-    .tab-btn.active { color:var(--color-primary); border-bottom-color:var(--color-primary); }
+    .rpt-tab-btn:hover  { color:var(--text); }
+    .rpt-tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
 
     /* ── Pagination ──────────────────────────────────────────────── */
-    .pagination { display:flex; align-items:center; gap:6px; margin-top:10px; justify-content:flex-end; font-size:12px; color:var(--color-text-muted); }
+    .pagination { display:flex; align-items:center; gap:6px; margin-top:10px; justify-content:flex-end; font-size:12px; color:var(--muted); }
     .pg-btn {
-      padding:3px 9px; border:1px solid var(--color-border);
-      border-radius:5px; background:var(--color-surface);
+      padding:3px 9px; border:1px solid var(--border);
+      border-radius:5px; background:var(--surface);
       cursor:pointer; font-size:12px; font-family:inherit;
     }
-    .pg-btn:hover   { background:var(--color-surface-2,#f3f0ec); }
-    .pg-btn.active  { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+    .pg-btn:hover   { background:var(--surface-2,#f3f0ec); }
+    .pg-btn.active  { background:var(--primary); color:#fff; border-color:var(--primary); }
     .pg-btn:disabled { opacity:.4; cursor:not-allowed; }
 
-    /* ── Action bar ──────────────────────────────────────────────── */
-    .action-bar { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
-    .action-bar .record-count { font-size:12px; color:var(--color-text-muted); margin-left:auto; }
-
     /* ── Dashboard grid ──────────────────────────────────────────── */
-    .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); }
+    .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
     @media(max-width:860px) { .dash-grid { grid-template-columns:1fr; } }
     @media(max-width:720px) {
       .reporter-layout { flex-direction:column; }
-      .reporter-sidebar { width:100%; min-width:unset; border-right:none; border-bottom:1px solid var(--color-border); }
+      .reporter-sidebar { width:100%; min-width:unset; border-right:none; border-bottom:1px solid var(--border); }
     }
   </style>
 </head>
@@ -177,7 +173,7 @@
   <!-- TOOLBAR -->
   <div class="toolbar">
     <div class="toolbar-left">
-      <button id="import-btn" class="file-label" type="button">Import V2 File</button>
+      <button id="import-btn" class="btn-outline" type="button">Import V2 File</button>
       <input type="file" id="file-input" accept=".xlsx"
              style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
     </div>
@@ -186,7 +182,7 @@
       <button class="btn-outline" onclick="window.RPT.exportReport()">Export All</button>
       <button class="btn-outline" onclick="window.RPT.resetToUpload()">Load New File</button>
     </div>
-    <span id="record-count" style="font-size:12px;color:var(--color-text-muted);margin-left:auto;"></span>
+    <span id="record-count" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
   </div>
 
   <div class="reporter-layout">
@@ -220,7 +216,7 @@
     <!-- MAIN CONTENT -->
     <div class="reporter-main">
 
-      <!-- ── UPLOAD STATE ─────────────────────────────────────── -->
+      <!-- UPLOAD STATE -->
       <div id="upload-section">
         <div class="upload-zone" id="drop-zone-reporter">
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -235,26 +231,25 @@
         <div id="upload-status"></div>
       </div>
 
-      <!-- ── DATA STATE ────────────────────────────────────────── -->
+      <!-- DATA STATE -->
       <div id="data-section">
-
         <!-- KPIs -->
         <div class="kpi-row" id="kpi-row"></div>
 
         <!-- Tabs -->
-        <div class="tabs" id="tab-bar">
-          <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-          <button class="tab-btn" data-tab="overview">Overview</button>
-          <button class="tab-btn" data-tab="all">All Records</button>
-          <button class="tab-btn" data-tab="ksl4">KSL-4</button>
-          <button class="tab-btn" data-tab="km1">KM-1</button>
-          <button class="tab-btn" data-tab="ksl5a">KSL-5a</button>
-          <button class="tab-btn" data-tab="km2">KM-2</button>
-          <button class="tab-btn" data-tab="aos">AOS</button>
+        <div class="rpt-tabs" id="tab-bar">
+          <button class="rpt-tab-btn active" data-tab="dashboard">Dashboard</button>
+          <button class="rpt-tab-btn" data-tab="overview">Overview</button>
+          <button class="rpt-tab-btn" data-tab="all">All Records</button>
+          <button class="rpt-tab-btn" data-tab="ksl4">KSL-4</button>
+          <button class="rpt-tab-btn" data-tab="km1">KM-1</button>
+          <button class="rpt-tab-btn" data-tab="ksl5a">KSL-5a</button>
+          <button class="rpt-tab-btn" data-tab="km2">KM-2</button>
+          <button class="rpt-tab-btn" data-tab="aos">AOS</button>
         </div>
         <div id="tab-content" style="margin-top:16px;"></div>
-
       </div><!-- /data-section -->
+
     </div><!-- /reporter-main -->
   </div><!-- /reporter-layout -->
 </div><!-- /app -->
@@ -271,8 +266,12 @@
   var fileInput  = document.getElementById('file-input');
   var importBtn  = document.getElementById('import-btn');
   var dropZone   = document.getElementById('drop-zone-reporter');
-  var exportBtns = document.getElementById('export-btns');
-  var sidebar    = document.getElementById('reporter-sidebar');
+
+  // showData() is called by renderTables() AFTER the async load finishes
+  window._showReporterData = function () {
+    document.getElementById('export-btns').style.display      = '';
+    document.getElementById('reporter-sidebar').style.display = '';
+  };
 
   function loadFile(f) {
     if (!f) return;
@@ -280,11 +279,9 @@
       setStatus('Only .xlsx files are accepted.', true);
       return;
     }
-    setStatus('Loading ' + f.name + '…', false);
+    setStatus('Loading ' + f.name + '\u2026', false);
     window.RPT.loadFile(f);
-    // Show export buttons & sidebar after load
-    exportBtns.style.display = '';
-    sidebar.style.display = '';
+    // sidebar & export buttons are revealed inside renderTables() once data is ready
   }
 
   function setStatus(msg, isErr) {
@@ -301,19 +298,15 @@
 
   dropZone.addEventListener('click', function () { fileInput.click(); });
   dropZone.addEventListener('dragover', function (e) {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
+    e.preventDefault(); dropZone.classList.add('drag-over');
   });
   dropZone.addEventListener('dragleave', function () {
     dropZone.classList.remove('drag-over');
   });
   dropZone.addEventListener('drop', function (e) {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
+    e.preventDefault(); dropZone.classList.remove('drag-over');
     loadFile(e.dataTransfer.files[0]);
   });
-
-  // Global drop fallback
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
   document.addEventListener('drop', function (e) {
     e.preventDefault();
@@ -324,9 +317,9 @@
 
 // ─── Tab switching ─────────────────────────────────────────────────────────
 document.getElementById('tab-bar').addEventListener('click', function (e) {
-  var btn = e.target.closest('.tab-btn');
+  var btn = e.target.closest('.rpt-tab-btn');
   if (!btn) return;
-  document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  document.querySelectorAll('.rpt-tab-btn').forEach(function (b) { b.classList.remove('active'); });
   btn.classList.add('active');
   renderTab(btn.dataset.tab);
 });
@@ -340,6 +333,7 @@ function renderTab(name) {
   currentPage = 1;
   var data = window.RPT ? window.RPT.filtered : [];
   var el   = document.getElementById('tab-content');
+  if (!el) return;
   switch (name) {
     case 'dashboard': el.innerHTML = buildDashboard(data); break;
     case 'overview':  el.innerHTML = buildOverview(data);  break;
@@ -357,8 +351,10 @@ window.renderTables = function () {
   var data = window.RPT ? window.RPT.filtered : [];
   buildKPIs(data);
   renderTab(currentTab);
+  // Now safe to reveal sidebar & export buttons
+  if (typeof window._showReporterData === 'function') window._showReporterData();
 };
-window.renderCharts = function () { /* charts handled inline in dashboard */ };
+window.renderCharts = function () { /* charts rendered inline inside buildDashboard */ };
 
 // ─── KPIs ──────────────────────────────────────────────────────────────────
 function buildKPIs(data) {
@@ -367,9 +363,9 @@ function buildKPIs(data) {
   var excl   = total - active;
   function bySla(s) { return data.filter(function(r){return r.sla===s && r.excluded==='N';}).length; }
   var aos   = data.filter(function(r){return r.isAos && r.excluded==='N';}).length;
-  var weeks = new Set(data.map(function(r){return r.week;}));
+  var weeks = {}; data.forEach(function(r){if(r.week) weeks[r.week]=1;});
   document.getElementById('kpi-row').innerHTML =
-    kpiCard('c-total', 'Total',   total,  weeks.size + ' week(s)') +
+    kpiCard('c-total', 'Total',   total,  Object.keys(weeks).length + ' week(s)') +
     kpiCard('c-ksl4',  'KSL-4',  bySla('KSL-4'),  pct(bySla('KSL-4'),  active)) +
     kpiCard('c-km1',   'KM-1',   bySla('KM-1'),   pct(bySla('KM-1'),   active)) +
     kpiCard('c-ksl5a', 'KSL-5a', bySla('KSL-5a'), pct(bySla('KSL-5a'), active)) +
@@ -385,25 +381,29 @@ function pct(n, d) { return d ? Math.round(n/d*100)+'%' : '0%'; }
 // ─── Dashboard ─────────────────────────────────────────────────────────────
 function buildDashboard(data) {
   var active = data.filter(function(r){return r.excluded==='N';});
-  var appMap={}, reasonMap={}, langMap={}, slaMap={};
+  var appMap={}, reasonMap={}, langMap={}, slaMap={}, queueMap={}, topicMap={};
   active.forEach(function(r){
     if(r.tool)     appMap[r.tool]         = (appMap[r.tool]||0)+1;
     if(r.reason)   reasonMap[r.reason]    = (reasonMap[r.reason]||0)+1;
     if(r.language) langMap[r.language]    = (langMap[r.language]||0)+1;
     if(r.sla)      slaMap[r.sla]          = (slaMap[r.sla]||0)+1;
+    if(r.queue)    queueMap[r.queue]      = (queueMap[r.queue]||0)+1;
+    if(r.topic)    topicMap[r.topic]      = (topicMap[r.topic]||0)+1;
   });
   return '<div class="dash-grid">'+
-    card('Top Tools',    barChart(topN(appMap,10),   '#006494'))+
-    card('Breach Reasons', barChart(topN(reasonMap,8), '#964219'))+
-    card('Languages',    barChart(topN(langMap,10),  '#437a22'))+
-    card('SLA Breakdown', barChart(topN(slaMap,6),   '#7a39bb'))+
+    card('Top Tools',      barChart(topN(appMap,10),    '#006494'))+
+    card('Breach Reasons', barChart(topN(reasonMap,10), '#964219'))+
+    card('Languages',      barChart(topN(langMap,10),   '#437a22'))+
+    card('SLA Breakdown',  barChart(topN(slaMap,8),     '#7a39bb'))+
+    card('By Queue',       barChart(topN(queueMap,8),   '#01696f'))+
+    card('By Topic',       barChart(topN(topicMap,8),   '#d19900'))+
   '</div>';
 }
 function topN(map, n) {
   return Object.entries(map).sort(function(a,b){return b[1]-a[1];}).slice(0,n);
 }
 function barChart(entries, color) {
-  if (!entries.length) return '<p style="color:var(--color-text-muted);font-size:12px;">No data</p>';
+  if (!entries.length) return '<p style="color:var(--muted);font-size:12px;">No data</p>';
   var max = entries[0][1];
   return '<div class="bar-chart">'+entries.map(function(e){
     return '<div class="bar-row">'+
@@ -432,7 +432,7 @@ function buildOverview(data) {
   }).join('');
   return '<div class="section-card"><div class="section-card-head"><h2>SLA Overview</h2><span class="badge">'+data.length+' records</span></div>'+
     '<div class="section-card-body"><table class="data-table"><thead><tr><th>SLA</th><th>Total</th><th>Active</th><th>Excl</th><th>AOS</th><th>Active%</th></tr></thead>'+
-    '<tbody>'+(rows||'<tr><td colspan="6" style="color:var(--color-text-muted);text-align:center;padding:20px;">No data</td></tr>')+'</tbody></table></div></div>';
+    '<tbody>'+(rows||'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">No data</td></tr>')+'</tbody></table></div></div>';
 }
 
 // ─── Generic table ─────────────────────────────────────────────────────────
@@ -461,7 +461,7 @@ function buildTable(title, rows) {
         '<th>Ticket</th><th>Date Close (CET)</th><th>Breach Time (CET)</th>'+
         '<th>SLA</th><th>Tool</th><th>Reason</th><th>Lang</th><th>Sheet</th><th>Excl</th><th>AOS</th>'+
       '</tr></thead>'+
-      '<tbody>'+(trs||'<tr><td colspan="10" style="color:var(--color-text-muted);text-align:center;padding:20px;">No records</td></tr>')+'</tbody>'+
+      '<tbody>'+(trs||'<tr><td colspan="10" style="color:var(--muted);text-align:center;padding:20px;">No records</td></tr>')+'</tbody>'+
       '</table>'+
       buildPagination(total)+
     '</div></div>';
@@ -482,14 +482,15 @@ function buildPagination(total) {
     btns += '<button class="pg-btn'+(i===currentPage?' active':'')+'" onclick="goPage('+i+')">'+i+'</button>';
   }
   return '<div class="pagination">'+
-    '<button class="pg-btn" onclick="goPage('+(currentPage-1)+')" '+(currentPage===1?'disabled':'')+'>‹</button>'+
+    '<button class="pg-btn" onclick="goPage('+(currentPage-1)+')" '+(currentPage===1?'disabled':'')+'>&#8249;</button>'+
     btns+
-    '<button class="pg-btn" onclick="goPage('+(currentPage+1)+')" '+(currentPage===pages?'disabled':'')+'>›</button>'+
-    '<span>'+((currentPage-1)*PAGE_SIZE+1)+'–'+Math.min(currentPage*PAGE_SIZE,total)+' of '+total+'</span>'+
+    '<button class="pg-btn" onclick="goPage('+(currentPage+1)+')" '+(currentPage===pages?'disabled':'')+'>&#8250;</button>'+
+    '<span>'+((currentPage-1)*PAGE_SIZE+1)+'\u2013'+Math.min(currentPage*PAGE_SIZE,total)+' of '+total+'</span>'+
   '</div>';
 }
 window.goPage = function(n) {
-  var pages = Math.ceil((window.RPT?window.RPT.filtered:[]).length/PAGE_SIZE);
+  var data  = window.RPT ? window.RPT.filtered : [];
+  var pages = Math.ceil(data.length/PAGE_SIZE);
   currentPage = Math.max(1,Math.min(n,pages));
   renderTab(currentTab);
 };
