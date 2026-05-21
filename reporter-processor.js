@@ -13,10 +13,13 @@
     uniqueValues: {},
     loadFile: function(file) { loadFile(file); },
     clearFilters: function() {
-      document.querySelectorAll('.filter-group select').forEach(s => s.value = 'All');
+      // Reset all filter selects by their known IDs
+      ['filter-week','filter-sla','filter-lang','filter-excl',
+       'filter-aos','filter-tool','filter-queue','filter-sheet'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = 'All';
+      });
       applyFilters();
-      if (typeof renderCharts === 'function') renderCharts();
-      if (typeof renderTables === 'function') renderTables();
     },
     resetToUpload: function() { location.reload(); },
     exportFiltered: function() {
@@ -24,7 +27,10 @@
       else alert('Exporter not loaded');
     },
     exportReport: function() {
-      if (window.EXPORTER) window.EXPORTER.exportAsExcel(window.RPT.allData, 'Breaches_FullReport_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.xlsx');
+      if (window.EXPORTER) window.EXPORTER.exportAsExcel(
+        window.RPT.allData,
+        'Breaches_FullReport_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.xlsx'
+      );
       else alert('Exporter not loaded');
     },
   };
@@ -40,12 +46,12 @@
     if (isNaN(d.getTime())) return clean(val);
     const TZ_OFFSET_MS = 2 * 60 * 60 * 1000; // CET = UTC+2
     const local = new Date(d.getTime() + TZ_OFFSET_MS);
-    const dd   = String(local.getUTCDate()).padStart(2, '0');
-    const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
+    const dd  = String(local.getUTCDate()).padStart(2, '0');
+    const mm  = String(local.getUTCMonth() + 1).padStart(2, '0');
     const yyyy = local.getUTCFullYear();
-    const hh   = String(local.getUTCHours()).padStart(2, '0');
-    const min  = String(local.getUTCMinutes()).padStart(2, '0');
-    const ss   = String(local.getUTCSeconds()).padStart(2, '0');
+    const hh  = String(local.getUTCHours()).padStart(2, '0');
+    const min = String(local.getUTCMinutes()).padStart(2, '0');
+    const ss  = String(local.getUTCSeconds()).padStart(2, '0');
     return `${dd}.${mm}.${yyyy} ${hh}:${min}:${ss}`;
   }
 
@@ -56,7 +62,7 @@
     return 'N';
   }
 
-  // ─── V2 MODEL: processWorkbook ────────────────────────────────────────────────────────
+  // ─── V2 MODEL: processWorkbook ────────────────────────────────────────────
   // V2 headers (same across all sheets):
   // 0:Incident Ticket  1:DATE_CLOSE  2:Status  3:Queue  4:Priority
   // 5:ISO_Language  6:Tool  7:TOPIC  8:SLA_Code  9:SLA_N
@@ -110,15 +116,20 @@
     });
 
     console.log('V2 Reporter loaded', data.length, 'records');
-    window.RPT.allData    = data;
-    window.RPT.filtered   = data.slice();
+    window.RPT.allData     = data;
+    window.RPT.filtered    = data.slice();
     window.RPT.aosFiltered = data.filter(r => r.isAos);
 
     populateUniqueValues();
-    updateFilterDropdowns();
-    applyFilters();
-    if (typeof renderCharts === 'function') renderCharts();
-    if (typeof renderTables === 'function') renderTables();
+    updateFilterDropdowns(); // shows #data-section, hides #upload-section
+
+    // Apply filters updates RPT.filtered, then defer renderTables one tick
+    // so that reporter.html's inline <script> (which defines window.renderTables)
+    // is guaranteed to have executed before we call it.
+    applyFiltersOnly();
+    setTimeout(function() {
+      if (typeof window.renderTables === 'function') window.renderTables();
+    }, 0);
   }
 
   function loadFile(file) {
@@ -155,7 +166,8 @@
     const sel = (id, arr) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.innerHTML = '<option value="All">All</option>' + arr.map(v => `<option value="${v}">${v}</option>`).join('');
+      el.innerHTML = '<option value="All">All</option>' +
+        arr.map(v => `<option value="${v}">${v}</option>`).join('');
     };
     sel('filter-week',  uv.weeks);
     sel('filter-sla',   uv.slas);
@@ -163,18 +175,23 @@
     sel('filter-tool',  uv.tools);
     sel('filter-queue', uv.queues);
     sel('filter-sheet', uv.sheets);
-    const exclEl = document.getElementById('filter-excl');
-    if (exclEl) exclEl.innerHTML = '<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
-    const aosEl = document.getElementById('filter-aos');
-    if (aosEl) aosEl.innerHTML = '<option value="All">All</option><option value="Y">AOS Only</option><option value="N">Non-AOS</option>';
 
+    const exclEl = document.getElementById('filter-excl');
+    if (exclEl) exclEl.innerHTML =
+      '<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
+    const aosEl = document.getElementById('filter-aos');
+    if (aosEl) aosEl.innerHTML =
+      '<option value="All">All</option><option value="Y">AOS Only</option><option value="N">Non-AOS</option>';
+
+    // Show data area, hide upload area
     const uploadSection = document.getElementById('upload-section');
     const dataSection   = document.getElementById('data-section');
     if (uploadSection) uploadSection.style.display = 'none';
     if (dataSection)   dataSection.style.display   = '';
   }
 
-  function applyFilters() {
+  // Filters data only — does NOT call renderTables (avoids double render on load)
+  function applyFiltersOnly() {
     const g = id => (document.getElementById(id)?.value || 'All');
     const weekF  = g('filter-week');
     const slaF   = g('filter-sla');
@@ -199,13 +216,17 @@
 
     const countEl = document.getElementById('record-count');
     if (countEl) countEl.textContent = window.RPT.filtered.length + ' records';
+  }
 
-    if (typeof renderCharts === 'function') renderCharts();
-    if (typeof renderTables === 'function') renderTables();
+  // Full apply: filter + re-render (used by dropdowns and clearFilters)
+  function applyFilters() {
+    applyFiltersOnly();
+    if (typeof window.renderTables === 'function') window.renderTables();
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    ['filter-week','filter-sla','filter-lang','filter-excl','filter-aos','filter-tool','filter-queue','filter-sheet'].forEach(function(id) {
+    ['filter-week','filter-sla','filter-lang','filter-excl',
+     'filter-aos','filter-tool','filter-queue','filter-sheet'].forEach(function(id) {
       const el = document.getElementById(id);
       if (el) el.addEventListener('change', applyFilters);
     });
