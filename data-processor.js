@@ -27,13 +27,13 @@
   }
   window.BT.debounce = debounce;
 
-  // Format date helper — output: dd.mm.yyyy hh:mm:ss in UTC+3
+  // Format date helper — output: dd.mm.yyyy hh:mm:ss in CET (UTC+2)
   function formatDate(val) {
     if (!val) return '';
     const d = new Date(val);
     if (isNaN(d.getTime())) return String(val);
-    // Offset to UTC+3 (180 minutes)
-    const TZ_OFFSET_MS = 3 * 60 * 60 * 1000;
+    // Offset to CET (UTC+2) — 120 minutes
+    const TZ_OFFSET_MS = 2 * 60 * 60 * 1000;
     const local = new Date(d.getTime() + TZ_OFFSET_MS);
     const dd   = String(local.getUTCDate()).padStart(2, '0');
     const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
