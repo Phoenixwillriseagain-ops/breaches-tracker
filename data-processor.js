@@ -12,8 +12,6 @@
     sortDir: 'asc',
     isProcessing: false,
     loadedMonths: [],
-    // Set of all Incident Ticket values seen — used for deduplication across imports
-    _seenTickets: new Set(),
   };
 
   window.BT.trackerState = trackerState;
@@ -27,15 +25,13 @@
   }
   window.BT.debounce = debounce;
 
-  // ── Date helpers ─────────────────────────────────────────────────────────
+  // ── Date helpers ───────────────────────────────────────────────────────
 
   // Returns a JS Date shifted to EEST (UTC+3), or null if unparseable.
   function toEEST(val) {
     if (!val) return null;
     const d = new Date(val);
     if (isNaN(d.getTime())) return null;
-    // Shift the UTC instant forward by 3 h so that getUTC* methods
-    // return the wall-clock time in EEST.
     return new Date(d.getTime() + 3 * 3600 * 1000);
   }
 
@@ -48,19 +44,16 @@
            ` ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
   }
 
-  // Excel date serial (days since 1899-12-30, which is SheetJS / Excel epoch).
-  // Returns null when the value cannot be parsed.
+  // Excel date serial (days since 1899-12-30 = SheetJS/Excel epoch).
   function toExcelSerial(val) {
     const t = toEEST(val);
     if (!t) return null;
-    // Build a UTC midnight Date for the EEST wall-clock date/time so that
-    // the serial represents the correct local time to the second.
-    const MS_PER_DAY = 86400000;
-    const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30)).getTime(); // 1899-12-30
-    return (t.getTime() - EXCEL_EPOCH) / MS_PER_DAY;  // fractional days
+    const MS_PER_DAY  = 86400000;
+    const EXCEL_EPOCH = new Date(Date.UTC(1899, 11, 30)).getTime();
+    return (t.getTime() - EXCEL_EPOCH) / MS_PER_DAY;
   }
 
-  // ── Status / Loading helpers ─────────────────────────────────────────────
+  // ── Status / Loading helpers ────────────────────────────────────────────
 
   function showStatus(msg, type = 'ok') {
     const el = document.getElementById('status');
@@ -90,15 +83,14 @@
   }
   window.BT.showLoading = showLoading;
 
-  // ── Import log helpers ───────────────────────────────────────────────────
+  // ── Import log helpers ───────────────────────────────────────────────
   function showImportLog(lines) {
     const el = document.getElementById('import-log');
     if (!el) return;
     el.innerHTML = lines.map(function(l) {
-      const icon = l.type === 'ok'   ? '\u2713' :
-                   l.type === 'warn' ? '\u26a0' : '\u2715';
-      const color = l.type === 'ok'   ? 'var(--success, #437a22)' :
-                    l.type === 'warn' ? 'var(--warning, #964219)' : 'var(--error, #a12c7b)';
+      const icon  = l.type === 'ok' ? '\u2713' : l.type === 'warn' ? '\u26a0' : '\u2715';
+      const color = l.type === 'ok' ? 'var(--success, #437a22)'
+                  : l.type === 'warn' ? 'var(--warning, #964219)' : 'var(--error, #a12c7b)';
       return `<span style="color:${color};margin-right:8px;">${icon}</span>${l.msg}`;
     }).join('<br>');
     el.style.display = 'block';
@@ -109,7 +101,7 @@
     if (el) el.style.display = 'none';
   }
 
-  // ── Multi-file import entry point ────────────────────────────────────────
+  // ── Multi-file import entry point ──────────────────────────────────────
   window.BT.startMultiImport = function(files) {
     hideImportLog();
     const logLines = [];
@@ -133,11 +125,8 @@
             next();
             return;
           }
-          const result = mergeRows(rows, C);
-          const icon = result.duplicates > 0 ? 'warn' : 'ok';
-          let msg = file.name + ' \u2014 ' + result.added + ' record(s) added';
-          if (result.duplicates > 0) msg += ', ' + result.duplicates + ' duplicate(s) skipped';
-          logLines.push({ type: icon, msg: msg });
+          const added = mergeRows(rows, C);
+          logLines.push({ type: 'ok', msg: file.name + ' \u2014 ' + added + ' record(s) added' });
           next();
         });
       }, 10);
@@ -150,16 +139,15 @@
     next();
   };
 
-  // ── Clear all data ───────────────────────────────────────────────────────
+  // ── Clear all data ─────────────────────────────────────────────────────
   window.BT.clearAllData = function() {
     TAB_DEFS.forEach(t => { trackerState.tabs[t.id] = []; });
-    trackerState._seenTickets = new Set();
     hideImportLog();
     showStatus('All data cleared.');
     if (typeof window.BT.renderEmptyState === 'function') window.BT.renderEmptyState(true);
   };
 
-  // ── File reader ──────────────────────────────────────────────────────────
+  // ── File reader ────────────────────────────────────────────────────────
   function readFile(file, cb) {
     const ext = file.name.split('.').pop().toLowerCase();
     const reader = new FileReader();
@@ -207,20 +195,15 @@
     }
   }
 
-  // ── Merge rows into existing state (with deduplication) ──────────────────
+  // ── Merge rows into state (no deduplication) ──────────────────────────────
+  // Every row is imported as-is. Returns the number of records added.
   function mergeRows(rows, C) {
-    let added = 0, duplicates = 0;
+    let added = 0;
 
     rows.forEach(function(row) {
       if (!row[C.ticket]) return;
       const ticket = String(row[C.ticket]).trim();
       if (!ticket) return;
-
-      if (trackerState._seenTickets.has(ticket)) {
-        duplicates++;
-        return;
-      }
-      trackerState._seenTickets.add(ticket);
 
       const sla  = String(row[C.sla_code] || '').trim();
       const lang = String(row[C.lang]     || '').trim().toLowerCase();
@@ -238,16 +221,10 @@
       });
     });
 
-    return { added, duplicates };
+    return added;
   }
 
-  // ── Map a row to the output object ───────────────────────────────────────
-  // DATE_CLOSE and DATE_TIME_Breach are stored as objects:
-  //   { v: <Excel serial number>, t: 'n', z: 'dd.mm.yyyy hh:mm:ss' }
-  // so SheetJS writes them as real date cells (numeric type) with the
-  // correct display format — which means WEEKNUM() works normally in Excel.
-  // The display string is kept separately in _dateCloseFmt / _breachFmt
-  // for the in-browser table renderer.
+  // ── Map a row to the output object ─────────────────────────────────────
   function mapRow(row, C) {
     const dateCloseSerial = toExcelSerial(row[C.date_close] || '');
     const breachSerial    = toExcelSerial(row[C.breach_dt]  || '');
@@ -263,7 +240,6 @@
     return {
       'Incident Ticket':    String(row[C.ticket]      || ''),
       'DATE_CLOSE':         dateCloseCell,
-      // Human-readable string kept for in-browser display (ignored by SheetJS export)
       '_dateCloseFmt':      formatDate(row[C.date_close] || ''),
       'Status':             String(row[C.status]      || ''),
       'Queue':              String(row[C.queue]        || ''),
@@ -290,13 +266,7 @@
     };
   }
 
-  // ── Export helpers ───────────────────────────────────────────────────────
-  //
-  // We need to write cell objects (not plain strings) for DATE columns so
-  // that Excel recognises them as dates and WEEKNUM() works.
-  // SheetJS json_to_sheet does NOT handle cell objects inside plain JS
-  // objects — we have to build the sheet manually via aoa_to_sheet or by
-  // writing cell objects directly into the worksheet after creation.
+  // ── Export helpers ─────────────────────────────────────────────────────
 
   function buildWorksheet(data) {
     if (!data.length) {
@@ -306,60 +276,41 @@
       );
     }
 
-    // Find column indices for date columns
-    const dateClosIdx  = OUT_COLS.indexOf('DATE_CLOSE');
-    const breachIdx    = OUT_COLS.indexOf('DATE_TIME_Breach');
+    const dateClosIdx = OUT_COLS.indexOf('DATE_CLOSE');
+    const breachIdx   = OUT_COLS.indexOf('DATE_TIME_Breach');
 
-    // Build AOA: header row + data rows
-    const aoa = [OUT_COLS.slice()]; // header
+    const aoa = [OUT_COLS.slice()];
     data.forEach(function(row) {
-      const r = OUT_COLS.map(function(col) {
-        const v = row[col];
-        // Pass cell objects through as-is for date columns;
-        // everything else is a plain value.
-        return v;
-      });
-      aoa.push(r);
+      aoa.push(OUT_COLS.map(col => row[col]));
     });
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-    // Now fix the date cells: aoa_to_sheet writes objects as '[object Object]'
-    // when a cell-object is placed in the array.  We overwrite those cells
-    // with proper SheetJS cell objects after the sheet is created.
-    if (dateClosIdx >= 0 || breachIdx >= 0) {
-      const colLetterOf = idx => {
-        // Convert 0-based column index to Excel letter (A, B, … Z, AA …)
-        let s = '';
-        let n = idx + 1;
-        while (n > 0) {
-          const rem = (n - 1) % 26;
-          s = String.fromCharCode(65 + rem) + s;
-          n = Math.floor((n - 1) / 26);
-        }
-        return s;
-      };
+    const colLetterOf = idx => {
+      let s = '', n = idx + 1;
+      while (n > 0) {
+        const rem = (n - 1) % 26;
+        s = String.fromCharCode(65 + rem) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    };
 
-      data.forEach(function(row, ri) {
-        const excelRow = ri + 2; // +1 for header, +1 for 1-based
-
-        if (dateClosIdx >= 0) {
-          const cell = row['DATE_CLOSE'];
-          if (cell && typeof cell === 'object' && cell.t === 'n') {
-            const addr = colLetterOf(dateClosIdx) + excelRow;
-            ws[addr] = { v: cell.v, t: 'n', z: 'dd.mm.yyyy hh:mm:ss' };
-          }
+    data.forEach(function(row, ri) {
+      const excelRow = ri + 2;
+      if (dateClosIdx >= 0) {
+        const cell = row['DATE_CLOSE'];
+        if (cell && typeof cell === 'object' && cell.t === 'n') {
+          ws[colLetterOf(dateClosIdx) + excelRow] = { v: cell.v, t: 'n', z: 'dd.mm.yyyy hh:mm:ss' };
         }
-
-        if (breachIdx >= 0) {
-          const cell = row['DATE_TIME_Breach'];
-          if (cell && typeof cell === 'object' && cell.t === 'n') {
-            const addr = colLetterOf(breachIdx) + excelRow;
-            ws[addr] = { v: cell.v, t: 'n', z: 'dd.mm.yyyy hh:mm:ss' };
-          }
+      }
+      if (breachIdx >= 0) {
+        const cell = row['DATE_TIME_Breach'];
+        if (cell && typeof cell === 'object' && cell.t === 'n') {
+          ws[colLetterOf(breachIdx) + excelRow] = { v: cell.v, t: 'n', z: 'dd.mm.yyyy hh:mm:ss' };
         }
-      });
-    }
+      }
+    });
 
     return ws;
   }
