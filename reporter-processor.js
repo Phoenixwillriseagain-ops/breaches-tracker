@@ -17,6 +17,9 @@
     // Multi-file entry point
     loadFiles: function(files) { _startMultiImport(files); },
 
+    // Public method called by language dropdown checkboxes
+    applyFilters: function() { _applyFilters(); },
+
     clearData: function() {
       window.RPT.allData     = [];
       window.RPT.filtered    = [];
@@ -24,6 +27,11 @@
       window.RPT.uniqueValues= {};
       _seenTickets = new Set();
       _hideImportLog();
+      // Reset lang dropdown label
+      var lbl = document.getElementById('lang-trigger-label');
+      if (lbl) lbl.textContent = 'All';
+      var list = document.getElementById('lang-dd-list');
+      if (list) list.innerHTML = '';
       var up = document.getElementById('upload-section');
       var dp = document.getElementById('data-section');
       var sb = document.getElementById('rpt-sidebar');
@@ -37,12 +45,16 @@
     },
 
     clearFilters: function() {
-      ['filter-week','filter-sla','filter-lang','filter-excl',
-       'filter-aos','filter-tool','filter-queue','filter-sheet']
+      ['filter-week','filter-sla','filter-excl','filter-aos','filter-tool','filter-queue','filter-sheet']
         .forEach(function(id){
           var el=document.getElementById(id);
           if(el) el.value='All';
         });
+      // Reset language: check all
+      document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb){
+        cb.checked = true;
+      });
+      if (typeof window._updateLangLabel === 'function') window._updateLangLabel();
       _applyFilters();
     },
 
@@ -85,7 +97,7 @@
     var el = document.getElementById('rpt-import-log');
     if (!el) return;
     el.innerHTML = lines.map(function(l) {
-      var icon  = l.type==='ok' ? '✓' : l.type==='warn' ? '⚠' : '✕';
+      var icon  = l.type==='ok' ? '\u2713' : l.type==='warn' ? '\u26a0' : '\u2715';
       var color = l.type==='ok' ? 'var(--success,#437a22)' :
                   l.type==='warn' ? 'var(--warning,#964219)' : 'var(--error,#a12c7b)';
       return '<span style="color:'+color+';margin-right:8px;">'+icon+'</span>'+l.msg;
@@ -108,6 +120,7 @@
         // All done — rebuild unique values, dropdowns, filters, render
         _populateUnique();
         _updateDropdowns();
+        _buildLangDropdown();   // ← rebuild lang checkboxes
         _applyFiltersOnly();
         window.renderTables();
         _showImportLog(logLines);
@@ -116,7 +129,7 @@
       }
       var file = files[idx++];
       if (!/\.xlsx$/i.test(file.name)) {
-        logLines.push({ type:'error', msg: file.name + ' — only .xlsx files are accepted' });
+        logLines.push({ type:'error', msg: file.name + ' \u2014 only .xlsx files are accepted' });
         next();
         return;
       }
@@ -126,16 +139,16 @@
           var wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
           var result = _mergeWorkbook(wb);
           var type = result.duplicates > 0 ? 'warn' : 'ok';
-          var msg  = file.name + ' — ' + result.added + ' record(s) added';
+          var msg  = file.name + ' \u2014 ' + result.added + ' record(s) added';
           if (result.duplicates > 0) msg += ', ' + result.duplicates + ' duplicate(s) skipped';
           logLines.push({ type: type, msg: msg });
         } catch(err) {
-          logLines.push({ type:'error', msg: file.name + ' — ' + err.message });
+          logLines.push({ type:'error', msg: file.name + ' \u2014 ' + err.message });
         }
         next();
       };
       reader.onerror = function() {
-        logLines.push({ type:'error', msg: file.name + ' — read error' });
+        logLines.push({ type:'error', msg: file.name + ' \u2014 read error' });
         next();
       };
       reader.readAsArrayBuffer(file);
@@ -205,6 +218,23 @@
     window.RPT.uniqueValues=uv;
   }
 
+  /* ---- Build language checkbox list ---- */
+  function _buildLangDropdown() {
+    var list = document.getElementById('lang-dd-list');
+    if (!list) return;
+    var langs = (window.RPT.uniqueValues.languages || []).slice().sort();
+    list.innerHTML = langs.map(function(lang) {
+      var id = 'lang-cb-' + lang.replace(/[^a-zA-Z0-9]/g,'_');
+      return '<label class="lang-dd-item" for="'+id+'">'+
+        '<input type="checkbox" id="'+id+'" value="'+_escAttr(lang)+'" checked '+
+        'onchange="window._onLangChange()">'+
+        '<span>'+_esc(lang)+'</span>'+
+        '</label>';
+    }).join('');
+    // Update the trigger label
+    if (typeof window._updateLangLabel === 'function') window._updateLangLabel();
+  }
+
   function _updateDropdowns(){
     var uv=window.RPT.uniqueValues;
     function fill(id,arr){
@@ -215,7 +245,6 @@
     }
     fill('filter-week', uv.weeks);
     fill('filter-sla',  uv.slas);
-    fill('filter-lang', uv.languages);
     fill('filter-tool', uv.tools);
     fill('filter-queue',uv.queues);
     fill('filter-sheet',uv.sheets);
@@ -232,13 +261,22 @@
 
   function _applyFiltersOnly(){
     function g(id){var e=document.getElementById(id);return e?e.value:'All';}
-    var wF=g('filter-week'), sF=g('filter-sla'),  lF=g('filter-lang'),
+    var wF=g('filter-week'), sF=g('filter-sla'),
         eF=g('filter-excl'), aF=g('filter-aos'),  tF=g('filter-tool'),
         qF=g('filter-queue'),shF=g('filter-sheet');
+
+    // Language: use the checkbox Set from the HTML helper
+    var selectedLangs = (typeof window.getSelectedLanguages === 'function')
+      ? window.getSelectedLanguages()
+      : null;
+    var totalLangs = document.querySelectorAll('#lang-dd-list input[type=checkbox]').length;
+    // If all checked (or helper not ready), treat as no lang filter
+    var filterLang = selectedLangs && selectedLangs.size < totalLangs;
+
     window.RPT.filtered=window.RPT.allData.filter(function(r){
       if(wF !=='All'&&r.week     !==wF)  return false;
       if(sF !=='All'&&r.sla      !==sF)  return false;
-      if(lF !=='All'&&r.language !==lF)  return false;
+      if(filterLang && !selectedLangs.has(r.language)) return false;
       if(eF !=='All'&&r.excluded !==eF)  return false;
       if(aF !=='All'&&(r.isAos?'Y':'N')!==aF) return false;
       if(tF !=='All'&&r.tool     !==tF)  return false;
@@ -255,13 +293,17 @@
     if(typeof window.renderTables==='function') window.renderTables();
   }
 
+  function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function _escAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
   document.addEventListener('DOMContentLoaded',function(){
-    ['filter-week','filter-sla','filter-lang','filter-excl',
+    ['filter-week','filter-sla','filter-excl',
      'filter-aos','filter-tool','filter-queue','filter-sheet']
       .forEach(function(id){
         var el=document.getElementById(id);
         if(el) el.addEventListener('change',_applyFilters);
       });
+    // Note: filter-lang is now handled via checkbox onchange -> window._onLangChange()
   });
 
 })();

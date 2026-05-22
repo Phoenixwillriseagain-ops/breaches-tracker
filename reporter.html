@@ -123,6 +123,49 @@
     .pg-btn.on      { background: var(--primary); color: #fff; border-color: var(--primary); }
     .pg-btn:disabled { opacity: .4; cursor: not-allowed; }
 
+    /* ---- Language multi-select dropdown ---- */
+    .lang-filter-wrap { position: relative; }
+    .lang-trigger {
+      width: 100%; padding: 5px 8px; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--bg);
+      font-size: 12px; color: var(--text); font-family: inherit;
+      text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      transition: border-color .15s;
+    }
+    .lang-trigger:hover, .lang-trigger.open { border-color: var(--primary); }
+    .lang-trigger .lt-arrow { font-size: 9px; color: var(--muted); margin-left: 4px; flex-shrink: 0; }
+    .lang-dropdown {
+      display: none; position: fixed; z-index: 999;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12);
+      min-width: 180px; max-width: 240px;
+      overflow: hidden;
+    }
+    .lang-dropdown.open { display: block; }
+    .lang-dd-header {
+      padding: 7px 10px; border-bottom: 1px solid var(--divider);
+      display: flex; gap: 6px;
+    }
+    .lang-dd-header button {
+      font-size: 11px; font-family: inherit; cursor: pointer;
+      padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text);
+      transition: background .12s;
+    }
+    .lang-dd-header button:hover { background: var(--primary-hi, #cedcd8); }
+    .lang-dd-list {
+      max-height: 200px; overflow-y: auto;
+      padding: 4px 0;
+    }
+    .lang-dd-item {
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 10px; font-size: 12px; cursor: pointer;
+      transition: background .1s;
+    }
+    .lang-dd-item:hover { background: var(--surface-2, #f3f0ec); }
+    .lang-dd-item input[type=checkbox] { margin: 0; cursor: pointer; accent-color: var(--primary); }
+    /* ---- end language filter ---- */
+
     @media (max-width: 720px) {
       .reporter-layout { flex-direction: column; }
       .reporter-sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); }
@@ -164,7 +207,23 @@
         <div class="filter-block">
           <label>Week</label>    <select id="filter-week"><option value="All">All</option></select>
           <label>SLA</label>     <select id="filter-sla"><option value="All">All</option></select>
-          <label>Language</label><select id="filter-lang"><option value="All">All</option></select>
+
+          <!-- Language: multi-select checkbox dropdown -->
+          <label>Language</label>
+          <div class="lang-filter-wrap" id="lang-filter-wrap">
+            <button type="button" class="lang-trigger" id="lang-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span id="lang-trigger-label">All</span>
+              <span class="lt-arrow">&#9660;</span>
+            </button>
+            <div class="lang-dropdown" id="lang-dropdown" role="listbox" aria-multiselectable="true">
+              <div class="lang-dd-header">
+                <button type="button" id="lang-select-all">Select all</button>
+                <button type="button" id="lang-deselect-all">Deselect all</button>
+              </div>
+              <div class="lang-dd-list" id="lang-dd-list"></div>
+            </div>
+          </div>
+
           <label>Tool</label>    <select id="filter-tool"><option value="All">All</option></select>
           <label>Queue</label>   <select id="filter-queue"><option value="All">All</option></select>
           <label>Sheet</label>   <select id="filter-sheet"><option value="All">All</option></select>
@@ -259,8 +318,93 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.classList.add('active');
     _renderTab(btn.dataset.tab);
   });
+
+  // ---- Language dropdown toggle ----
+  var trigger  = document.getElementById('lang-trigger');
+  var dropdown = document.getElementById('lang-dropdown');
+
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var isOpen = dropdown.classList.contains('open');
+    if (isOpen) {
+      _closeLangDropdown();
+    } else {
+      _openLangDropdown();
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('lang-filter-wrap').contains(e.target)) {
+      _closeLangDropdown();
+    }
+  });
+
+  document.getElementById('lang-select-all').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb) { cb.checked = true; });
+    _onLangChange();
+  });
+
+  document.getElementById('lang-deselect-all').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+    _onLangChange();
+  });
 });
 
+function _openLangDropdown() {
+  var trigger  = document.getElementById('lang-trigger');
+  var dropdown = document.getElementById('lang-dropdown');
+  var wrap     = document.getElementById('lang-filter-wrap');
+  var rect     = wrap.getBoundingClientRect();
+  dropdown.style.top    = (rect.bottom + 4) + 'px';
+  dropdown.style.left   = rect.left + 'px';
+  dropdown.style.width  = Math.max(rect.width, 180) + 'px';
+  dropdown.classList.add('open');
+  trigger.classList.add('open');
+  trigger.setAttribute('aria-expanded', 'true');
+}
+
+function _closeLangDropdown() {
+  var trigger  = document.getElementById('lang-trigger');
+  var dropdown = document.getElementById('lang-dropdown');
+  dropdown.classList.remove('open');
+  trigger.classList.remove('open');
+  trigger.setAttribute('aria-expanded', 'false');
+}
+
+// Called by reporter-processor.js after dropdown is populated
+window._onLangChange = function _onLangChange() {
+  if (window.RPT) {
+    window.RPT.applyFilters();
+  }
+  _updateLangLabel();
+};
+
+function _updateLangLabel() {
+  var all  = document.querySelectorAll('#lang-dd-list input[type=checkbox]');
+  var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
+  var lbl = document.getElementById('lang-trigger-label');
+  if (!lbl) return;
+  if (checked.length === 0) {
+    lbl.textContent = 'None';
+  } else if (checked.length === all.length) {
+    lbl.textContent = 'All';
+  } else if (checked.length <= 2) {
+    lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
+  } else {
+    lbl.textContent = checked.length + ' selected';
+  }
+}
+
+// Returns currently selected languages as a Set (empty = none selected)
+window.getSelectedLanguages = function() {
+  var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
+  return new Set(Array.from(checked).map(function(c){ return c.value; }));
+};
+</script>
+
+<script>
 function _buildKPIs(data) {
   var total  = data.length;
   var active = data.filter(function(r){return r.excluded==='N';}).length;
@@ -406,7 +550,7 @@ window._goPage=function(n){
     var files = Array.from(fileList).filter(function(f){ return /\.xlsx$/i.test(f.name); });
     var rejected = Array.from(fileList).length - files.length;
     if (!files.length) { setStatus('Only .xlsx files are accepted.', true); return; }
-    var msg = 'Loading ' + files.length + ' file(s)…';
+    var msg = 'Loading ' + files.length + ' file(s)\u2026';
     if (rejected > 0) msg += ' (' + rejected + ' non-xlsx skipped)';
     setStatus(msg, false);
     window.RPT.loadFiles(files);
