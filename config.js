@@ -20,9 +20,9 @@
   // V2 "Breaches" file headers (all sheets share this structure):
   // 0:Incident Ticket  1:DATE_CLOSE  2:Status  3:Queue  4:Priority
   // 5:ISO_Language  6:Tool  7:TOPIC  8:SLA_Code  9:SLA_N
-  // 10:Breach_Description  11:DATE_TIME_Breach  12:Munich time
-  // 13:COMPASS ID  14:Reason  15:AOS  16:Agent  17:BMS ID
-  // 18:Comment  19:AOS Issue  20:Excluded  21:Jira  22:Week  23:Unique
+  // 10:Breach_Description  11:DATE_TIME_Breach
+  // 12:COMPASS ID  13:Reason  14:AOS  15:Agent  16:BMS ID
+  // 17:Comment  18:AOS Issue  19:Excluded  20:Jira  21:Week  22:Unique
   const C_XLSX = {
     ticket:     0,
     date_close: 1,
@@ -36,19 +36,18 @@
     sla_n:      9,
     breach_desc:10,
     breach_dt:  11,
-    munich_time:12,
-    compass_id: 13,
-    reason:     14,
-    aos:        15,
-    agent:      16,
-    bms_id:     17,
-    comment:    18,
-    aos_issue:  19,
-    excluded:   20,
-    jira:       21,
-    week:       22,
-    unique:     23,
-    nok:        19,
+    compass_id: 12,
+    reason:     13,
+    aos:        14,
+    agent:      15,
+    bms_id:     16,
+    comment:    17,
+    aos_issue:  18,
+    excluded:   19,
+    jira:       20,
+    week:       21,
+    unique:     22,
+    nok:        18,
   };
 
   // CSV column mappings (ServiceNow SLAs-Details export — unchanged)
@@ -72,7 +71,7 @@
   const OUT_COLS = [
     'Incident Ticket', 'DATE_CLOSE', 'Status', 'Queue', 'Priority',
     'ISO_Language', 'Tool', 'TOPIC', 'SLA_Code', 'SLA_N',
-    'Breach_Description', 'DATE_TIME_Breach', 'Munich time', 'COMPASS ID',
+    'Breach_Description', 'DATE_TIME_Breach', 'COMPASS ID',
     'Reason', 'AOS', 'Agent', 'BMS ID', 'Comment', 'AOS Issue',
     'Excluded', 'Jira', 'Week', 'Unique',
   ];

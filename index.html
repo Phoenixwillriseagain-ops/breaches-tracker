@@ -38,7 +38,7 @@
   <!-- TOOLBAR (hidden until file loaded) -->
   <div class="toolbar" style="display:none;">
     <div class="toolbar-left">
-      <button class="btn-outline" id="import-btn" type="button">Import File</button>
+      <button class="btn-outline" id="import-btn" type="button">Import Breaches File</button>
       <input type="file" id="file-input" accept=".csv,.xlsx,.xls"
              style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
     </div>
@@ -56,7 +56,7 @@
     </div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:16px;">
       <span id="row-count" style="font-size:12px;color:var(--muted);"></span>
-      <input type="text" id="search-input" placeholder="Search…"
+      <input type="text" id="search-input" placeholder="Search&hellip;"
              style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;
                     font-size:12px;background:var(--bg);color:var(--text);width:200px;"
              oninput="window.searchTable && window.searchTable(this.value)">
@@ -87,7 +87,7 @@
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
         <h3>Drop your RAW export here</h3>
-        <p>Upload the <strong>NEW-Breaches-file</strong> .xlsx or a <strong>SLAs-Details .csv</strong> from ServiceNow</p>
+        <p>Upload the <strong>Breaches-file</strong> .xlsx or a <strong>SLAs-Details .csv</strong> from ServiceNow</p>
         <button class="upload-btn">Choose file</button>
         <input type="file" id="file-input-dz" accept=".xlsx,.xls,.csv">
       </div>

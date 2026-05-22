@@ -130,7 +130,6 @@
       'SLA_N':              String(row[C.sla_n]        || ''),
       'Breach_Description': String(row[C.breach_desc]  || ''),
       'DATE_TIME_Breach':   formatDate(row[C.breach_dt]  || ''),
-      'Munich time':        C.munich_time !== undefined ? formatDate(row[C.munich_time] || '') : '',
       'COMPASS ID':         C.compass_id  !== undefined ? String(row[C.compass_id]  || '') : '',
       'Reason':             C.reason      !== undefined ? String(row[C.reason]       || '') : '',
       'AOS':                C.aos         !== undefined ? String(row[C.aos]          || '') : '',

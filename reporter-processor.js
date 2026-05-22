@@ -69,7 +69,6 @@
           ticket:         ticket,
           dateClosed:     formatDate(r['DATE_CLOSE']||''),
           dateTimeBreach: formatDate(r['DATE_TIME_Breach']||''),
-          munichTime:     formatDate(r['Munich time']||''),
           status:         clean(r['Status']||'N/A'),
           queue:          clean(r['Queue']||''),
           priority:       clean(r['Priority']||''),
@@ -102,11 +101,9 @@
     window.RPT.aosFiltered= data.filter(function(r){return r.isAos;});
 
     _populateUnique();
-    _updateDropdowns();   // shows #data-section, hides #upload-section
-    _applyFiltersOnly();  // compute RPT.filtered without rendering
+    _updateDropdowns();
+    _applyFiltersOnly();
 
-    // Render — safe because renderTables is defined in the inline script
-    // which sits ABOVE this <script src> in the HTML.
     window.renderTables();
   }
 
@@ -158,7 +155,6 @@
     var fa=document.getElementById('filter-aos');
     if(fa)fa.innerHTML='<option value="All">All</option><option value="Y">AOS Only</option><option value="N">Non-AOS</option>';
 
-    // Show data panel, hide upload panel
     var up=document.getElementById('upload-section');
     var dp=document.getElementById('data-section');
     if(up) up.style.display='none';
