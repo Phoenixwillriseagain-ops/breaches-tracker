@@ -12,6 +12,8 @@
     sortDir: 'asc',
     isProcessing: false,
     loadedMonths: [],
+    // Set of all Incident Ticket values seen — used for deduplication across imports
+    _seenTickets: new Set(),
   };
 
   window.BT.trackerState = trackerState;
@@ -69,53 +71,163 @@
   }
   window.BT.showLoading = showLoading;
 
-  function loadCSV(file) {
-    showLoading(true, 'Reading CSV...');
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      showLoading(true, 'Parsing CSV...');
+  // ── Import log helpers ──────────────────────────────────────────────────
+  function showImportLog(lines) {
+    const el = document.getElementById('import-log');
+    if (!el) return;
+    el.innerHTML = lines.map(function(l) {
+      const icon = l.type === 'ok'   ? '✓' :
+                   l.type === 'warn' ? '⚠' : '✕';
+      const color = l.type === 'ok'   ? 'var(--success, #437a22)' :
+                    l.type === 'warn' ? 'var(--warning, #964219)' : 'var(--error, #a12c7b)';
+      return `<span style="color:${color};margin-right:8px;">${icon}</span>${l.msg}`;
+    }).join('<br>');
+    el.style.display = 'block';
+  }
+
+  function hideImportLog() {
+    const el = document.getElementById('import-log');
+    if (el) el.style.display = 'none';
+  }
+
+  // ── Multi-file import entry point ───────────────────────────────────────
+  // Accepts an array of File objects, processes them sequentially, merges into state
+  window.BT.startMultiImport = function(files) {
+    hideImportLog();
+    const logLines = [];
+    let fileIndex = 0;
+
+    function next() {
+      if (fileIndex >= files.length) {
+        // All files done — render once
+        showLoading(false);
+        const total = Object.values(trackerState.tabs).reduce((s, a) => s + a.length, 0);
+        showStatus('Total: ' + total + ' records across ' + files.length + ' file(s)');
+        showImportLog(logLines);
+        if (typeof window.render === 'function') window.render();
+        return;
+      }
+      const file = files[fileIndex++];
+      showLoading(true, 'Importing ' + file.name + ' (' + fileIndex + '/' + files.length + ')...');
       setTimeout(function() {
-        const text = e.target.result;
-        const rows = text.trim().split(/\r?\n/).map(r => {
-          const result = [];
-          let cur = '', inQ = false;
-          for (let i = 0; i < r.length; i++) {
-            if (r[i] === '"') { inQ = !inQ; }
-            else if (r[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-            else { cur += r[i]; }
+        readFile(file, function(rows, C, err) {
+          if (err) {
+            logLines.push({ type: 'error', msg: file.name + ' — ' + err });
+            next();
+            return;
           }
-          result.push(cur.trim());
-          return result;
+          const result = mergeRows(rows, C);
+          const icon = result.duplicates > 0 ? 'warn' : 'ok';
+          let msg = file.name + ' — ' + result.added + ' record(s) added';
+          if (result.duplicates > 0) msg += ', ' + result.duplicates + ' duplicate(s) skipped';
+          logLines.push({ type: icon, msg: msg });
+          next();
         });
-        processRows(rows.slice(1), C_CSV, 'csv');
       }, 10);
-    };
-    reader.readAsText(file, 'UTF-8');
-  }
+    }
 
-  function loadXLSX(file) {
-    showLoading(true, 'Reading XLSX...');
+    // Initialise tabs if this is the very first import
+    if (Object.keys(trackerState.tabs).length === 0) {
+      TAB_DEFS.forEach(t => { trackerState.tabs[t.id] = []; });
+    }
+
+    next();
+  };
+
+  // ── Clear all data ──────────────────────────────────────────────────────
+  window.BT.clearAllData = function() {
+    TAB_DEFS.forEach(t => { trackerState.tabs[t.id] = []; });
+    trackerState._seenTickets = new Set();
+    hideImportLog();
+    showStatus('All data cleared.');
+    if (typeof window.BT.renderEmptyState === 'function') window.BT.renderEmptyState(true);
+  };
+
+  // ── File reader — returns raw rows + column map via callback ───────────
+  function readFile(file, cb) {
+    const ext = file.name.split('.').pop().toLowerCase();
     const reader = new FileReader();
-    reader.onload = function(e) {
-      showLoading(true, 'Parsing spreadsheet...');
-      setTimeout(function() {
-        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        // V2 model: read ALL sheets except "Instructions", merge rows
-        const allRows = [];
-        wb.SheetNames.forEach(function(sn) {
-          if (sn === 'Instructions') return;
-          const sheet = wb.Sheets[sn];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-          // Skip header row (index 0), push data rows
-          rows.slice(1).forEach(function(r) { allRows.push(r); });
-        });
-        processRows(allRows, C_XLSX, 'xlsx');
-      }, 10);
-    };
-    reader.readAsArrayBuffer(file);
+
+    if (ext === 'csv') {
+      reader.onload = function(e) {
+        try {
+          const text = e.target.result;
+          const rows = text.trim().split(/\r?\n/).map(r => {
+            const result = [];
+            let cur = '', inQ = false;
+            for (let i = 0; i < r.length; i++) {
+              if (r[i] === '"') { inQ = !inQ; }
+              else if (r[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+              else { cur += r[i]; }
+            }
+            result.push(cur.trim());
+            return result;
+          });
+          cb(rows.slice(1), C_CSV, null);
+        } catch(e) { cb(null, null, e.message); }
+      };
+      reader.onerror = function() { cb(null, null, 'Read error'); };
+      reader.readAsText(file, 'UTF-8');
+
+    } else if (['xlsx','xls'].includes(ext)) {
+      reader.onload = function(e) {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+          const allRows = [];
+          wb.SheetNames.forEach(function(sn) {
+            if (sn === 'Instructions') return;
+            const sheet = wb.Sheets[sn];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            rows.slice(1).forEach(function(r) { allRows.push(r); });
+          });
+          cb(allRows, C_XLSX, null);
+        } catch(e) { cb(null, null, e.message); }
+      };
+      reader.onerror = function() { cb(null, null, 'Read error'); };
+      reader.readAsArrayBuffer(file);
+
+    } else {
+      cb(null, null, 'Unsupported file type: .' + ext);
+    }
   }
 
-  // Map a V2 row array to output column object
+  // ── Merge rows into existing state (with deduplication) ─────────────────
+  // Returns { added, duplicates }
+  function mergeRows(rows, C) {
+    let added = 0, duplicates = 0;
+
+    rows.forEach(function(row) {
+      if (!row[C.ticket]) return;
+      const ticket = String(row[C.ticket]).trim();
+      if (!ticket) return;
+
+      // Deduplication: skip if this ticket was already loaded
+      if (trackerState._seenTickets.has(ticket)) {
+        duplicates++;
+        return;
+      }
+      trackerState._seenTickets.add(ticket);
+
+      const sla  = String(row[C.sla_code] || '').trim();
+      const lang = String(row[C.lang]     || '').trim().toLowerCase();
+      const nok  = parseInt(row[C.nok])   || 0;
+      const mapped = mapRow(row, C);
+
+      TAB_DEFS.forEach(function(t) {
+        if (t.code !== sla) return;
+        const isDE = lang === 'de';
+        if (t.lang === 'de'  && !isDE) return;
+        if (t.lang === '!de' && isDE)  return;
+        if (t.nokFilter && nok !== 1)  return;
+        trackerState.tabs[t.id].push(mapped);
+        added++;
+      });
+    });
+
+    return { added, duplicates };
+  }
+
+  // ── Map a row array to output column object ──────────────────────────────
   function mapRow(row, C) {
     return {
       'Incident Ticket':    String(row[C.ticket]      || ''),
@@ -144,51 +256,14 @@
     };
   }
 
-  // Distribute rows across tabs based on SLA_Code + language split
-  function processRows(rows, C, source) {
-    const tabs = {};
-    TAB_DEFS.forEach(t => { tabs[t.id] = []; });
-    trackerState.tabs = tabs;
-
-    rows.forEach(function(row) {
-      if (!row[C.ticket]) return;
-      const sla  = String(row[C.sla_code] || '').trim();
-      const lang = String(row[C.lang]     || '').trim().toLowerCase();
-      const nok  = parseInt(row[C.nok])   || 0;
-      const mapped = mapRow(row, C);
-
-      TAB_DEFS.forEach(function(t) {
-        if (t.code !== sla) return;
-        const isDE = lang === 'de';
-        if (t.lang === 'de'  && !isDE) return;
-        if (t.lang === '!de' && isDE)  return;
-        if (t.nokFilter && nok !== 1)  return;
-        tabs[t.id].push(mapped);
-      });
-    });
-
-    trackerState.tabs = tabs;
-    showLoading(false);
-    showStatus('Loaded ' + rows.length + ' records from ' + source.toUpperCase());
-
-    if (typeof window.render === 'function') {
-      window.render();
-    }
-  }
-
+  // ── Legacy single-file entry point (kept for internal safety) ───────────
   function handleFile(file) {
     if (!file) return;
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (ext === 'csv') {
-      loadCSV(file);
-    } else if (['xlsx', 'xls'].includes(ext)) {
-      loadXLSX(file);
-    } else {
-      showStatus('Unsupported file type: .' + ext, 'error');
-    }
+    window.BT.startMultiImport([file]);
   }
   window.BT.handleFile = handleFile;
 
+  // ── Export helpers ───────────────────────────────────────────────────────
   function exportTab(tabId) {
     const data = trackerState.tabs[tabId];
     if (!data || !data.length) { showStatus('No data.', 'error'); return; }
