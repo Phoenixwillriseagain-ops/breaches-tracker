@@ -2,13 +2,39 @@
 (function() {
   'use strict';
 
+  // _seenTickets persists across file imports for deduplication
+  var _seenTickets = new Set();
+
   window.RPT = {
     allData: [],
     filtered: [],
     aosFiltered: [],
     uniqueValues: {},
 
-    loadFile: function(file) { _loadFile(file); },
+    // Legacy single-file entry point — now routes through multi-import
+    loadFile: function(file) { window.RPT.loadFiles([file]); },
+
+    // Multi-file entry point
+    loadFiles: function(files) { _startMultiImport(files); },
+
+    clearData: function() {
+      window.RPT.allData     = [];
+      window.RPT.filtered    = [];
+      window.RPT.aosFiltered = [];
+      window.RPT.uniqueValues= {};
+      _seenTickets = new Set();
+      _hideImportLog();
+      var up = document.getElementById('upload-section');
+      var dp = document.getElementById('data-section');
+      var sb = document.getElementById('rpt-sidebar');
+      var eb = document.getElementById('export-btns');
+      if(up) up.style.display = '';
+      if(dp) { dp.style.display = 'none'; }
+      if(sb) sb.style.display  = 'none';
+      if(eb) eb.style.display  = 'none';
+      var rc = document.getElementById('record-count');
+      if(rc) rc.textContent = '';
+    },
 
     clearFilters: function() {
       ['filter-week','filter-sla','filter-lang','filter-excl',
@@ -20,7 +46,7 @@
       _applyFilters();
     },
 
-    resetToUpload: function() { location.reload(); },
+    resetToUpload: function() { window.RPT.clearData(); },
 
     exportFiltered: function() {
       if(window.EXPORTER) window.EXPORTER.exportAsExcel(window.RPT.filtered);
@@ -54,18 +80,84 @@
     return(['t','true','yes','y','1'].indexOf(s)!==-1)?'Y':'N';
   }
 
-  /* ---- processWorkbook ---- */
-  function _processWorkbook(wb){
-    var data=[];
-    wb.SheetNames.forEach(function(sn){
-      if(sn==='Instructions') return;
-      var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:''});
-      rows.forEach(function(r){
-        var ticket=clean(r['Incident Ticket']||'');
-        if(!ticket) return;
-        var aosF=normBool(r['AOS']||'');
-        var aosI=normBool(r['AOS Issue']||'');
-        data.push({
+  /* ---- Import log ---- */
+  function _showImportLog(lines) {
+    var el = document.getElementById('rpt-import-log');
+    if (!el) return;
+    el.innerHTML = lines.map(function(l) {
+      var icon  = l.type==='ok' ? '✓' : l.type==='warn' ? '⚠' : '✕';
+      var color = l.type==='ok' ? 'var(--success,#437a22)' :
+                  l.type==='warn' ? 'var(--warning,#964219)' : 'var(--error,#a12c7b)';
+      return '<span style="color:'+color+';margin-right:8px;">'+icon+'</span>'+l.msg;
+    }).join('<br>');
+    el.style.display = 'block';
+  }
+  function _hideImportLog() {
+    var el = document.getElementById('rpt-import-log');
+    if (el) el.style.display = 'none';
+  }
+
+  /* ---- Multi-file sequential import ---- */
+  function _startMultiImport(files) {
+    _hideImportLog();
+    var logLines = [];
+    var idx = 0;
+
+    function next() {
+      if (idx >= files.length) {
+        // All done — rebuild unique values, dropdowns, filters, render
+        _populateUnique();
+        _updateDropdowns();
+        _applyFiltersOnly();
+        window.renderTables();
+        _showImportLog(logLines);
+        console.log('[RPT] total allData:', window.RPT.allData.length);
+        return;
+      }
+      var file = files[idx++];
+      if (!/\.xlsx$/i.test(file.name)) {
+        logLines.push({ type:'error', msg: file.name + ' — only .xlsx files are accepted' });
+        next();
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+          var result = _mergeWorkbook(wb);
+          var type = result.duplicates > 0 ? 'warn' : 'ok';
+          var msg  = file.name + ' — ' + result.added + ' record(s) added';
+          if (result.duplicates > 0) msg += ', ' + result.duplicates + ' duplicate(s) skipped';
+          logLines.push({ type: type, msg: msg });
+        } catch(err) {
+          logLines.push({ type:'error', msg: file.name + ' — ' + err.message });
+        }
+        next();
+      };
+      reader.onerror = function() {
+        logLines.push({ type:'error', msg: file.name + ' — read error' });
+        next();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    next();
+  }
+
+  /* ---- Merge one workbook into allData (with deduplication) ---- */
+  function _mergeWorkbook(wb) {
+    var added = 0, duplicates = 0;
+    wb.SheetNames.forEach(function(sn) {
+      if (sn === 'Instructions') return;
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval:'' });
+      rows.forEach(function(r) {
+        var ticket = clean(r['Incident Ticket']||'');
+        if (!ticket) return;
+        if (_seenTickets.has(ticket)) { duplicates++; return; }
+        _seenTickets.add(ticket);
+        var aosF = normBool(r['AOS']||'');
+        var aosI = normBool(r['AOS Issue']||'');
+        window.RPT.allData.push({
           ticket:         ticket,
           dateClosed:     formatDate(r['DATE_CLOSE']||''),
           dateTimeBreach: formatDate(r['DATE_TIME_Breach']||''),
@@ -92,34 +184,11 @@
           sheet:          sn,
           isAos:          aosF==='Y'||aosI==='Y',
         });
+        added++;
       });
     });
-
-    console.log('[RPT] loaded',data.length,'records');
-    window.RPT.allData    = data;
-    window.RPT.filtered   = data.slice();
-    window.RPT.aosFiltered= data.filter(function(r){return r.isAos;});
-
-    _populateUnique();
-    _updateDropdowns();
-    _applyFiltersOnly();
-
-    window.renderTables();
-  }
-
-  function _loadFile(file){
-    if(!file) return;
-    var reader=new FileReader();
-    reader.onload=function(e){
-      try{
-        var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-        _processWorkbook(wb);
-      }catch(err){
-        console.error('[RPT] parse error',err);
-        alert('Error loading file: '+err.message);
-      }
-    };
-    reader.readAsArrayBuffer(file);
+    window.RPT.aosFiltered = window.RPT.allData.filter(function(r){return r.isAos;});
+    return { added: added, duplicates: duplicates };
   }
 
   function _populateUnique(){
