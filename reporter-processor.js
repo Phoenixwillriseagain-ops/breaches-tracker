@@ -43,7 +43,7 @@
     if(!val) return '';
     var d=new Date(val);
     if(isNaN(d.getTime())) return clean(val);
-    var t=new Date(d.getTime()+2*3600*1000); // UTC+2 (CET)
+    var t=new Date(d.getTime()+3*3600*1000); // UTC+3 (EEST)
     function p(n){return String(n).padStart(2,'0');}
     return p(t.getUTCDate())+'.'+p(t.getUTCMonth()+1)+'.'+t.getUTCFullYear()+
            ' '+p(t.getUTCHours())+':'+p(t.getUTCMinutes())+':'+p(t.getUTCSeconds());

@@ -25,12 +25,12 @@
   }
   window.BT.debounce = debounce;
 
-  // Format date → dd.mm.yyyy hh:mm:ss in CET (UTC+2)
+  // Format date → dd.mm.yyyy hh:mm:ss in EEST (UTC+3)
   function formatDate(val) {
     if (!val) return '';
     const d = new Date(val);
     if (isNaN(d.getTime())) return String(val);
-    const TZ_OFFSET_MS = 2 * 60 * 60 * 1000; // CET = UTC+2
+    const TZ_OFFSET_MS = 3 * 60 * 60 * 1000; // EEST = UTC+3
     const local = new Date(d.getTime() + TZ_OFFSET_MS);
     const dd   = String(local.getUTCDate()).padStart(2, '0');
     const mm   = String(local.getUTCMonth() + 1).padStart(2, '0');
