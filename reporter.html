@@ -76,7 +76,7 @@
     .kpi-card.c-excl  .kpi-val  { color: var(--muted); }
 
     .sc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-    .sc-head { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .sc-head { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .sc-head h2 { font-size: 13px; font-weight: 600; }
     .sc-head .badge { margin-left: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; font-size: 11px; color: var(--muted); }
     .sc-body { padding: 14px 16px; overflow-x: auto; }
@@ -165,7 +165,7 @@
     .lang-dd-item:hover { background: var(--surface-2, #f3f0ec); }
     .lang-dd-item input[type=checkbox] { margin: 0; cursor: pointer; accent-color: var(--primary); }
 
-    /* ---- Heatmap ---- */
+    /* ---- Heatmap (global day×hour) ---- */
     .heatmap-wrap { overflow-x: auto; }
     .heatmap-table {
       border-collapse: separate;
@@ -199,6 +199,64 @@
     .hm-legend-swatch span {
       display: inline-block; width: 18px; height: 12px; border-radius: 2px;
     }
+
+    /* ---- Trends heatmap ---- */
+    .trends-grid { display: flex; flex-direction: column; gap: 20px; }
+    .trend-section { display: flex; flex-direction: column; gap: 6px; }
+    .trend-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--muted);
+    }
+    .trend-table-wrap { overflow-x: auto; }
+    .trend-table {
+      border-collapse: separate;
+      border-spacing: 3px;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .trend-table th {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--muted);
+      padding: 4px 8px; background: none; border: none;
+      text-align: center;
+    }
+    .trend-table th.tt-row-lbl { text-align: left; min-width: 72px; }
+    .trend-table td {
+      height: 32px; min-width: 52px;
+      text-align: center; border-radius: 5px;
+      font-size: 11px; font-weight: 700;
+      cursor: default; transition: transform .1s;
+      border: none; padding: 0 4px;
+    }
+    .trend-table td:hover { transform: scale(1.08); z-index: 2; position: relative; }
+    .trend-table td.tt-row-lbl {
+      text-align: left; font-weight: 600; font-size: 11px;
+      color: var(--muted); background: none !important; padding: 0 8px 0 0;
+      min-width: 72px;
+    }
+    .trend-table td.tt-row-lbl:hover { transform: none; }
+    /* delta row */
+    .trend-table tr.delta-row td {
+      height: 24px; font-size: 10px; font-weight: 700; border-radius: 4px;
+    }
+    .trend-table tr.delta-row td.tt-row-lbl {
+      font-size: 10px; color: var(--faint);
+    }
+    .trend-table tr.spacer-row td { height: 8px; background: none !important; }
+    .trend-table tr.section-hdr-row td {
+      background: none !important; padding-top: 12px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted);
+    }
+    .trend-table tr.section-hdr-row td:hover { transform: none; }
+    /* legend */
+    .trends-legend {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      font-size: 10px; color: var(--muted); margin-top: 4px; align-items: center;
+    }
+    .trends-legend-item { display: flex; align-items: center; gap: 5px; }
+    .trends-legend-swatch { display: flex; gap: 2px; }
+    .trends-legend-swatch span { display:inline-block; width:14px; height:10px; border-radius:2px; }
 
     /* ---- Jira Tracker ---- */
     .jira-link {
@@ -298,6 +356,7 @@
         <div class="kpi-row" id="kpi-row"></div>
         <div class="rpt-tabs" id="tab-bar">
           <button class="rpt-tab active" data-tab="dashboard">Dashboard</button>
+          <button class="rpt-tab" data-tab="trends">Trends</button>
           <button class="rpt-tab" data-tab="heatmap">Heatmap</button>
           <button class="rpt-tab" data-tab="overview">Overview</button>
           <button class="rpt-tab" data-tab="all">All Records</button>
@@ -321,7 +380,7 @@
 <script>
 var _currentTab     = 'dashboard';
 var _currentPage    = 1;
-var _currentTabRows = [];   // <-- holds the exact row array for the active tab
+var _currentTabRows = [];
 var PAGE_SIZE       = 50;
 
 window.renderTables = function() {
@@ -337,8 +396,6 @@ window.renderTables = function() {
 };
 window.renderCharts = function() {};
 
-// Returns the row array for a given tab name + full filtered dataset.
-// Centralised here so _renderTab and _goPage both use the identical slice logic.
 function _tabRows(name, data) {
   if (name === 'all')   return data;
   if (name === 'ksl4')  return data.filter(function(r){return r.sla==='KSL-4';});
@@ -346,7 +403,7 @@ function _tabRows(name, data) {
   if (name === 'ksl5a') return data.filter(function(r){return r.sla==='KSL-5a';});
   if (name === 'km2')   return data.filter(function(r){return r.sla==='KM-2';});
   if (name === 'aos')   return data.filter(function(r){return r.isAos;});
-  return null; // non-table tabs
+  return null;
 }
 
 function _renderTab(name) {
@@ -358,7 +415,6 @@ function _renderTab(name) {
 
   var rows = _tabRows(name, data);
   if (rows !== null) {
-    // Table tab: cache the row array so _goPage can reference it directly
     _currentTabRows = rows;
     var labels = {
       all: 'All Records', ksl4: 'KSL-4', km1: 'KM-1',
@@ -368,6 +424,7 @@ function _renderTab(name) {
   } else {
     _currentTabRows = [];
     if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
+    else if (name === 'trends')    el.innerHTML = _buildTrends(data);
     else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
     else if (name === 'overview')  el.innerHTML = _buildOverview(data);
     else if (name === 'jira')      el.innerHTML = _buildJiraTracker(data);
@@ -441,10 +498,10 @@ function _updateLangLabel() {
   var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
   var lbl     = document.getElementById('lang-trigger-label');
   if (!lbl) return;
-  if (checked.length === 0)             lbl.textContent = 'None';
+  if (checked.length === 0)               lbl.textContent = 'None';
   else if (checked.length === all.length) lbl.textContent = 'All';
-  else if (checked.length <= 2)         lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
-  else                                   lbl.textContent = checked.length + ' selected';
+  else if (checked.length <= 2)           lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
+  else                                     lbl.textContent = checked.length + ' selected';
 }
 
 window.getSelectedLanguages = function() {
@@ -497,12 +554,10 @@ function _buildDashboard(data) {
     if(r.topic)    P[r.topic]   =(P[r.topic]||0)+1;
     if(r.sla==='KM-1' && r.action) ACT[r.action]=(ACT[r.action]||0)+1;
   });
-
   var km1ActionChart = '';
   if (Object.keys(ACT).length > 0) {
     km1ActionChart = _card('KM-1 Action Breakdown', _bar(_top(ACT,10),'#006494'));
   }
-
   return '<div class="dash-grid">'+
     _card('Top Tools',      _bar(_top(T,10),'#006494'))+
     _card('Breach Reasons', _bar(_top(R,10),'#964219'))+
@@ -532,7 +587,170 @@ function _card(title,body){
 }
 function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-/* ---- Heatmap ---- */
+/* ============================================================
+   TRENDS TAB — Week × KPI heatmap
+   Rows  = calendar weeks (sorted chronologically)
+   Cols  = Total | KSL-4 | KM-1 | KSL-5a | KM-2 | AOS | Excl
+   Cell  = unique ticket count for that week+KPI combination
+   Colour = per-column intensity (each column has its own max)
+   Below each main block → a WoW delta row (▲▼ relative to prev week)
+   ============================================================ */
+function _buildTrends(data) {
+  if (!data || !data.length) {
+    return '<div class="sc"><div class="sc-head"><h2>Trends</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No data loaded.</p></div></div>';
+  }
+
+  // ---- Collect sorted unique weeks ----
+  var weekSet = {};
+  data.forEach(function(r){ if (r.week) weekSet[r.week] = 1; });
+  var weeks = Object.keys(weekSet).sort(); // e.g. ["CW01","CW02",...]
+
+  if (weeks.length < 1) {
+    return '<div class="sc"><div class="sc-head"><h2>Trends</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No week data found.</p></div></div>';
+  }
+
+  // ---- Define KPI columns ----
+  // Each entry: { key, label, color [R,G,B], filter(r, week) }
+  var COLS = [
+    { key: 'total',  label: 'Total',  rgb: [40,37,29],    f: function(r){ return true; } },
+    { key: 'ksl4',   label: 'KSL-4',  rgb: [0,100,148],   f: function(r){ return r.sla==='KSL-4'; } },
+    { key: 'km1',    label: 'KM-1',   rgb: [0,100,148],   f: function(r){ return r.sla==='KM-1'; } },
+    { key: 'ksl5a',  label: 'KSL-5a', rgb: [150,66,25],   f: function(r){ return r.sla==='KSL-5a'; } },
+    { key: 'km2',    label: 'KM-2',   rgb: [122,57,187],  f: function(r){ return r.sla==='KM-2'; } },
+    { key: 'aos',    label: 'AOS',    rgb: [1,105,111],   f: function(r){ return r.isAos; } },
+    { key: 'excl',   label: 'Excl',   rgb: [160,44,123],  f: function(r){ return r.excluded==='Y'; } }
+  ];
+
+  // Active data (for most KPIs) vs all data (for excl + total)
+  var activeData = data.filter(function(r){ return r.excluded==='N'; });
+
+  // ---- Build matrix: matrix[colKey][week] = unique ticket count ----
+  function countUniqByWeek(rows, weekVal) {
+    var seen = {};
+    rows.forEach(function(r){ if (r.week === weekVal && r.ticket) seen[r.ticket] = 1; });
+    return Object.keys(seen).length;
+  }
+
+  var matrix = {};
+  COLS.forEach(function(col) {
+    matrix[col.key] = {};
+    var src = (col.key === 'total' || col.key === 'excl') ? data : activeData;
+    var filtered = src.filter(col.f);
+    weeks.forEach(function(w) {
+      matrix[col.key][w] = countUniqByWeek(filtered, w);
+    });
+  });
+
+  // ---- Per-column max (for colour scaling) ----
+  var colMax = {};
+  COLS.forEach(function(col) {
+    var m = 0;
+    weeks.forEach(function(w){ if (matrix[col.key][w] > m) m = matrix[col.key][w]; });
+    colMax[col.key] = m || 1;
+  });
+
+  // ---- Colour helpers ----
+  // Each column gets its own hue; intensity scales 0→max
+  var BASE_RGB = [247, 246, 242]; // --color-bg neutral
+  function cellStyle(col, val) {
+    if (val === 0) return 'background:#f0eeea;color:#bab9b4';
+    var ratio = Math.pow(val / colMax[col.key], 0.6);
+    var tr = col.rgb[0], tg = col.rgb[1], tb = col.rgb[2];
+    var r = Math.round(BASE_RGB[0] + ratio * (tr - BASE_RGB[0]));
+    var g = Math.round(BASE_RGB[1] + ratio * (tg - BASE_RGB[1]));
+    var b = Math.round(BASE_RGB[2] + ratio * (tb - BASE_RGB[2]));
+    var lum = 0.299*r + 0.587*g + 0.114*b;
+    return 'background:rgb('+r+','+g+','+b+');color:'+(lum<145?'#ffffff':'#28251d');
+  }
+
+  // ---- Delta helpers ----
+  // Returns +n / -n / — vs previous week; coloured green (down=good) or red (up=bad)
+  // For "Excl" column: more excluded is also bad (red), same logic
+  function deltaStyle(val) {
+    // positive delta = more breaches this week = bad = red
+    if (val > 0) return 'background:#fce8e8;color:#a12c3a';
+    if (val < 0) return 'background:#e3f2e8;color:#2e6b38';
+    return 'background:#f0eeea;color:#bab9b4';
+  }
+  function deltaLabel(val) {
+    if (val === null) return '&#8212;';
+    if (val === 0)   return '&#177;0';
+    return (val > 0 ? '+' : '') + val;
+  }
+
+  // ---- Render ----
+  // Header row
+  var colHeaders = COLS.map(function(col){
+    return '<th>'+_esc(col.label)+'</th>';
+  }).join('');
+
+  var thead = '<thead><tr><th class="tt-row-lbl">Week</th>'+colHeaders+'</tr></thead>';
+
+  // Body: one data row + one delta row per week
+  var tbodyRows = '';
+  weeks.forEach(function(w, wi) {
+    // Data row
+    var dataCells = COLS.map(function(col) {
+      var v = matrix[col.key][w];
+      return '<td style="'+cellStyle(col, v)+'" title="'+_esc(col.label)+' | '+_esc(w)+' : '+v+' unique ticket(s)">'+v+'</td>';
+    }).join('');
+    tbodyRows += '<tr><td class="tt-row-lbl">'+_esc(w)+'</td>'+dataCells+'</tr>';
+
+    // Delta row (vs previous week; first week shows —)
+    var deltaCells = COLS.map(function(col) {
+      if (wi === 0) return '<td style="'+deltaStyle(null)+'">&#8212;</td>';
+      var prev = matrix[col.key][weeks[wi-1]];
+      var curr = matrix[col.key][w];
+      var d = curr - prev;
+      return '<td style="'+deltaStyle(d)+'" title="WoW delta '+_esc(col.label)+' | '+_esc(w)+'">'+deltaLabel(d)+'</td>';
+    }).join('');
+    tbodyRows += '<tr class="delta-row"><td class="tt-row-lbl" style="color:var(--faint,#bab9b4);font-size:9px">WoW &#916;</td>'+deltaCells+'</tr>';
+  });
+
+  // Summary row (totals across all weeks)
+  var summaryRow = '<tr style="border-top:2px solid var(--border)"><td class="tt-row-lbl" style="font-weight:700;color:var(--text)">All weeks</td>'+
+    COLS.map(function(col) {
+      var total = 0;
+      weeks.forEach(function(w){ total += matrix[col.key][w]; });
+      // For total/excl use all data; already filtered in matrix but sum rows
+      return '<td style="background:var(--bg);font-weight:700;color:var(--text);border-radius:5px" title="'+_esc(col.label)+' — sum across all weeks">'+total+'</td>';
+    }).join('')+'</tr>';
+
+  // Legend swatches
+  var legendItems = COLS.map(function(col) {
+    var mid = col.rgb;
+    return '<div class="trends-legend-item">'+
+      '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb('+mid[0]+','+mid[1]+','+mid[2]+')"></span>'+
+      '<span>'+_esc(col.label)+'</span></div>';
+  }).join('');
+
+  var deltaLegend =
+    '<div class="trends-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e3f2e8"></span><span>WoW better (&#8595;)</span></div>'+
+    '<div class="trends-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#fce8e8"></span><span>WoW worse (&#8593;)</span></div>';
+
+  var weekCount = weeks.length;
+  var totalUniq = window.RPT.countUniqueTickets(data);
+
+  return '<div class="sc">'+
+    '<div class="sc-head">'+
+    '<h2>Weekly KPI Trends</h2>'+
+    '<span class="badge">'+weekCount+' week'+(weekCount!==1?'s':'')+' &bull; '+totalUniq+' unique ticket(s)</span>'+
+    '</div>'+
+    '<div class="sc-body">'+
+    '<div class="trend-table-wrap">'+
+    '<table class="trend-table">'+thead+'<tbody>'+tbodyRows+summaryRow+'</tbody></table>'+
+    '</div>'+
+    '<div class="trends-legend" style="margin-top:12px">'+legendItems+'<span style="margin:0 8px;color:var(--border)">|</span>'+deltaLegend+'</div>'+
+    '<p style="font-size:10px;color:var(--faint);margin-top:8px">'+
+    'Counts = unique Incident Tickets per week. Total &amp; Excl include all rows; other columns count active (Excluded=N) rows only. '+
+    'WoW &#916; row shows change vs. previous week (green = fewer breaches, red = more breaches).'+
+    '</p>'+
+    '</div></div>';
+}
+
+/* ---- Heatmap (Day × Hour) ---- */
 function _buildHeatmap(data) {
   function parseBreach(str) {
     if (!str) return null;
@@ -681,7 +899,6 @@ function _buildPg(total){
   var pages = Math.ceil(total / PAGE_SIZE);
   if (pages <= 1) return '';
   var btns = '';
-  // Show at most 10 page buttons; if there are more, show ellipsis hint
   var maxBtns = Math.min(pages, 10);
   for (var i = 1; i <= maxBtns; i++) {
     btns += '<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
@@ -698,13 +915,10 @@ function _buildPg(total){
   '</div>';
 }
 
-// FIX: _goPage now clamps against _currentTabRows.length (the actual rows
-// rendered in the current tab), not RPT.filtered.length (all filtered rows).
 window._goPage = function(n) {
   var total = _currentTabRows.length;
   var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   _currentPage = Math.max(1, Math.min(n, pages));
-  // Re-render only the table content, not the full tab (avoids filter re-run)
   var el = document.getElementById('tab-content');
   if (el) {
     var labels = {
