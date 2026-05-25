@@ -167,9 +167,7 @@
     /* ---- end language filter ---- */
 
     /* ---- Heatmap ---- */
-    .heatmap-wrap {
-      overflow-x: auto;
-    }
+    .heatmap-wrap { overflow-x: auto; }
     .heatmap-table {
       border-collapse: separate;
       border-spacing: 3px;
@@ -182,7 +180,7 @@
       text-align: center; background: none; border: none;
     }
     .heatmap-table td {
-      width: 36px; height: 28px; text-align: center;
+      width: 34px; height: 26px; text-align: center;
       border-radius: 4px; font-size: 10px; font-weight: 600;
       cursor: default; transition: transform .1s;
       border: none;
@@ -194,16 +192,87 @@
       background: none; cursor: default;
     }
     .heatmap-table td.hm-day-lbl:hover { transform: none; }
+
+    /* Per-KPI heatmap grid */
+    .hm-kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 1100px) { .hm-kpi-grid { grid-template-columns: 1fr; } }
+
+    .hm-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .hm-panel-head {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .hm-panel-head h3 {
+      font-size: 12px; font-weight: 600; margin: 0;
+    }
+    .hm-panel-head .hm-accent {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .hm-panel-head .hm-badge {
+      margin-left: auto;
+      font-size: 10px; color: var(--muted);
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 20px; padding: 1px 8px;
+    }
+    .hm-panel-body { padding: 12px 14px; overflow-x: auto; }
+
+    /* Insight strip below each heatmap */
+    .hm-insight {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--divider);
+      font-size: 11px; color: var(--muted);
+    }
+    .hm-insight-item strong { color: var(--text); }
+
     .hm-legend {
       display: flex; align-items: center; gap: 4px;
-      font-size: 10px; color: var(--muted); margin-top: 10px;
+      font-size: 10px; color: var(--muted); margin-top: 8px;
     }
-    .hm-legend-swatch {
-      display: flex; gap: 2px;
+    .hm-legend-swatch { display: flex; gap: 2px; }
+    .hm-legend-swatch span { display: inline-block; width: 16px; height: 10px; border-radius: 2px; }
+
+    /* Combined (full-width) heatmap */
+    .hm-combined-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 4px;
     }
-    .hm-legend-swatch span {
-      display: inline-block; width: 18px; height: 12px; border-radius: 2px;
+    .hm-combined-head {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
     }
+    .hm-combined-head h2 { font-size: 13px; font-weight: 600; }
+    .hm-combined-body { padding: 14px 16px; overflow-x: auto; }
+
+    /* Hour summary sparkline row */
+    .hm-hour-bar-row {
+      display: flex; align-items: flex-end; gap: 2px;
+      height: 28px; margin-top: 6px;
+    }
+    .hm-hour-bar {
+      flex: 1; border-radius: 2px 2px 0 0;
+      min-height: 3px;
+      transition: opacity .15s;
+    }
+    .hm-hour-bar:hover { opacity: .7; }
     /* ---- end Heatmap ---- */
 
     @media (max-width: 720px) {
@@ -225,7 +294,6 @@
   <div class="toolbar">
     <div class="toolbar-left">
       <button id="import-btn" class="btn-outline">&#8679; Import Breaches File(s)</button>
-      <!-- multiple: allows selecting several .xlsx files at once -->
       <input type="file" id="rpt-file-input" accept=".xlsx" multiple style="display:none">
       <button id="rpt-clear-btn" class="btn-outline"
               style="display:none;color:var(--error,#a12c7b);border-color:var(--error,#a12c7b);"
@@ -240,7 +308,7 @@
 
   <div class="reporter-layout">
 
-    <!-- SIDEBAR (hidden until file loaded) -->
+    <!-- SIDEBAR -->
     <aside class="reporter-sidebar" id="rpt-sidebar" style="display:none">
       <div>
         <h3>Filters</h3>
@@ -248,7 +316,6 @@
           <label>Week</label>    <select id="filter-week"><option value="All">All</option></select>
           <label>SLA</label>     <select id="filter-sla"><option value="All">All</option></select>
 
-          <!-- Language: multi-select checkbox dropdown -->
           <label>Language</label>
           <div class="lang-filter-wrap" id="lang-filter-wrap">
             <button type="button" class="lang-trigger" id="lang-trigger" aria-haspopup="listbox" aria-expanded="false">
@@ -276,8 +343,6 @@
 
     <!-- MAIN -->
     <main class="reporter-main">
-
-      <!-- Import log (shown after each multi-file batch) -->
       <div id="rpt-import-log"></div>
 
       <!-- UPLOAD -->
@@ -342,7 +407,7 @@ function _renderTab(name) {
   var el   = document.getElementById('tab-content');
   if (!el) return;
   if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
-  else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
+  else if (name === 'heatmap')   el.innerHTML = _buildHeatmapTab(data);
   else if (name === 'overview')  el.innerHTML = _buildOverview(data);
   else if (name === 'all')       el.innerHTML = _buildTable('All Records', data);
   else if (name === 'ksl4')      el.innerHTML = _buildTable('KSL-4',  data.filter(function(r){return r.sla==='KSL-4';}));
@@ -361,24 +426,17 @@ document.addEventListener('DOMContentLoaded', function() {
     _renderTab(btn.dataset.tab);
   });
 
-  // ---- Language dropdown toggle ----
   var trigger  = document.getElementById('lang-trigger');
   var dropdown = document.getElementById('lang-dropdown');
 
   trigger.addEventListener('click', function(e) {
     e.stopPropagation();
-    var isOpen = dropdown.classList.contains('open');
-    if (isOpen) {
-      _closeLangDropdown();
-    } else {
-      _openLangDropdown();
-    }
+    if (dropdown.classList.contains('open')) _closeLangDropdown();
+    else _openLangDropdown();
   });
 
   document.addEventListener('click', function(e) {
-    if (!document.getElementById('lang-filter-wrap').contains(e.target)) {
-      _closeLangDropdown();
-    }
+    if (!document.getElementById('lang-filter-wrap').contains(e.target)) _closeLangDropdown();
   });
 
   document.getElementById('lang-select-all').addEventListener('click', function(e) {
@@ -399,9 +457,9 @@ function _openLangDropdown() {
   var dropdown = document.getElementById('lang-dropdown');
   var wrap     = document.getElementById('lang-filter-wrap');
   var rect     = wrap.getBoundingClientRect();
-  dropdown.style.top    = (rect.bottom + 4) + 'px';
-  dropdown.style.left   = rect.left + 'px';
-  dropdown.style.width  = Math.max(rect.width, 180) + 'px';
+  dropdown.style.top   = (rect.bottom + 4) + 'px';
+  dropdown.style.left  = rect.left + 'px';
+  dropdown.style.width = Math.max(rect.width, 180) + 'px';
   dropdown.classList.add('open');
   trigger.classList.add('open');
   trigger.setAttribute('aria-expanded', 'true');
@@ -415,31 +473,22 @@ function _closeLangDropdown() {
   trigger.setAttribute('aria-expanded', 'false');
 }
 
-// Called by reporter-processor.js after dropdown is populated
 window._onLangChange = function _onLangChange() {
-  if (window.RPT) {
-    window.RPT.applyFilters();
-  }
+  if (window.RPT) window.RPT.applyFilters();
   _updateLangLabel();
 };
 
 function _updateLangLabel() {
-  var all  = document.querySelectorAll('#lang-dd-list input[type=checkbox]');
+  var all     = document.querySelectorAll('#lang-dd-list input[type=checkbox]');
   var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
-  var lbl = document.getElementById('lang-trigger-label');
+  var lbl     = document.getElementById('lang-trigger-label');
   if (!lbl) return;
-  if (checked.length === 0) {
-    lbl.textContent = 'None';
-  } else if (checked.length === all.length) {
-    lbl.textContent = 'All';
-  } else if (checked.length <= 2) {
-    lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
-  } else {
-    lbl.textContent = checked.length + ' selected';
-  }
+  if (checked.length === 0)         lbl.textContent = 'None';
+  else if (checked.length === all.length) lbl.textContent = 'All';
+  else if (checked.length <= 2)     lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
+  else                              lbl.textContent = checked.length + ' selected';
 }
 
-// Returns currently selected languages as a Set (empty = none selected)
 window.getSelectedLanguages = function() {
   var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
   return new Set(Array.from(checked).map(function(c){ return c.value; }));
@@ -449,22 +498,15 @@ window.getSelectedLanguages = function() {
 <script>
 /* ---- KPIs ---- */
 function _buildKPIs(data) {
-  // Feature #1: count only UNIQUE Incident Ticket values in the current
-  // filtered dataset. V2 files always contain multiple rows per ticket
-  // (one row per breach event). countUniqueTickets() is the only correct
-  // metric — never use data.length for ticket counts.
   var uniqueTotal = window.RPT.countUniqueTickets(data);
   var activeData  = data.filter(function(r){return r.excluded==='N';});
   var uniqueActive= window.RPT.countUniqueTickets(activeData);
   var excl        = uniqueTotal - uniqueActive;
 
   function bySla(s){
-    var subset = activeData.filter(function(r){return r.sla===s;});
-    return window.RPT.countUniqueTickets(subset);
+    return window.RPT.countUniqueTickets(activeData.filter(function(r){return r.sla===s;}));
   }
-  var aos = window.RPT.countUniqueTickets(
-    activeData.filter(function(r){return r.isAos;})
-  );
+  var aos = window.RPT.countUniqueTickets(activeData.filter(function(r){return r.isAos;}));
   var wk  = {}; data.forEach(function(r){if(r.week)wk[r.week]=1;});
 
   document.getElementById('kpi-row').innerHTML =
@@ -524,128 +566,247 @@ function _card(title,body){
 }
 function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-/* ----
-  Feature #2: Heatmap — day-of-week × hour-of-day breach density
-  DATE_TIME_Breach values are stored in r.dateTimeBreach as
-  "DD.MM.YYYY HH:MM:SS" (EEST, UTC+3) by reporter-processor.js.
-  We parse that string directly — no timezone gymnastics needed.
-  Only active (excluded=N) breach rows are counted.
----- */
-function _buildHeatmap(data) {
-  // Parse "DD.MM.YYYY HH:MM:SS" → { dow: 0-6, hour: 0-23 }
-  // dow: 0=Mon … 6=Sun (ISO order, friendlier for ops)
-  function parseBreach(str) {
-    if (!str) return null;
-    var parts = str.split(' ');
-    if (parts.length < 2) return null;
-    var dateParts = parts[0].split('.');
-    var timeParts = parts[1].split(':');
-    if (dateParts.length < 3 || timeParts.length < 2) return null;
-    var day   = parseInt(dateParts[0], 10);
-    var month = parseInt(dateParts[1], 10) - 1; // JS month 0-based
-    var year  = parseInt(dateParts[2], 10);
-    var hour  = parseInt(timeParts[0], 10);
-    if (isNaN(day)||isNaN(month)||isNaN(year)||isNaN(hour)) return null;
-    // Use UTC constructor to avoid local-tz shift; we only need dow + hour
-    var d = new Date(Date.UTC(year, month, day, hour, 0, 0));
-    if (isNaN(d.getTime())) return null;
-    // getUTCDay: 0=Sun…6=Sat → remap to 0=Mon…6=Sun
-    var dow = (d.getUTCDay() + 6) % 7;
-    return { dow: dow, hour: hour };
-  }
 
-  // Build 7×24 matrix (dow × hour)
-  var matrix = [];
-  var i, j;
-  for (i = 0; i < 7; i++) {
-    matrix.push([]);
-    for (j = 0; j < 24; j++) matrix[i].push(0);
-  }
+/* =========================================================
+   HEATMAP TAB
+   ---------------------------------------------------------
+   Renders:
+     1. Combined (all active) heatmap — full width
+     2. Per-KPI grid: KSL-4 | KM-1 | KSL-5a | KM-2 | AOS | Excluded
+        Each panel uses its own colour accent so panels are
+        visually distinct at a glance.
+   ---------------------------------------------------------
+   DATE_TIME_Breach is stored as "DD.MM.YYYY HH:MM:SS" (EEST)
+   by reporter-processor.js. We parse the string directly —
+   no timezone math needed.
+   ========================================================= */
 
+/* Parse "DD.MM.YYYY HH:MM:SS" → { dow:0-6 (Mon=0), hour:0-23 } */
+function _parseBreachDt(str) {
+  if (!str) return null;
+  var sp = str.indexOf(' ');
+  if (sp < 0) return null;
+  var dp = str.slice(0, sp).split('.');
+  var tp = str.slice(sp+1).split(':');
+  if (dp.length < 3 || tp.length < 2) return null;
+  var day  = parseInt(dp[0], 10);
+  var mon  = parseInt(dp[1], 10) - 1;
+  var yr   = parseInt(dp[2], 10);
+  var hr   = parseInt(tp[0], 10);
+  if (isNaN(day)||isNaN(mon)||isNaN(yr)||isNaN(hr)) return null;
+  // Use UTC constructor — we only need dow + hour, both already in EEST
+  var d = new Date(Date.UTC(yr, mon, day));
+  if (isNaN(d.getTime())) return null;
+  var dow = (d.getUTCDay() + 6) % 7; // 0=Mon…6=Sun
+  return { dow: dow, hour: hr };
+}
+
+/* Build a 7×24 count matrix from a row array */
+function _buildMatrix(rows) {
+  var m = [], i, j;
+  for (i = 0; i < 7; i++) { m.push([]); for (j=0;j<24;j++) m[i].push(0); }
   var parsed = 0;
-  data.forEach(function(r) {
-    if (r.excluded === 'Y') return; // only active breaches
-    var p = parseBreach(r.dateTimeBreach);
+  rows.forEach(function(r) {
+    var p = _parseBreachDt(r.dateTimeBreach);
     if (!p) return;
-    matrix[p.dow][p.hour]++;
+    m[p.dow][p.hour]++;
     parsed++;
   });
+  return { matrix: m, parsed: parsed };
+}
 
-  if (parsed === 0) {
-    return '<div class="sc"><div class="sc-head"><h2>Breach Heatmap</h2></div>'+
-      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">'+
-      'No parseable DATE_TIME_Breach values in the current filter.</p></div></div>';
-  }
+/* Max value in a matrix */
+function _matMax(m) {
+  var mx = 0;
+  for (var i=0;i<7;i++) for (var j=0;j<24;j++) if (m[i][j]>mx) mx=m[i][j];
+  return mx;
+}
 
-  // Find max for colour scaling
-  var maxVal = 0;
-  for (i = 0; i < 7; i++) for (j = 0; j < 24; j++) if (matrix[i][j] > maxVal) maxVal = matrix[i][j];
-
-  // Colour ramp: neutral → primary teal (#01696f)
-  var BASE_R=247, BASE_G=246, BASE_B=242;
-  var TOP_R=1,    TOP_G=105,  TOP_B=111;
-  function hmColor(val) {
-    if (val === 0) return 'background:#f0eeea;color:var(--faint,#bab9b4)';
-    var ratio = Math.pow(val / maxVal, 0.65); // gamma<1 = better mid-range contrast
-    var r = Math.round(BASE_R + ratio*(TOP_R - BASE_R));
-    var g = Math.round(BASE_G + ratio*(TOP_G - BASE_G));
-    var b = Math.round(BASE_B + ratio*(TOP_B - BASE_B));
+/* Colour interpolator: base → accent, gamma-corrected */
+function _hmColorFn(baseRGB, topRGB) {
+  return function(val, maxVal) {
+    if (val === 0) return { bg:'#f0eeea', fg:'#bab9b4' };
+    var ratio = Math.pow(val / maxVal, 0.65);
+    var r = Math.round(baseRGB[0] + ratio*(topRGB[0]-baseRGB[0]));
+    var g = Math.round(baseRGB[1] + ratio*(topRGB[1]-baseRGB[1]));
+    var b = Math.round(baseRGB[2] + ratio*(topRGB[2]-baseRGB[2]));
     var luma = 0.299*r + 0.587*g + 0.114*b;
-    var textColor = luma < 140 ? '#ffffff' : '#28251d';
-    return 'background:rgb('+r+','+g+','+b+');color:'+textColor;
-  }
+    return { bg:'rgb('+r+','+g+','+b+')', fg: luma<140?'#ffffff':'#28251d' };
+  };
+}
 
-  var days  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  var hours = [];
-  for (j = 0; j < 24; j++) hours.push(j);
+var _PALETTE = {
+  teal:   _hmColorFn([247,246,242],[1,105,111]),    // combined / AOS
+  blue:   _hmColorFn([240,245,250],[0,100,148]),    // KSL-4
+  cobalt: _hmColorFn([240,245,250],[14,78,120]),    // KM-1
+  orange: _hmColorFn([252,245,238],[185,90,0]),     // KSL-5a
+  purple: _hmColorFn([244,240,252],[100,45,160]),   // KM-2
+  green:  _hmColorFn([238,248,238],[55,120,40]),    // Excluded
+};
 
-  // Header row: hour labels (every 2h for readability)
-  var headerCells = '<th></th>';
-  for (j = 0; j < 24; j++) {
-    headerCells += '<th>'+(j%2===0?String(j).padStart(2,'0')+'h':'')+'</th>';
-  }
+var _KPI_DEFS = [
+  { key:'ksl4',  label:'KSL-4',    accent:'#006494', palKey:'blue',
+    filter: function(r){ return r.excluded==='N' && r.sla==='KSL-4'; } },
+  { key:'km1',   label:'KM-1',     accent:'#0e4e78', palKey:'cobalt',
+    filter: function(r){ return r.excluded==='N' && r.sla==='KM-1'; } },
+  { key:'ksl5a', label:'KSL-5a',   accent:'#964219', palKey:'orange',
+    filter: function(r){ return r.excluded==='N' && r.sla==='KSL-5a'; } },
+  { key:'km2',   label:'KM-2',     accent:'#7a39bb', palKey:'purple',
+    filter: function(r){ return r.excluded==='N' && r.sla==='KM-2'; } },
+  { key:'aos',   label:'AOS',      accent:'#01696f', palKey:'teal',
+    filter: function(r){ return r.excluded==='N' && r.isAos; } },
+  { key:'excl',  label:'Excluded', accent:'#437a22', palKey:'green',
+    filter: function(r){ return r.excluded==='Y'; } },
+];
 
-  // Data rows
-  var bodyRows = days.map(function(dayName, di) {
-    var cells = '<td class="hm-day-lbl">'+dayName+'</td>';
-    for (j = 0; j < 24; j++) {
+var _DAY_LABELS  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+/* Render a single heatmap table HTML string */
+function _hmTableHtml(matrix, maxVal, colorFn, label) {
+  var j;
+  // Hour header (every 2h)
+  var header = '<th></th>';
+  for (j=0;j<24;j++) header += '<th>'+(j%2===0?String(j).padStart(2,'0')+'h':'')+'</th>';
+
+  // Body rows
+  var body = _DAY_LABELS.map(function(dn, di) {
+    var cells = '<td class="hm-day-lbl">'+dn+'</td>';
+    for (j=0;j<24;j++) {
       var v = matrix[di][j];
-      var style = hmColor(v);
-      var label = v > 0 ? v : '';
-      cells += '<td style="'+style+'" title="'+dayName+' '+String(j).padStart(2,'0')+':00 — '+v+' breach(es)">'+label+'</td>';
+      var c = colorFn(v, maxVal);
+      cells += '<td style="background:'+c.bg+';color:'+c.fg+'" '+
+               'title="'+dn+' '+String(j).padStart(2,'0')+':00 — '+v+' breach(es) ['+label+']">'+
+               (v>0?v:'')+'</td>';
     }
     return '<tr>'+cells+'</tr>';
   }).join('');
 
-  // Legend swatches (6 steps)
-  var legendSwatches = '';
-  var steps = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
-  steps.forEach(function(ratio) {
-    var r = Math.round(BASE_R + ratio*(TOP_R - BASE_R));
-    var g = Math.round(BASE_G + ratio*(TOP_G - BASE_G));
-    var b = Math.round(BASE_B + ratio*(TOP_B - BASE_B));
-    legendSwatches += '<span style="background:rgb('+r+','+g+','+b+')"></span>';
-  });
+  return '<table class="heatmap-table">'+
+    '<thead><tr>'+header+'</tr></thead>'+
+    '<tbody>'+body+'</tbody>'+
+  '</table>';
+}
 
-  return '<div class="sc">'+
-    '<div class="sc-head"><h2>Breach Heatmap</h2>'+
-    '<span class="badge" style="margin-left:auto">Day of week &times; Hour (EEST) &bull; '+parsed+' active breach rows</span>'+
-    '</div>'+
-    '<div class="sc-body">'+
-      '<div class="heatmap-wrap">'+
-        '<table class="heatmap-table">'+
-          '<thead><tr>'+headerCells+'</tr></thead>'+
-          '<tbody>'+bodyRows+'</tbody>'+
-        '</table>'+
-        '<div class="hm-legend">'+
-          '<span>Less</span>'+
-          '<div class="hm-legend-swatch">'+legendSwatches+'</div>'+
-          '<span>More</span>'+
-        '</div>'+
-      '</div>'+
-    '</div>'+
+/* Legend HTML */
+function _hmLegendHtml(topRGB) {
+  var swatches = [0,0.2,0.4,0.6,0.8,1.0].map(function(ratio) {
+    var BASE = [247,246,242];
+    var r=Math.round(BASE[0]+ratio*(topRGB[0]-BASE[0]));
+    var g=Math.round(BASE[1]+ratio*(topRGB[1]-BASE[1]));
+    var b=Math.round(BASE[2]+ratio*(topRGB[2]-BASE[2]));
+    return '<span style="background:rgb('+r+','+g+','+b+')"></span>';
+  }).join('');
+  return '<div class="hm-legend"><span>Less</span><div class="hm-legend-swatch">'+swatches+'</div><span>More</span></div>';
+}
+
+/* Insight strip: peak day, peak hour, busiest window */
+function _hmInsightHtml(matrix, parsed) {
+  if (parsed === 0) return '';
+  // Day totals
+  var dayTotals  = _DAY_LABELS.map(function(_,di){ var s=0; for(var j=0;j<24;j++) s+=matrix[di][j]; return s; });
+  var peakDayIdx = dayTotals.indexOf(Math.max.apply(null,dayTotals));
+  // Hour totals
+  var hourTotals = [];
+  for (var j=0;j<24;j++) { var s=0; for(var i=0;i<7;i++) s+=matrix[i][j]; hourTotals.push(s); }
+  var peakHrIdx  = hourTotals.indexOf(Math.max.apply(null,hourTotals));
+  // Busiest 4-hour window (rolling sum)
+  var bestWin=0, bestWinStart=0;
+  for (j=0;j<24;j++) {
+    var win=0; for(var k=0;k<4;k++) win+=hourTotals[(j+k)%24];
+    if(win>bestWin){bestWin=win;bestWinStart=j;}
+  }
+  return '<div class="hm-insight">'+
+    '<span>&#128197; Peak day: <strong>'+_DAY_LABELS[peakDayIdx]+'</strong> ('+dayTotals[peakDayIdx]+')</span>'+
+    '<span>&#128336; Peak hour: <strong>'+String(peakHrIdx).padStart(2,'0')+':00</strong> ('+hourTotals[peakHrIdx]+')</span>'+
+    '<span>&#9201; Busiest 4h: <strong>'+String(bestWinStart).padStart(2,'0')+':00&ndash;'+String((bestWinStart+4)%24).padStart(2,'0')+':00</strong> ('+bestWin+')</span>'+
   '</div>';
 }
+
+/* Hour-summary mini bar row below each heatmap */
+function _hmHourBarsHtml(matrix, maxVal, accentColor) {
+  if (maxVal === 0) return '';
+  var hourTotals = [];
+  for (var j=0;j<24;j++) { var s=0; for(var i=0;i<7;i++) s+=matrix[i][j]; hourTotals.push(s); }
+  var maxH = Math.max.apply(null, hourTotals);
+  if (maxH === 0) return '';
+  var bars = hourTotals.map(function(v, h) {
+    var pct = Math.round(v/maxH*100);
+    return '<div class="hm-hour-bar" style="height:'+Math.max(pct,3)+'%;background:'+accentColor+';opacity:'+(0.35+0.65*v/maxH).toFixed(2)+'" '+
+           'title="'+String(h).padStart(2,'0')+':00 — '+v+'"></div>';
+  }).join('');
+  return '<div style="font-size:10px;color:var(--muted);margin-top:8px;margin-bottom:2px">Hourly distribution (all days combined)</div>'+
+         '<div class="hm-hour-bar-row">'+bars+'</div>';
+}
+
+/* Main heatmap tab builder */
+function _buildHeatmapTab(data) {
+  var activeAll = data.filter(function(r){ return r.excluded==='N'; });
+
+  // --- Combined heatmap ---
+  var combResult = _buildMatrix(activeAll);
+  var combMax    = _matMax(combResult.matrix);
+  var combColor  = _PALETTE.teal;
+  var combNoData = combResult.parsed === 0;
+
+  var combinedHtml = '<div class="hm-combined-wrap">'+
+    '<div class="hm-combined-head">'+
+      '<h2>Combined — All Active Breaches</h2>'+
+      '<span class="badge" style="margin-left:auto">Day &times; Hour (EEST) &bull; '+combResult.parsed+' rows</span>'+
+    '</div>'+
+    '<div class="hm-combined-body">';
+
+  if (combNoData) {
+    combinedHtml += '<p style="color:var(--muted);font-size:12px;padding:16px 0">No parseable DATE_TIME_Breach values in the current filter.</p>';
+  } else {
+    combinedHtml +=
+      _hmTableHtml(combResult.matrix, combMax, combColor, 'All')+
+      _hmLegendHtml([1,105,111])+
+      _hmHourBarsHtml(combResult.matrix, combMax, '#01696f')+
+      _hmInsightHtml(combResult.matrix, combResult.parsed);
+  }
+  combinedHtml += '</div></div>';
+
+  // --- Per-KPI panels ---
+  var panels = _KPI_DEFS.map(function(def) {
+    var subset  = data.filter(def.filter);
+    var result  = _buildMatrix(subset);
+    var mx      = _matMax(result.matrix);
+    var colorFn = _PALETTE[def.palKey];
+
+    var inner;
+    if (result.parsed === 0) {
+      inner = '<p style="color:var(--muted);font-size:12px;padding:12px 0">No breach timestamps for this segment.</p>';
+    } else {
+      // Get the top RGB from the palette function at ratio=1
+      var sampleColor = colorFn(1,1);
+      // Extract rgb values for legend (approx from accent hex)
+      inner =
+        _hmTableHtml(result.matrix, mx, colorFn, def.label)+
+        '<div class="hm-legend"><span>Less</span>'+
+        '<div class="hm-legend-swatch">'+
+        [0,0.25,0.5,0.75,1.0].map(function(ratio){
+          var c = colorFn(ratio>0?ratio:0.001, 1);
+          return '<span style="background:'+c.bg+'"></span>';
+        }).join('')+
+        '</div><span>More</span></div>'+
+        _hmHourBarsHtml(result.matrix, mx, def.accent)+
+        _hmInsightHtml(result.matrix, result.parsed);
+    }
+
+    return '<div class="hm-panel">'+
+      '<div class="hm-panel-head">'+
+        '<span class="hm-accent" style="background:'+def.accent+'"></span>'+
+        '<h3>'+def.label+'</h3>'+
+        '<span class="hm-badge">'+result.parsed+' rows</span>'+
+      '</div>'+
+      '<div class="hm-panel-body">'+inner+'</div>'+
+    '</div>';
+  }).join('');
+
+  return combinedHtml +
+    '<div class="hm-kpi-grid">'+panels+'</div>';
+}
+
 
 /* ---- Overview & Table ---- */
 function _buildOverview(data){
@@ -700,7 +861,7 @@ function _buildPg(total){
   var pages=Math.ceil(total/PAGE_SIZE);
   if(pages<=1)return '';
   var btns='';
-  for(var i=1;i<=Math.min(pages,10);i++)btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+  for(var i=1;i<=Math.min(pages,10);i++)btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'\" onclick="_goPage('+i+')">'+i+'</button>';
   return '<div class="pg">'+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage-1)+')" '+(_currentPage===1?'disabled':'')+'>&#8249;</button>'+
     btns+
