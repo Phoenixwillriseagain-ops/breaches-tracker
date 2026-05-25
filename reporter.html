@@ -326,6 +326,9 @@ window.renderTables = function() {
   document.getElementById('export-btns').style.display = '';
   var cb = document.getElementById('rpt-clear-btn');
   if (cb) cb.style.display = '';
+  // Toolbar pill: unique tickets (never raw rows)
+  var rc = document.getElementById('record-count');
+  if (rc) rc.textContent = window.RPT.countUniqueTickets(data) + ' unique ticket(s)';
 };
 window.renderCharts = function() {};
 
@@ -556,7 +559,7 @@ function _buildHeatmap(data) {
 
   var swatches = '';
   [0,0.2,0.4,0.6,0.8,1].forEach(function(ratio){
-    swatches += '<span style="background:rgb('+Math.round(BR+ratio*(TR-BR))+','+Math.round(BG+ratio*(TG-BG))+','+Math.round(BB+ratio*(TB-BB))+')"></span>';
+    swatches += '<span style="background:rgb('+Math.round(BR+ratio*(TR-BR))+','+Math.round(BG+ratio*(TG-BG))+','+Math.round(BB+ratio*(TB-BB))+')" ></span>';
   });
 
   return '<div class="sc">'+
@@ -568,32 +571,48 @@ function _buildHeatmap(data) {
     '</div></div></div>';
 }
 
-/* ---- Overview ---- */
+/* ---- Overview — unique ticket counts per SLA ---- */
 function _buildOverview(data){
-  var map={};
+  // Build per-SLA maps keyed by ticket to count uniques correctly
+  var map = {};
   data.forEach(function(r){
-    if(!map[r.sla])map[r.sla]={total:0,active:0,excl:0,aos:0};
-    map[r.sla].total++;
-    if(r.excluded==='N')map[r.sla].active++;else map[r.sla].excl++;
-    if(r.isAos&&r.excluded==='N')map[r.sla].aos++;
+    if (!map[r.sla]) map[r.sla] = { total: new Set(), active: new Set(), excl: new Set(), aos: new Set() };
+    map[r.sla].total.add(r.ticket);
+    if (r.excluded === 'N') {
+      map[r.sla].active.add(r.ticket);
+      if (r.isAos) map[r.sla].aos.add(r.ticket);
+    } else {
+      map[r.sla].excl.add(r.ticket);
+    }
   });
-  var rows=Object.keys(map).sort().map(function(k){
-    var s=map[k];
-    return '<tr><td>'+_chipSla(k)+'</td><td>'+s.total+'</td><td>'+s.active+'</td><td>'+s.excl+'</td><td>'+s.aos+'</td><td>'+_pct(s.active,s.total)+'</td></tr>';
+  var rows = Object.keys(map).sort().map(function(k){
+    var s = map[k];
+    var tot = s.total.size, act = s.active.size;
+    return '<tr>'+
+      '<td>'+_chipSla(k)+'</td>'+
+      '<td>'+tot+'</td>'+
+      '<td>'+act+'</td>'+
+      '<td>'+s.excl.size+'</td>'+
+      '<td>'+s.aos.size+'</td>'+
+      '<td>'+_pct(act,tot)+'</td>'+
+    '</tr>';
   }).join('');
-  return '<div class="sc"><div class="sc-head"><h2>SLA Overview</h2><span class="badge">'+data.length+' records</span></div>'+
+  var totalUniq = window.RPT.countUniqueTickets(data);
+  return '<div class="sc"><div class="sc-head"><h2>SLA Overview</h2>'+
+    '<span class="badge">'+totalUniq+' unique ticket(s)</span></div>'+
     '<div class="sc-body"><table class="dt"><thead><tr>'+
-    '<th>SLA</th><th>Total Rows</th><th>Active Rows</th><th>Excl Rows</th><th>AOS Rows</th><th>Active%</th>'+
+    '<th>SLA</th><th>Unique Total</th><th>Unique Active</th><th>Unique Excl</th><th>Unique AOS</th><th>Active%</th>'+
     '</tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">No data</td></tr>')+
     '</tbody></table></div></div>';
 }
 
 /* ---- Table + Pagination ---- */
 function _buildTable(title, rows){
-  var total=rows.length;
-  var start=(_currentPage-1)*PAGE_SIZE;
-  var page=rows.slice(start,start+PAGE_SIZE);
-  var trs=page.map(function(r){
+  var total     = rows.length;
+  var uniqCount = window.RPT.countUniqueTickets(rows);
+  var start = (_currentPage-1)*PAGE_SIZE;
+  var page  = rows.slice(start, start+PAGE_SIZE);
+  var trs = page.map(function(r){
     return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
       '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
       '<td>'+_esc(r.dateClosed)+'</td>'+
@@ -607,7 +626,11 @@ function _buildTable(title, rows){
       '<td>'+(r.isAos?'<span class="chip ch-y">Y</span>':'')+'</td>'+
     '</tr>';
   }).join('');
-  return '<div class="sc"><div class="sc-head"><h2>'+title+'</h2><span class="badge">'+total+' records</span></div>'+
+  // Badge shows unique tickets / total rows so both are visible
+  var badge = uniqCount+' unique ticket'+(uniqCount!==1?'s':'')+
+              (total !== uniqCount ? ' / '+total+' rows' : '');
+  return '<div class="sc"><div class="sc-head"><h2>'+title+'</h2>'+
+    '<span class="badge">'+badge+'</span></div>'+
     '<div class="sc-body"><table class="dt"><thead><tr>'+
     '<th>Ticket</th><th>Date Close (EEST)</th><th>Breach Time (EEST)</th>'+
     '<th>SLA</th><th>Tool</th><th>Reason</th><th>Lang</th><th>Sheet</th><th>Excl</th><th>AOS</th>'+
@@ -623,13 +646,13 @@ function _buildPg(total){
   if(pages<=1)return '';
   var btns='';
   for(var i=1;i<=Math.min(pages,10);i++){
-    btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+    btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'\" onclick="_goPage('+i+')">'+i+'</button>';
   }
   return '<div class="pg">'+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage-1)+')" '+(_currentPage===1?'disabled':'')+'>&#8249;</button>'+
     btns+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage+1)+')" '+(_currentPage===pages?'disabled':'')+'>&#8250;</button>'+
-    '<span>'+(((_currentPage-1)*PAGE_SIZE)+1)+'&#8211;'+Math.min(_currentPage*PAGE_SIZE,total)+' of '+total+'</span>'+
+    '<span>'+((_currentPage-1)*PAGE_SIZE+1)+'&#8211;'+Math.min(_currentPage*PAGE_SIZE,total)+' of '+total+' rows</span>'+
   '</div>';
 }
 window._goPage=function(n){
