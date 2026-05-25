@@ -677,7 +677,7 @@ function _buildPg(total){
   if(pages<=1)return '';
   var btns='';
   for(var i=1;i<=Math.min(pages,10);i++){
-    btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'\" onclick="_goPage('+i+')">'+i+'</button>';
+    btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
   }
   return '<div class="pg">'+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage-1)+')" '+(_currentPage===1?'disabled':'')+'>&#8249;</button>'+
@@ -723,11 +723,8 @@ function _buildJiraTracker(data) {
       'No Jira ticket IDs found in the current filter. Jira IDs are only present on excluded rows.</p></div></div>';
   }
 
-  // Build Jira URL using the JIRA_BASE_URL from config.js if available,
-  // otherwise fall back to a sensible Atlassian Cloud pattern.
-  var jiraBase = (window.RPT_CONFIG && window.RPT_CONFIG.jiraBaseUrl)
-    ? window.RPT_CONFIG.jiraBaseUrl.replace(/\/$/, '')
-    : 'https://jira.atlassian.net/browse';
+  // BMW Group Jira base URL — the ticket ID is appended directly after the trailing slash.
+  var jiraBase = 'https://atc.bmwgroup.net/jira/browse';
 
   var trs = entries.map(function(e) {
     var href = jiraBase + '/' + _esc(e.jira);
