@@ -196,11 +196,14 @@
           breachDesc:     clean(r['Breach_Description']||''),
           compassId:      clean(r['COMPASS ID']||''),
           reason:         clean(r['Reason']||''),
+          // KM-1 specific: caller action / reopen reason category
+          action:         clean(r['Action']||''),
           aos:            aosF,
           agent:          clean(r['Agent']||''),
           bmsId:          clean(r['BMS ID']||''),
           comment:        clean(r['Comment']||''),
-          aosIssue:       aosI,
+          // KSL-4 specific: description of the AOS-side issue
+          aosIssue:       clean(r['AOS Issue']||''),
           excluded:       normBool(r['Excluded']||''),
           jira:           clean(r['Jira']||''),
           week:           clean(r['Week']||''),
@@ -294,8 +297,7 @@
       if(shF!=='All'&&r.sheet    !==shF) return false;
       return true;
     });
-    var c=document.getElementById('record-count');
-    if(c) c.textContent=window.RPT.filtered.length+' records';
+    // Toolbar pill now updated by renderTables() with unique ticket count
   }
 
   function _applyFilters(){

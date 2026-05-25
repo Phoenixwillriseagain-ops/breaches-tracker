@@ -116,6 +116,7 @@
     .ch-km2   { background: #ede3f8; color: #7a39bb; }
     .ch-other { background: #f0eeea; color: var(--muted); }
     .ch-y     { background: #d6ecec; color: var(--primary); }
+    .ch-jira  { background: #e8edf8; color: #0052cc; font-family: monospace; }
 
     .pg { display: flex; align-items: center; gap: 5px; margin-top: 10px; justify-content: flex-end; font-size: 12px; color: var(--muted); }
     .pg-btn { padding: 3px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; font-size: 12px; font-family: inherit; }
@@ -201,6 +202,14 @@
       display: inline-block; width: 18px; height: 12px; border-radius: 2px;
     }
     /* ---- end Heatmap ---- */
+
+    /* ---- Jira Tracker ---- */
+    .jira-link {
+      color: #0052cc; text-decoration: none; font-family: monospace;
+      font-size: 11px; font-weight: 600;
+    }
+    .jira-link:hover { text-decoration: underline; }
+    /* ---- end Jira Tracker ---- */
 
     @media (max-width: 720px) {
       .reporter-layout { flex-direction: column; }
@@ -302,6 +311,7 @@
           <button class="rpt-tab" data-tab="ksl5a">KSL-5a</button>
           <button class="rpt-tab" data-tab="km2">KM-2</button>
           <button class="rpt-tab" data-tab="aos">AOS</button>
+          <button class="rpt-tab" data-tab="jira">Jira Tracker</button>
         </div>
         <div id="tab-content"></div>
       </div>
@@ -341,12 +351,13 @@ function _renderTab(name) {
   if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
   else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
   else if (name === 'overview')  el.innerHTML = _buildOverview(data);
-  else if (name === 'all')       el.innerHTML = _buildTable('All Records', data);
-  else if (name === 'ksl4')      el.innerHTML = _buildTable('KSL-4',  data.filter(function(r){return r.sla==='KSL-4';}));
-  else if (name === 'km1')       el.innerHTML = _buildTable('KM-1',   data.filter(function(r){return r.sla==='KM-1';}));
-  else if (name === 'ksl5a')     el.innerHTML = _buildTable('KSL-5a', data.filter(function(r){return r.sla==='KSL-5a';}));
-  else if (name === 'km2')       el.innerHTML = _buildTable('KM-2',   data.filter(function(r){return r.sla==='KM-2';}));
-  else if (name === 'aos')       el.innerHTML = _buildTable('AOS Records', data.filter(function(r){return r.isAos;}));
+  else if (name === 'all')       el.innerHTML = _buildTable('All Records', data, 'all');
+  else if (name === 'ksl4')      el.innerHTML = _buildTable('KSL-4',  data.filter(function(r){return r.sla==='KSL-4';}), 'ksl4');
+  else if (name === 'km1')       el.innerHTML = _buildTable('KM-1',   data.filter(function(r){return r.sla==='KM-1';}),  'km1');
+  else if (name === 'ksl5a')     el.innerHTML = _buildTable('KSL-5a', data.filter(function(r){return r.sla==='KSL-5a';}), 'ksl5a');
+  else if (name === 'km2')       el.innerHTML = _buildTable('KM-2',   data.filter(function(r){return r.sla==='KM-2';}),  'km2');
+  else if (name === 'aos')       el.innerHTML = _buildTable('AOS Records', data.filter(function(r){return r.isAos;}), 'aos');
+  else if (name === 'jira')      el.innerHTML = _buildJiraTracker(data);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -462,7 +473,7 @@ function _pct(n,d){return d?Math.round(n/d*100)+'%':'0%';}
 /* ---- Dashboard ---- */
 function _buildDashboard(data) {
   var a = data.filter(function(r){return r.excluded==='N';});
-  var T={}, R={}, L={}, S={}, Q={}, P={};
+  var T={}, R={}, L={}, S={}, Q={}, P={}, ACT={};
   a.forEach(function(r){
     if(r.tool)     T[r.tool]    =(T[r.tool]||0)+1;
     if(r.reason)   R[r.reason]  =(R[r.reason]||0)+1;
@@ -470,7 +481,15 @@ function _buildDashboard(data) {
     if(r.sla)      S[r.sla]     =(S[r.sla]||0)+1;
     if(r.queue)    Q[r.queue]   =(Q[r.queue]||0)+1;
     if(r.topic)    P[r.topic]   =(P[r.topic]||0)+1;
+    // KM-1 Action column — only count non-empty values
+    if(r.sla==='KM-1' && r.action) ACT[r.action]=(ACT[r.action]||0)+1;
   });
+
+  var km1ActionChart = '';
+  if (Object.keys(ACT).length > 0) {
+    km1ActionChart = _card('KM-1 Action Breakdown', _bar(_top(ACT,10),'#006494'));
+  }
+
   return '<div class="dash-grid">'+
     _card('Top Tools',      _bar(_top(T,10),'#006494'))+
     _card('Breach Reasons', _bar(_top(R,10),'#964219'))+
@@ -478,6 +497,7 @@ function _buildDashboard(data) {
     _card('SLA Breakdown',  _bar(_top(S,8), '#7a39bb'))+
     _card('By Queue',       _bar(_top(Q,8), '#01696f'))+
     _card('By Topic',       _bar(_top(P,8), '#d19900'))+
+    km1ActionChart+
   '</div>';
 }
 function _top(map,n){
@@ -607,12 +627,19 @@ function _buildOverview(data){
 }
 
 /* ---- Table + Pagination ---- */
-function _buildTable(title, rows){
+// tabName is passed so the AOS tab can show the extra 'AOS Issue' column
+function _buildTable(title, rows, tabName){
+  var isAosTab = tabName === 'aos';
   var total     = rows.length;
   var uniqCount = window.RPT.countUniqueTickets(rows);
   var start = (_currentPage-1)*PAGE_SIZE;
   var page  = rows.slice(start, start+PAGE_SIZE);
+  var colSpan = isAosTab ? 11 : 10;
+
   var trs = page.map(function(r){
+    var aosIssueCell = isAosTab
+      ? '<td style="color:var(--muted);font-size:11px">'+_esc(r.aosIssue)+'</td>'
+      : '';
     return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
       '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
       '<td>'+_esc(r.dateClosed)+'</td>'+
@@ -624,8 +651,11 @@ function _buildTable(title, rows){
       '<td>'+_esc(r.sheet)+'</td>'+
       '<td>'+(r.excluded==='Y'?'<span class="chip ch-other">Excl</span>':'')+'</td>'+
       '<td>'+(r.isAos?'<span class="chip ch-y">Y</span>':'')+'</td>'+
+      aosIssueCell+
     '</tr>';
   }).join('');
+
+  var aosIssueTh = isAosTab ? '<th>AOS Issue</th>' : '';
   // Badge shows unique tickets / total rows so both are visible
   var badge = uniqCount+' unique ticket'+(uniqCount!==1?'s':'')+
               (total !== uniqCount ? ' / '+total+' rows' : '');
@@ -634,7 +664,8 @@ function _buildTable(title, rows){
     '<div class="sc-body"><table class="dt"><thead><tr>'+
     '<th>Ticket</th><th>Date Close (EEST)</th><th>Breach Time (EEST)</th>'+
     '<th>SLA</th><th>Tool</th><th>Reason</th><th>Lang</th><th>Sheet</th><th>Excl</th><th>AOS</th>'+
-    '</tr></thead><tbody>'+(trs||'<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+
+    aosIssueTh+
+    '</tr></thead><tbody>'+(trs||'<tr><td colspan="'+colSpan+'" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+
     '</tbody></table>'+_buildPg(total)+'</div></div>';
 }
 function _chipSla(sla){
@@ -660,6 +691,64 @@ window._goPage=function(n){
   _currentPage=Math.max(1,Math.min(n,Math.ceil(data.length/PAGE_SIZE)));
   _renderTab(_currentTab);
 };
+
+/* ---- Jira Tracker ---- */
+// Shows one row per unique Jira ticket ID found in the filtered dataset.
+// Only rows that have a non-empty Jira value are included (= excluded tickets).
+function _buildJiraTracker(data) {
+  // Collect unique Jira IDs and store representative row info
+  var jiraMap = {};
+  data.forEach(function(r) {
+    if (!r.jira) return;
+    if (!jiraMap[r.jira]) {
+      jiraMap[r.jira] = {
+        jira:    r.jira,
+        ticket:  r.ticket,
+        sla:     r.sla,
+        tool:    r.tool,
+        reason:  r.reason,
+        comment: r.comment,
+        week:    r.week,
+      };
+    }
+  });
+
+  var entries = Object.keys(jiraMap).sort().map(function(k){ return jiraMap[k]; });
+  var count = entries.length;
+
+  if (count === 0) {
+    return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2>'+
+      '<span class="badge">0 tickets</span></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">'+
+      'No Jira ticket IDs found in the current filter. Jira IDs are only present on excluded rows.</p></div></div>';
+  }
+
+  // Build Jira URL using the JIRA_BASE_URL from config.js if available,
+  // otherwise fall back to a sensible Atlassian Cloud pattern.
+  var jiraBase = (window.RPT_CONFIG && window.RPT_CONFIG.jiraBaseUrl)
+    ? window.RPT_CONFIG.jiraBaseUrl.replace(/\/$/, '')
+    : 'https://jira.atlassian.net/browse';
+
+  var trs = entries.map(function(e) {
+    var href = jiraBase + '/' + _esc(e.jira);
+    return '<tr>'+
+      '<td><a class="jira-link" href="'+href+'" target="_blank" rel="noopener noreferrer">'+_esc(e.jira)+'</a></td>'+
+      '<td style="font-family:monospace;font-size:11px">'+_esc(e.ticket)+'</td>'+
+      '<td>'+_chipSla(e.sla)+'</td>'+
+      '<td>'+_esc(e.tool)+'</td>'+
+      '<td>'+_esc(e.reason)+'</td>'+
+      '<td style="color:var(--muted);font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+_esc(e.comment)+'">'+_esc(e.comment)+'</td>'+
+      '<td style="text-align:center">'+_esc(e.week)+'</td>'+
+    '</tr>';
+  }).join('');
+
+  return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2>'+
+    '<span class="badge">'+count+' unique Jira ticket'+(count!==1?'s':'')+'</span></div>'+
+    '<div class="sc-body"><table class="dt"><thead><tr>'+
+    '<th>Jira ID</th><th>INC Ticket</th><th>SLA</th><th>Tool</th><th>Reason</th><th>Comment</th><th>Week</th>'+
+    '</tr></thead><tbody>'+trs+
+    '</tbody></table></div></div>';
+}
 </script>
 
 <script src="reporter-processor.js"></script>
