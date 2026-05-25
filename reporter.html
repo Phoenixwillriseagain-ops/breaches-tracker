@@ -50,7 +50,6 @@
     #data-section { display: none; flex-direction: column; gap: 20px; }
     #data-section.visible { display: flex; }
 
-    /* Import log strip */
     #rpt-import-log {
       display: none;
       margin: 0 0 4px;
@@ -118,7 +117,7 @@
     .ch-y     { background: #d6ecec; color: var(--primary); }
     .ch-jira  { background: #e8edf8; color: #0052cc; font-family: monospace; }
 
-    .pg { display: flex; align-items: center; gap: 5px; margin-top: 10px; justify-content: flex-end; font-size: 12px; color: var(--muted); }
+    .pg { display: flex; align-items: center; gap: 5px; margin-top: 10px; justify-content: flex-end; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
     .pg-btn { padding: 3px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; font-size: 12px; font-family: inherit; }
     .pg-btn:hover   { background: var(--bg); }
     .pg-btn.on      { background: var(--primary); color: #fff; border-color: var(--primary); }
@@ -165,7 +164,6 @@
     }
     .lang-dd-item:hover { background: var(--surface-2, #f3f0ec); }
     .lang-dd-item input[type=checkbox] { margin: 0; cursor: pointer; accent-color: var(--primary); }
-    /* ---- end language filter ---- */
 
     /* ---- Heatmap ---- */
     .heatmap-wrap { overflow-x: auto; }
@@ -201,7 +199,6 @@
     .hm-legend-swatch span {
       display: inline-block; width: 18px; height: 12px; border-radius: 2px;
     }
-    /* ---- end Heatmap ---- */
 
     /* ---- Jira Tracker ---- */
     .jira-link {
@@ -209,7 +206,6 @@
       font-size: 11px; font-weight: 600;
     }
     .jira-link:hover { text-decoration: underline; }
-    /* ---- end Jira Tracker ---- */
 
     @media (max-width: 720px) {
       .reporter-layout { flex-direction: column; }
@@ -252,7 +248,6 @@
           <label>Week</label>    <select id="filter-week"><option value="All">All</option></select>
           <label>SLA</label>     <select id="filter-sla"><option value="All">All</option></select>
 
-          <!-- Language: multi-select checkbox dropdown -->
           <label>Language</label>
           <div class="lang-filter-wrap" id="lang-filter-wrap">
             <button type="button" class="lang-trigger" id="lang-trigger" aria-haspopup="listbox" aria-expanded="false">
@@ -324,9 +319,10 @@
 <script src="config.js"></script>
 
 <script>
-var _currentTab  = 'dashboard';
-var _currentPage = 1;
-var PAGE_SIZE    = 50;
+var _currentTab     = 'dashboard';
+var _currentPage    = 1;
+var _currentTabRows = [];   // <-- holds the exact row array for the active tab
+var PAGE_SIZE       = 50;
 
 window.renderTables = function() {
   var data = window.RPT ? window.RPT.filtered : [];
@@ -336,11 +332,22 @@ window.renderTables = function() {
   document.getElementById('export-btns').style.display = '';
   var cb = document.getElementById('rpt-clear-btn');
   if (cb) cb.style.display = '';
-  // Toolbar pill: unique tickets (never raw rows)
   var rc = document.getElementById('record-count');
   if (rc) rc.textContent = window.RPT.countUniqueTickets(data) + ' unique ticket(s)';
 };
 window.renderCharts = function() {};
+
+// Returns the row array for a given tab name + full filtered dataset.
+// Centralised here so _renderTab and _goPage both use the identical slice logic.
+function _tabRows(name, data) {
+  if (name === 'all')   return data;
+  if (name === 'ksl4')  return data.filter(function(r){return r.sla==='KSL-4';});
+  if (name === 'km1')   return data.filter(function(r){return r.sla==='KM-1';});
+  if (name === 'ksl5a') return data.filter(function(r){return r.sla==='KSL-5a';});
+  if (name === 'km2')   return data.filter(function(r){return r.sla==='KM-2';});
+  if (name === 'aos')   return data.filter(function(r){return r.isAos;});
+  return null; // non-table tabs
+}
 
 function _renderTab(name) {
   _currentTab  = name;
@@ -348,16 +355,23 @@ function _renderTab(name) {
   var data = window.RPT ? window.RPT.filtered : [];
   var el   = document.getElementById('tab-content');
   if (!el) return;
-  if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
-  else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
-  else if (name === 'overview')  el.innerHTML = _buildOverview(data);
-  else if (name === 'all')       el.innerHTML = _buildTable('All Records', data, 'all');
-  else if (name === 'ksl4')      el.innerHTML = _buildTable('KSL-4',  data.filter(function(r){return r.sla==='KSL-4';}), 'ksl4');
-  else if (name === 'km1')       el.innerHTML = _buildTable('KM-1',   data.filter(function(r){return r.sla==='KM-1';}),  'km1');
-  else if (name === 'ksl5a')     el.innerHTML = _buildTable('KSL-5a', data.filter(function(r){return r.sla==='KSL-5a';}), 'ksl5a');
-  else if (name === 'km2')       el.innerHTML = _buildTable('KM-2',   data.filter(function(r){return r.sla==='KM-2';}),  'km2');
-  else if (name === 'aos')       el.innerHTML = _buildTable('AOS Records', data.filter(function(r){return r.isAos;}), 'aos');
-  else if (name === 'jira')      el.innerHTML = _buildJiraTracker(data);
+
+  var rows = _tabRows(name, data);
+  if (rows !== null) {
+    // Table tab: cache the row array so _goPage can reference it directly
+    _currentTabRows = rows;
+    var labels = {
+      all: 'All Records', ksl4: 'KSL-4', km1: 'KM-1',
+      ksl5a: 'KSL-5a', km2: 'KM-2', aos: 'AOS Records'
+    };
+    el.innerHTML = _buildTable(labels[name] || name, rows, name);
+  } else {
+    _currentTabRows = [];
+    if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
+    else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
+    else if (name === 'overview')  el.innerHTML = _buildOverview(data);
+    else if (name === 'jira')      el.innerHTML = _buildJiraTracker(data);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -427,10 +441,10 @@ function _updateLangLabel() {
   var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
   var lbl     = document.getElementById('lang-trigger-label');
   if (!lbl) return;
-  if (checked.length === 0)        lbl.textContent = 'None';
+  if (checked.length === 0)             lbl.textContent = 'None';
   else if (checked.length === all.length) lbl.textContent = 'All';
-  else if (checked.length <= 2)   lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
-  else                             lbl.textContent = checked.length + ' selected';
+  else if (checked.length <= 2)         lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
+  else                                   lbl.textContent = checked.length + ' selected';
 }
 
 window.getSelectedLanguages = function() {
@@ -481,7 +495,6 @@ function _buildDashboard(data) {
     if(r.sla)      S[r.sla]     =(S[r.sla]||0)+1;
     if(r.queue)    Q[r.queue]   =(Q[r.queue]||0)+1;
     if(r.topic)    P[r.topic]   =(P[r.topic]||0)+1;
-    // KM-1 Action column — only count non-empty values
     if(r.sla==='KM-1' && r.action) ACT[r.action]=(ACT[r.action]||0)+1;
   });
 
@@ -519,7 +532,7 @@ function _card(title,body){
 }
 function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-/* ---- Heatmap: day-of-week x hour-of-day breach density ---- */
+/* ---- Heatmap ---- */
 function _buildHeatmap(data) {
   function parseBreach(str) {
     if (!str) return null;
@@ -591,9 +604,8 @@ function _buildHeatmap(data) {
     '</div></div></div>';
 }
 
-/* ---- Overview — unique ticket counts per SLA ---- */
+/* ---- Overview ---- */
 function _buildOverview(data){
-  // Build per-SLA maps keyed by ticket to count uniques correctly
   var map = {};
   data.forEach(function(r){
     if (!map[r.sla]) map[r.sla] = { total: new Set(), active: new Set(), excl: new Set(), aos: new Set() };
@@ -610,11 +622,8 @@ function _buildOverview(data){
     var tot = s.total.size, act = s.active.size;
     return '<tr>'+
       '<td>'+_chipSla(k)+'</td>'+
-      '<td>'+tot+'</td>'+
-      '<td>'+act+'</td>'+
-      '<td>'+s.excl.size+'</td>'+
-      '<td>'+s.aos.size+'</td>'+
-      '<td>'+_pct(act,tot)+'</td>'+
+      '<td>'+tot+'</td>'+'<td>'+act+'</td>'+'<td>'+s.excl.size+'</td>'+
+      '<td>'+s.aos.size+'</td>'+'<td>'+_pct(act,tot)+'</td>'+
     '</tr>';
   }).join('');
   var totalUniq = window.RPT.countUniqueTickets(data);
@@ -627,19 +636,16 @@ function _buildOverview(data){
 }
 
 /* ---- Table + Pagination ---- */
-// tabName is passed so the AOS tab can show the extra 'AOS Issue' column
 function _buildTable(title, rows, tabName){
-  var isAosTab = tabName === 'aos';
+  var isAosTab  = tabName === 'aos';
   var total     = rows.length;
   var uniqCount = window.RPT.countUniqueTickets(rows);
-  var start = (_currentPage-1)*PAGE_SIZE;
-  var page  = rows.slice(start, start+PAGE_SIZE);
-  var colSpan = isAosTab ? 11 : 10;
+  var start     = (_currentPage - 1) * PAGE_SIZE;
+  var page      = rows.slice(start, start + PAGE_SIZE);
+  var colSpan   = isAosTab ? 11 : 10;
 
   var trs = page.map(function(r){
-    var aosIssueCell = isAosTab
-      ? '<td style="color:var(--muted);font-size:11px">'+_esc(r.aosIssue)+'</td>'
-      : '';
+    var aosCell = isAosTab ? '<td style="color:var(--muted);font-size:11px">'+_esc(r.aosIssue)+'</td>' : '';
     return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
       '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
       '<td>'+_esc(r.dateClosed)+'</td>'+
@@ -651,12 +657,11 @@ function _buildTable(title, rows, tabName){
       '<td>'+_esc(r.sheet)+'</td>'+
       '<td>'+(r.excluded==='Y'?'<span class="chip ch-other">Excl</span>':'')+'</td>'+
       '<td>'+(r.isAos?'<span class="chip ch-y">Y</span>':'')+'</td>'+
-      aosIssueCell+
+      aosCell+
     '</tr>';
   }).join('');
 
   var aosIssueTh = isAosTab ? '<th>AOS Issue</th>' : '';
-  // Badge shows unique tickets / total rows so both are visible
   var badge = uniqCount+' unique ticket'+(uniqCount!==1?'s':'')+
               (total !== uniqCount ? ' / '+total+' rows' : '');
   return '<div class="sc"><div class="sc-head"><h2>'+title+'</h2>'+
@@ -673,48 +678,58 @@ function _chipSla(sla){
   return '<span class="chip '+(map[sla]||'ch-other')+'">'+_esc(sla)+'</span>';
 }
 function _buildPg(total){
-  var pages=Math.ceil(total/PAGE_SIZE);
-  if(pages<=1)return '';
-  var btns='';
-  for(var i=1;i<=Math.min(pages,10);i++){
-    btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+  var pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) return '';
+  var btns = '';
+  // Show at most 10 page buttons; if there are more, show ellipsis hint
+  var maxBtns = Math.min(pages, 10);
+  for (var i = 1; i <= maxBtns; i++) {
+    btns += '<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+  }
+  if (pages > 10) {
+    btns += '<span style="padding:0 4px;color:var(--muted)">&#8230;</span>'+
+            '<button class="pg-btn'+(pages===_currentPage?' on':'')+'" onclick="_goPage('+pages+')">'+pages+'</button>';
   }
   return '<div class="pg">'+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage-1)+')" '+(_currentPage===1?'disabled':'')+'>&#8249;</button>'+
     btns+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage+1)+')" '+(_currentPage===pages?'disabled':'')+'>&#8250;</button>'+
-    '<span>'+((_currentPage-1)*PAGE_SIZE+1)+'&#8211;'+Math.min(_currentPage*PAGE_SIZE,total)+' of '+total+' rows</span>'+
+    '<span style="margin-left:6px">'+((_currentPage-1)*PAGE_SIZE+1)+'&#8211;'+Math.min(_currentPage*PAGE_SIZE,total)+' of '+total+' rows</span>'+
   '</div>';
 }
-window._goPage=function(n){
-  var data=window.RPT?window.RPT.filtered:[];
-  _currentPage=Math.max(1,Math.min(n,Math.ceil(data.length/PAGE_SIZE)));
-  _renderTab(_currentTab);
+
+// FIX: _goPage now clamps against _currentTabRows.length (the actual rows
+// rendered in the current tab), not RPT.filtered.length (all filtered rows).
+window._goPage = function(n) {
+  var total = _currentTabRows.length;
+  var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  _currentPage = Math.max(1, Math.min(n, pages));
+  // Re-render only the table content, not the full tab (avoids filter re-run)
+  var el = document.getElementById('tab-content');
+  if (el) {
+    var labels = {
+      all: 'All Records', ksl4: 'KSL-4', km1: 'KM-1',
+      ksl5a: 'KSL-5a', km2: 'KM-2', aos: 'AOS Records'
+    };
+    el.innerHTML = _buildTable(labels[_currentTab] || _currentTab, _currentTabRows, _currentTab);
+  }
 };
 
 /* ---- Jira Tracker ---- */
-// Shows one row per unique Jira ticket ID found in the filtered dataset.
-// Only rows that have a non-empty Jira value are included (= excluded tickets).
 function _buildJiraTracker(data) {
-  // Collect unique Jira IDs and store representative row info
   var jiraMap = {};
   data.forEach(function(r) {
     if (!r.jira) return;
     if (!jiraMap[r.jira]) {
       jiraMap[r.jira] = {
-        jira:    r.jira,
-        ticket:  r.ticket,
-        sla:     r.sla,
-        tool:    r.tool,
-        reason:  r.reason,
-        comment: r.comment,
-        week:    r.week,
+        jira: r.jira, ticket: r.ticket, sla: r.sla,
+        tool: r.tool, reason: r.reason, comment: r.comment, week: r.week
       };
     }
   });
 
   var entries = Object.keys(jiraMap).sort().map(function(k){ return jiraMap[k]; });
-  var count = entries.length;
+  var count   = entries.length;
 
   if (count === 0) {
     return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2>'+
@@ -723,7 +738,6 @@ function _buildJiraTracker(data) {
       'No Jira ticket IDs found in the current filter. Jira IDs are only present on excluded rows.</p></div></div>';
   }
 
-  // BMW Group Jira base URL — the ticket ID is appended directly after the trailing slash.
   var jiraBase = 'https://atc.bmwgroup.net/jira/browse';
 
   var trs = entries.map(function(e) {
