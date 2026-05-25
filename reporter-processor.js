@@ -72,6 +72,15 @@
       );
       else alert('Exporter not loaded');
     },
+
+    // Returns the count of unique Incident Tickets in a given dataset array.
+    // The file always contains duplicate tickets; this gives the reporter
+    // the true unique count for display in KPIs and any other metric.
+    countUniqueTickets: function(data) {
+      var seen = new Set();
+      (data || []).forEach(function(r) { if (r.ticket) seen.add(r.ticket); });
+      return seen.size;
+    },
   };
 
   /* ---- helpers ---- */
@@ -173,7 +182,7 @@
         window.RPT.allData.push({
           ticket:         ticket,
           dateClosed:     formatDate(r['DATE_CLOSE']||''),
-          dateTimeBreach: formatDate(r['DATE_TIME_Breach']||''),
+          dateTimeBreach: formatDate(r['DATE_TIME_Breach']||r['DATE_TIME_Breach UTC']||''),
           status:         clean(r['Status']||'N/A'),
           queue:          clean(r['Queue']||''),
           priority:       clean(r['Priority']||''),

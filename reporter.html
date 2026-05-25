@@ -166,6 +166,46 @@
     .lang-dd-item input[type=checkbox] { margin: 0; cursor: pointer; accent-color: var(--primary); }
     /* ---- end language filter ---- */
 
+    /* ---- Heatmap ---- */
+    .heatmap-wrap {
+      overflow-x: auto;
+    }
+    .heatmap-table {
+      border-collapse: separate;
+      border-spacing: 3px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .heatmap-table th {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--muted); padding: 3px 5px;
+      text-align: center; background: none; border: none;
+    }
+    .heatmap-table td {
+      width: 36px; height: 28px; text-align: center;
+      border-radius: 4px; font-size: 10px; font-weight: 600;
+      cursor: default; transition: transform .1s;
+      border: none;
+    }
+    .heatmap-table td:hover { transform: scale(1.15); z-index: 2; position: relative; }
+    .heatmap-table td.hm-day-lbl {
+      width: auto; text-align: right; padding-right: 8px;
+      color: var(--muted); font-weight: 600; font-size: 10px;
+      background: none; cursor: default;
+    }
+    .heatmap-table td.hm-day-lbl:hover { transform: none; }
+    .hm-legend {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 10px; color: var(--muted); margin-top: 10px;
+    }
+    .hm-legend-swatch {
+      display: flex; gap: 2px;
+    }
+    .hm-legend-swatch span {
+      display: inline-block; width: 18px; height: 12px; border-radius: 2px;
+    }
+    /* ---- end Heatmap ---- */
+
     @media (max-width: 720px) {
       .reporter-layout { flex-direction: column; }
       .reporter-sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); }
@@ -260,6 +300,7 @@
         <div class="kpi-row" id="kpi-row"></div>
         <div class="rpt-tabs" id="tab-bar">
           <button class="rpt-tab active" data-tab="dashboard">Dashboard</button>
+          <button class="rpt-tab" data-tab="heatmap">Heatmap</button>
           <button class="rpt-tab" data-tab="overview">Overview</button>
           <button class="rpt-tab" data-tab="all">All Records</button>
           <button class="rpt-tab" data-tab="ksl4">KSL-4</button>
@@ -301,6 +342,7 @@ function _renderTab(name) {
   var el   = document.getElementById('tab-content');
   if (!el) return;
   if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
+  else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
   else if (name === 'overview')  el.innerHTML = _buildOverview(data);
   else if (name === 'all')       el.innerHTML = _buildTable('All Records', data);
   else if (name === 'ksl4')      el.innerHTML = _buildTable('KSL-4',  data.filter(function(r){return r.sla==='KSL-4';}));
@@ -405,21 +447,33 @@ window.getSelectedLanguages = function() {
 </script>
 
 <script>
+/* ---- KPIs ---- */
 function _buildKPIs(data) {
-  var total  = data.length;
-  var active = data.filter(function(r){return r.excluded==='N';}).length;
-  var excl   = total - active;
-  function bySla(s){return data.filter(function(r){return r.sla===s&&r.excluded==='N';}).length;}
-  var aos = data.filter(function(r){return r.isAos&&r.excluded==='N';}).length;
+  // Feature #1: count only UNIQUE Incident Ticket values in the current
+  // filtered dataset.  The file always contains duplicate tickets across
+  // sheets; using countUniqueTickets() gives the correct reporter figure.
+  var uniqueTotal = window.RPT.countUniqueTickets(data);
+  var activeData  = data.filter(function(r){return r.excluded==='N';});
+  var uniqueActive= window.RPT.countUniqueTickets(activeData);
+  var excl        = uniqueTotal - uniqueActive;
+
+  function bySla(s){
+    var subset = activeData.filter(function(r){return r.sla===s;});
+    return window.RPT.countUniqueTickets(subset);
+  }
+  var aos = window.RPT.countUniqueTickets(
+    activeData.filter(function(r){return r.isAos;})
+  );
   var wk  = {}; data.forEach(function(r){if(r.week)wk[r.week]=1;});
+
   document.getElementById('kpi-row').innerHTML =
-    _kpi('c-total','Total',   total,  Object.keys(wk).length+' week(s)')+
-    _kpi('c-ksl4', 'KSL-4',  bySla('KSL-4'),  _pct(bySla('KSL-4'), active))+
-    _kpi('c-km1',  'KM-1',   bySla('KM-1'),   _pct(bySla('KM-1'),  active))+
-    _kpi('c-ksl5a','KSL-5a', bySla('KSL-5a'), _pct(bySla('KSL-5a'),active))+
-    _kpi('c-km2',  'KM-2',   bySla('KM-2'),   _pct(bySla('KM-2'),  active))+
-    _kpi('c-aos',  'AOS',    aos,  _pct(aos,  active))+
-    _kpi('c-excl', 'Excluded',excl, _pct(excl, total));
+    _kpi('c-total','Unique Tickets', uniqueTotal, Object.keys(wk).length+' week(s)')+
+    _kpi('c-ksl4', 'KSL-4',  bySla('KSL-4'),  _pct(bySla('KSL-4'),  uniqueActive))+
+    _kpi('c-km1',  'KM-1',   bySla('KM-1'),   _pct(bySla('KM-1'),   uniqueActive))+
+    _kpi('c-ksl5a','KSL-5a', bySla('KSL-5a'), _pct(bySla('KSL-5a'), uniqueActive))+
+    _kpi('c-km2',  'KM-2',   bySla('KM-2'),   _pct(bySla('KM-2'),   uniqueActive))+
+    _kpi('c-aos',  'AOS',    aos, _pct(aos, uniqueActive))+
+    _kpi('c-excl', 'Excluded', excl, _pct(excl, uniqueTotal));
 }
 function _kpi(cls,lbl,val,sub){
   return '<div class="kpi-card '+cls+'">'+
@@ -429,6 +483,7 @@ function _kpi(cls,lbl,val,sub){
 }
 function _pct(n,d){return d?Math.round(n/d*100)+'%':'0%';}
 
+/* ---- Dashboard (bar charts) ---- */
 function _buildDashboard(data) {
   var a = data.filter(function(r){return r.excluded==='N';});
   var T={}, R={}, L={}, S={}, Q={}, P={};
@@ -468,6 +523,132 @@ function _card(title,body){
 }
 function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
+/* ----
+  Feature #2: Heatmap — day-of-week × hour-of-day breach density
+  DATE_TIME_Breach values are stored in r.dateTimeBreach as
+  "DD.MM.YYYY HH:MM:SS" (EEST, UTC+3) by reporter-processor.js.
+  We parse that string directly — no timezone gymnastics needed.
+---- */
+function _buildHeatmap(data) {
+  // Parse "DD.MM.YYYY HH:MM:SS" → { dow: 0-6, hour: 0-23 }
+  // dow: 0=Mon … 6=Sun (ISO order, friendlier for ops)
+  function parseBreach(str) {
+    if (!str) return null;
+    // Expected format: DD.MM.YYYY HH:MM:SS
+    var parts = str.split(' ');
+    if (parts.length < 2) return null;
+    var dateParts = parts[0].split('.');
+    var timeParts = parts[1].split(':');
+    if (dateParts.length < 3 || timeParts.length < 2) return null;
+    var day   = parseInt(dateParts[0], 10);
+    var month = parseInt(dateParts[1], 10) - 1; // JS month 0-based
+    var year  = parseInt(dateParts[2], 10);
+    var hour  = parseInt(timeParts[0], 10);
+    if (isNaN(day)||isNaN(month)||isNaN(year)||isNaN(hour)) return null;
+    // Use UTC constructor to avoid local-tz shift; we only need dow + hour
+    var d = new Date(Date.UTC(year, month, day, hour, 0, 0));
+    if (isNaN(d.getTime())) return null;
+    // getUTCDay: 0=Sun…6=Sat → remap to 0=Mon…6=Sun
+    var dow = (d.getUTCDay() + 6) % 7;
+    return { dow: dow, hour: hour };
+  }
+
+  // Build 7×24 matrix (dow × hour)
+  var matrix = [];
+  var i, j;
+  for (i = 0; i < 7; i++) {
+    matrix.push([]);
+    for (j = 0; j < 24; j++) matrix[i].push(0);
+  }
+
+  var parsed = 0;
+  data.forEach(function(r) {
+    if (r.excluded === 'Y') return; // only active breaches
+    var p = parseBreach(r.dateTimeBreach);
+    if (!p) return;
+    matrix[p.dow][p.hour]++;
+    parsed++;
+  });
+
+  if (parsed === 0) {
+    return '<div class="sc"><div class="sc-head"><h2>Breach Heatmap</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">'+
+      'No parseable DATE_TIME_Breach values in the current filter.</p></div></div>';
+  }
+
+  // Find max for colour scaling
+  var maxVal = 0;
+  for (i = 0; i < 7; i++) for (j = 0; j < 24; j++) if (matrix[i][j] > maxVal) maxVal = matrix[i][j];
+
+  // Colour ramp: white → primary teal (#01696f)
+  // We interpolate in RGB between #f7f6f2 (bg) and #01696f (primary)
+  var BASE_R=247, BASE_G=246, BASE_B=242;
+  var TOP_R=1,    TOP_G=105,  TOP_B=111;
+  function hmColor(val) {
+    if (val === 0) return 'background:#f0eeea;color:var(--faint,#bab9b4)';
+    var ratio = Math.pow(val / maxVal, 0.65); // gamma<1 = better mid-range contrast
+    var r = Math.round(BASE_R + ratio*(TOP_R - BASE_R));
+    var g = Math.round(BASE_G + ratio*(TOP_G - BASE_G));
+    var b = Math.round(BASE_B + ratio*(TOP_B - BASE_B));
+    // Use white text when dark enough
+    var luma = 0.299*r + 0.587*g + 0.114*b;
+    var textColor = luma < 140 ? '#ffffff' : '#28251d';
+    return 'background:rgb('+r+','+g+','+b+');color:'+textColor;
+  }
+
+  var days  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var hours = [];
+  for (j = 0; j < 24; j++) hours.push(j);
+
+  // Header row: hour labels (every 2h for readability)
+  var headerCells = '<th></th>';
+  for (j = 0; j < 24; j++) {
+    headerCells += '<th>'+(j%2===0?String(j).padStart(2,'0')+'h':'')+'</th>';
+  }
+
+  // Data rows
+  var bodyRows = days.map(function(dayName, di) {
+    var cells = '<td class="hm-day-lbl">'+dayName+'</td>';
+    for (j = 0; j < 24; j++) {
+      var v = matrix[di][j];
+      var style = hmColor(v);
+      var label = v > 0 ? v : '';
+      cells += '<td style="'+style+'" title="'+dayName+' '+String(j).padStart(2,'0')+':00 — '+v+' breach(es)">'+label+'</td>';
+    }
+    return '<tr>'+cells+'</tr>';
+  }).join('');
+
+  // Legend swatches (6 steps)
+  var legendSwatches = '';
+  var steps = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  steps.forEach(function(ratio) {
+    var r = Math.round(BASE_R + ratio*(TOP_R - BASE_R));
+    var g = Math.round(BASE_G + ratio*(TOP_G - BASE_G));
+    var b = Math.round(BASE_B + ratio*(TOP_B - BASE_B));
+    legendSwatches += '<span style="background:rgb('+r+','+g+','+b+')"></span>';
+  });
+
+  return '<div class="sc">'+
+    '<div class="sc-head"><h2>Breach Heatmap</h2>'+
+    '<span class="badge" style="margin-left:auto">Day of week &times; Hour (EEST) &bull; '+parsed+' active breaches</span>'+
+    '</div>'+
+    '<div class="sc-body">'+
+      '<div class="heatmap-wrap">'+
+        '<table class="heatmap-table">'+
+          '<thead><tr>'+headerCells+'</tr></thead>'+
+          '<tbody>'+bodyRows+'</tbody>'+
+        '</table>'+
+        '<div class="hm-legend">'+
+          '<span>Less</span>'+
+          '<div class="hm-legend-swatch">'+legendSwatches+'</div>'+
+          '<span>More</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
+/* ---- Overview & Table ---- */
 function _buildOverview(data){
   var map={};
   data.forEach(function(r){
