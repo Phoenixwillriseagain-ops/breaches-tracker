@@ -450,8 +450,9 @@ window.getSelectedLanguages = function() {
 /* ---- KPIs ---- */
 function _buildKPIs(data) {
   // Feature #1: count only UNIQUE Incident Ticket values in the current
-  // filtered dataset.  The file always contains duplicate tickets across
-  // sheets; using countUniqueTickets() gives the correct reporter figure.
+  // filtered dataset. V2 files always contain multiple rows per ticket
+  // (one row per breach event). countUniqueTickets() is the only correct
+  // metric — never use data.length for ticket counts.
   var uniqueTotal = window.RPT.countUniqueTickets(data);
   var activeData  = data.filter(function(r){return r.excluded==='N';});
   var uniqueActive= window.RPT.countUniqueTickets(activeData);
@@ -528,13 +529,13 @@ function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
   DATE_TIME_Breach values are stored in r.dateTimeBreach as
   "DD.MM.YYYY HH:MM:SS" (EEST, UTC+3) by reporter-processor.js.
   We parse that string directly — no timezone gymnastics needed.
+  Only active (excluded=N) breach rows are counted.
 ---- */
 function _buildHeatmap(data) {
   // Parse "DD.MM.YYYY HH:MM:SS" → { dow: 0-6, hour: 0-23 }
   // dow: 0=Mon … 6=Sun (ISO order, friendlier for ops)
   function parseBreach(str) {
     if (!str) return null;
-    // Expected format: DD.MM.YYYY HH:MM:SS
     var parts = str.split(' ');
     if (parts.length < 2) return null;
     var dateParts = parts[0].split('.');
@@ -580,8 +581,7 @@ function _buildHeatmap(data) {
   var maxVal = 0;
   for (i = 0; i < 7; i++) for (j = 0; j < 24; j++) if (matrix[i][j] > maxVal) maxVal = matrix[i][j];
 
-  // Colour ramp: white → primary teal (#01696f)
-  // We interpolate in RGB between #f7f6f2 (bg) and #01696f (primary)
+  // Colour ramp: neutral → primary teal (#01696f)
   var BASE_R=247, BASE_G=246, BASE_B=242;
   var TOP_R=1,    TOP_G=105,  TOP_B=111;
   function hmColor(val) {
@@ -590,7 +590,6 @@ function _buildHeatmap(data) {
     var r = Math.round(BASE_R + ratio*(TOP_R - BASE_R));
     var g = Math.round(BASE_G + ratio*(TOP_G - BASE_G));
     var b = Math.round(BASE_B + ratio*(TOP_B - BASE_B));
-    // Use white text when dark enough
     var luma = 0.299*r + 0.587*g + 0.114*b;
     var textColor = luma < 140 ? '#ffffff' : '#28251d';
     return 'background:rgb('+r+','+g+','+b+');color:'+textColor;
@@ -630,7 +629,7 @@ function _buildHeatmap(data) {
 
   return '<div class="sc">'+
     '<div class="sc-head"><h2>Breach Heatmap</h2>'+
-    '<span class="badge" style="margin-left:auto">Day of week &times; Hour (EEST) &bull; '+parsed+' active breaches</span>'+
+    '<span class="badge" style="margin-left:auto">Day of week &times; Hour (EEST) &bull; '+parsed+' active breach rows</span>'+
     '</div>'+
     '<div class="sc-body">'+
       '<div class="heatmap-wrap">'+
@@ -663,7 +662,7 @@ function _buildOverview(data){
   }).join('');
   return '<div class="sc"><div class="sc-head"><h2>SLA Overview</h2><span class="badge">'+data.length+' records</span></div>'+
     '<div class="sc-body"><table class="dt"><thead><tr>'+
-    '<th>SLA</th><th>Total</th><th>Active</th><th>Excl</th><th>AOS</th><th>Active%</th>'+
+    '<th>SLA</th><th>Total Rows</th><th>Active Rows</th><th>Excl Rows</th><th>AOS Rows</th><th>Active%</th>'+
     '</tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">No data</td></tr>')+
     '</tbody></table></div></div>';
 }
@@ -701,7 +700,7 @@ function _buildPg(total){
   var pages=Math.ceil(total/PAGE_SIZE);
   if(pages<=1)return '';
   var btns='';
-  for(var i=1;i<=Math.min(pages,10);i++)btns+='<button class="pg-btn'+(i===_currentPage?' on':')+'" onclick="_goPage('+i+')">'+i+'</button>';
+  for(var i=1;i<=Math.min(pages,10);i++)btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
   return '<div class="pg">'+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage-1)+')" '+(_currentPage===1?'disabled':'')+'>&#8249;</button>'+
     btns+

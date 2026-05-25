@@ -2,9 +2,6 @@
 (function() {
   'use strict';
 
-  // _seenTickets persists across file imports for deduplication
-  var _seenTickets = new Set();
-
   window.RPT = {
     allData: [],
     filtered: [],
@@ -25,7 +22,6 @@
       window.RPT.filtered    = [];
       window.RPT.aosFiltered = [];
       window.RPT.uniqueValues= {};
-      _seenTickets = new Set();
       _hideImportLog();
       // Reset lang dropdown label
       var lbl = document.getElementById('lang-trigger-label');
@@ -74,8 +70,8 @@
     },
 
     // Returns the count of unique Incident Tickets in a given dataset array.
-    // The file always contains duplicate tickets; this gives the reporter
-    // the true unique count for display in KPIs and any other metric.
+    // V2 files always have multiple rows per ticket (one per breach event).
+    // This is the only correct way to count tickets — never use data.length.
     countUniqueTickets: function(data) {
       var seen = new Set();
       (data || []).forEach(function(r) { if (r.ticket) seen.add(r.ticket); });
@@ -147,10 +143,7 @@
         try {
           var wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
           var result = _mergeWorkbook(wb);
-          var type = result.duplicates > 0 ? 'warn' : 'ok';
-          var msg  = file.name + ' \u2014 ' + result.added + ' record(s) added';
-          if (result.duplicates > 0) msg += ', ' + result.duplicates + ' duplicate(s) skipped';
-          logLines.push({ type: type, msg: msg });
+          logLines.push({ type: 'ok', msg: file.name + ' \u2014 ' + result.added + ' row(s) imported (' + result.uniqueTickets + ' unique ticket(s))' });
         } catch(err) {
           logLines.push({ type:'error', msg: file.name + ' \u2014 ' + err.message });
         }
@@ -166,23 +159,33 @@
     next();
   }
 
-  /* ---- Merge one workbook into allData (with deduplication) ---- */
+  /* ---- Merge one workbook into allData ---- */
+  // NOTE: We intentionally do NOT deduplicate rows by ticket number here.
+  // V2 data has multiple rows per ticket — one row per breach event.
+  // Row-level dedup would silently discard valid breach timestamps and
+  // corrupt the heatmap and dashboard counts.
+  // Unique ticket counting happens at render time via countUniqueTickets().
   function _mergeWorkbook(wb) {
-    var added = 0, duplicates = 0;
+    var added = 0;
+    // Track unique tickets in THIS workbook for the import log message only
+    var ticketsInFile = new Set();
+
     wb.SheetNames.forEach(function(sn) {
       if (sn === 'Instructions') return;
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval:'' });
       rows.forEach(function(r) {
         var ticket = clean(r['Incident Ticket']||'');
         if (!ticket) return;
-        if (_seenTickets.has(ticket)) { duplicates++; return; }
-        _seenTickets.add(ticket);
+        ticketsInFile.add(ticket);
+
         var aosF = normBool(r['AOS']||'');
         var aosI = normBool(r['AOS Issue']||'');
+        // KSL-4 uses 'DATE_TIME_Breach'; KM-1 uses 'DATE_TIME_Breach UTC'
+        var breachRaw = r['DATE_TIME_Breach'] || r['DATE_TIME_Breach UTC'] || '';
         window.RPT.allData.push({
           ticket:         ticket,
           dateClosed:     formatDate(r['DATE_CLOSE']||''),
-          dateTimeBreach: formatDate(r['DATE_TIME_Breach']||r['DATE_TIME_Breach UTC']||''),
+          dateTimeBreach: formatDate(breachRaw),
           status:         clean(r['Status']||'N/A'),
           queue:          clean(r['Queue']||''),
           priority:       clean(r['Priority']||''),
@@ -210,7 +213,7 @@
       });
     });
     window.RPT.aosFiltered = window.RPT.allData.filter(function(r){return r.isAos;});
-    return { added: added, duplicates: duplicates };
+    return { added: added, uniqueTickets: ticketsInFile.size };
   }
 
   function _populateUnique(){
@@ -223,7 +226,8 @@
       if(r.queue    && uv.queues.indexOf(r.queue)<0)       uv.queues.push(r.queue);
       if(r.sheet    && uv.sheets.indexOf(r.sheet)<0)       uv.sheets.push(r.sheet);
     });
-    uv.weeks.sort();uv.slas.sort();uv.languages.sort();uv.tools.sort();uv.queues.sort();
+    uv.weeks.sort(function(a,b){return Number(a)-Number(b);});
+    uv.slas.sort();uv.languages.sort();uv.tools.sort();uv.queues.sort();
     window.RPT.uniqueValues=uv;
   }
 
