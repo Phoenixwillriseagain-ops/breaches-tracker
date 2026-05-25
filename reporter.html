@@ -224,7 +224,7 @@
   <!-- TOOLBAR -->
   <div class="toolbar">
     <div class="toolbar-left">
-      <button id="import-btn" class="btn-outline">&#8679; Import V2 File(s)</button>
+      <button id="import-btn" class="btn-outline">&#8679; Import Breaches File(s)</button>
       <!-- multiple: allows selecting several .xlsx files at once -->
       <input type="file" id="rpt-file-input" accept=".xlsx" multiple style="display:none">
       <button id="rpt-clear-btn" class="btn-outline"
@@ -289,7 +289,7 @@
             <line x1="12" y1="11" x2="12" y2="17"/>
             <polyline points="9,14 12,11 15,14"/>
           </svg>
-          <p>Drop your V2-Breaches .xlsx file(s) here</p>
+          <p>Drop your Breaches.xlsx file(s) here</p>
           <span>or click to browse &nbsp;&middot;&nbsp; .xlsx only &nbsp;&middot;&nbsp; multiple files supported</span>
         </div>
         <div id="upload-status"></div>
@@ -701,7 +701,7 @@ function _buildPg(total){
   var pages=Math.ceil(total/PAGE_SIZE);
   if(pages<=1)return '';
   var btns='';
-  for(var i=1;i<=Math.min(pages,10);i++)btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+  for(var i=1;i<=Math.min(pages,10);i++)btns+='<button class="pg-btn'+(i===_currentPage?' on':')+'" onclick="_goPage('+i+')">'+i+'</button>';
   return '<div class="pg">'+
     '<button class="pg-btn" onclick="_goPage('+(_currentPage-1)+')" '+(_currentPage===1?'disabled':'')+'>&#8249;</button>'+
     btns+
