@@ -48,7 +48,6 @@
     #upload-status.err { color: var(--error); }
 
     #data-section { display: none; flex-direction: column; gap: 20px; }
-    #data-section.visible { display: flex; }
 
     #rpt-import-log {
       display: none;
@@ -464,7 +463,7 @@
       </div>
 
       <!-- DATA -->
-      <div id="data-section">
+      <div id="data-section" style="display:none">
         <div class="kpi-row" id="kpi-row"></div>
         <div class="rpt-tabs" id="tab-bar">
           <button class="rpt-tab active" data-tab="dashboard">Dashboard</button>
@@ -503,6 +502,13 @@ var PAGE_SIZE       = 50;
 
 window.renderTables = function() {
   var data = window.RPT ? window.RPT.filtered : [];
+
+  // Show data section, hide upload section
+  var up = document.getElementById('upload-section');
+  var dp = document.getElementById('data-section');
+  if (up) up.style.display = 'none';
+  if (dp) dp.style.display = 'flex';
+
   _buildKPIs(data);
   _renderTab(_currentTab);
   document.getElementById('rpt-sidebar').style.display = '';
@@ -674,10 +680,3 @@ function _kpi(cls,lbl,val,sub){
     '<div class="kpi-sub">'+sub+'</div></div>';
 }
 function _pct(n,d){return d?Math.round(n/d*100)+'%':'0%';}
-
-/* ---- KSL-4 pivot overview ---- */
-function _buildKsl4Pivot(rows) {
-  if (!rows || !rows.length) {
-    return '<div class="sc" style="margin-bottom:0">'+
-      '<div class="sc-head"><h2>KSL-4 — Comment &amp; AOS Issue Overview</h2></div>'+
-      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No KSL-4 records in the cu
