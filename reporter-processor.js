@@ -26,14 +26,7 @@
       if (lbl) lbl.textContent = 'All';
       var list = document.getElementById('lang-dd-list');
       if (list) list.innerHTML = '';
-      var up = document.getElementById('upload-section');
-      var dp = document.getElementById('data-section');
-      var sb = document.getElementById('rpt-sidebar');
-      var eb = document.getElementById('export-btns');
-      if(up) up.style.display = '';
-      if(dp) { dp.style.display = 'none'; }
-      if(sb) sb.style.display  = 'none';
-      if(eb) eb.style.display  = 'none';
+      _showUpload();
       var rc = document.getElementById('record-count');
       if(rc) rc.textContent = '';
     },
@@ -75,6 +68,27 @@
     },
   };
 
+  /* ---- UI state helpers ---- */
+  function _showUpload() {
+    var up = document.getElementById('upload-section');
+    var dp = document.getElementById('data-section');
+    var sb = document.getElementById('rpt-sidebar');
+    var eb = document.getElementById('export-btns');
+    var cb = document.getElementById('rpt-clear-btn');
+    if(up) up.style.display = '';
+    if(dp) dp.style.display = 'none';
+    if(sb) sb.style.display = 'none';
+    if(eb) eb.style.display = 'none';
+    if(cb) cb.style.display = 'none';
+  }
+
+  function _showData() {
+    var up = document.getElementById('upload-section');
+    var dp = document.getElementById('data-section');
+    if(up) up.style.display = 'none';
+    if(dp) dp.style.display = 'flex';
+  }
+
   /* ---- helpers ---- */
   function clean(v){ return String(v==null?'':v).trim(); }
 
@@ -96,12 +110,6 @@
   /*
    * Column resolver — builds a case-insensitive, whitespace-normalised lookup
    * from the actual keys present in a parsed row object.
-   *
-   * Usage:
-   *   var col = _makeColResolver(rows[0]);
-   *   col(row, 'Incident Ticket')  // finds key regardless of case/spacing
-   *
-   * Each canonical name maps to one or more accepted aliases tried in order.
    */
   var COL_ALIASES = {
     'Incident Ticket':    ['incident ticket', 'incidentticket', 'ticket', 'inc ticket', 'incident_ticket'],
@@ -132,30 +140,20 @@
   };
 
   function _makeColResolver(sampleRow) {
-    // Build a normalised-key → actual-key map from whatever the row has
     var keyMap = {};
     Object.keys(sampleRow).forEach(function(k) {
       keyMap[k.toLowerCase().replace(/\s+/g,' ').trim()] = k;
     });
-
     return function get(row, canonicalName) {
-      // 1. Try exact match first (fastest, covers most cases)
       if (row[canonicalName] !== undefined) return row[canonicalName];
-
-      // 2. Try each alias
       var aliases = COL_ALIASES[canonicalName] || [];
       for (var i = 0; i < aliases.length; i++) {
         var actualKey = keyMap[aliases[i]];
-        if (actualKey !== undefined && row[actualKey] !== undefined) {
-          return row[actualKey];
-        }
+        if (actualKey !== undefined && row[actualKey] !== undefined) return row[actualKey];
       }
-
-      // 3. Fallback: case-insensitive scan of the canonical name itself
       var normCanon = canonicalName.toLowerCase().replace(/\s+/g,' ').trim();
       var fallbackKey = keyMap[normCanon];
       if (fallbackKey !== undefined) return row[fallbackKey];
-
       return '';
     };
   }
@@ -194,7 +192,7 @@
         return;
       }
       try {
-        var result = _mergeWorkbook(wb, logLines);
+        var result = _mergeWorkbook(wb);
         var name = wb._filename || ('workbook ' + (logLines.length + 1));
         logLines.push({
           type: result.added > 0 ? 'ok' : 'warn',
@@ -206,13 +204,21 @@
       }
     });
 
+    // Only proceed to show data UI if we actually got rows
+    if (window.RPT.allData.length === 0) {
+      logLines.push({ type: 'warn', msg: 'No rows were imported. Check that the file has an "Incident Ticket" column and at least one data row.' });
+      _showImportLog(logLines);
+      return;
+    }
+
     _populateUnique();
     _updateDropdowns();
     _buildLangDropdown();
     _applyFiltersOnly();
+    _showData();           // ← explicitly show data section only now
     window.renderTables();
     _showImportLog(logLines);
-    console.log('[RPT] total allData:', window.RPT.allData.length, '| filtered:', window.RPT.filtered.length);
+    console.log('[RPT] allData:', window.RPT.allData.length, '| filtered:', window.RPT.filtered.length);
   }
 
   /* ---- Merge one workbook into allData ---- */
@@ -226,15 +232,12 @@
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval:'' });
       if (!rows.length) return;
 
-      // Build column resolver once per sheet using the first row as sample
       var col = _makeColResolver(rows[0]);
 
-      // Warn once if the ticket column couldn't be found by exact match
-      var sampleTicket = col(rows[0], 'Incident Ticket');
-      if (sampleTicket === '' && rows.length > 1) {
-        // Check if resolved via alias by logging actual keys
-        var actualKeys = Object.keys(rows[0]).join(', ');
-        colWarning = 'Header "Incident Ticket" not found exactly — resolved via alias. Actual headers: ' + actualKeys.slice(0, 120);
+      // Diagnostic: warn if exact header match failed
+      if (rows[0]['Incident Ticket'] === undefined && !colWarning) {
+        colWarning = 'Headers resolved via alias. Sheet "' + sn + '" actual headers: '
+          + Object.keys(rows[0]).slice(0, 10).join(', ');
       }
 
       rows.forEach(function(r) {
@@ -251,13 +254,13 @@
           ticket:         ticket,
           dateClosed:     formatDate(col(r, 'DATE_CLOSE')),
           dateTimeBreach: formatDate(breachRaw),
-          status:         clean(col(r, 'Status'))   || 'N/A',
+          status:         clean(col(r, 'Status'))        || 'N/A',
           queue:          clean(col(r, 'Queue')),
           priority:       clean(col(r, 'Priority')),
-          language:       clean(col(r, 'ISO_Language')) || 'Unknown',
-          tool:           clean(col(r, 'Tool'))         || 'Unknown',
+          language:       clean(col(r, 'ISO_Language'))  || 'Unknown',
+          tool:           clean(col(r, 'Tool'))          || 'Unknown',
           topic:          clean(col(r, 'TOPIC')),
-          sla:            clean(col(r, 'SLA_Code'))     || 'Unknown',
+          sla:            clean(col(r, 'SLA_Code'))      || 'Unknown',
           slaN:           clean(col(r, 'SLA_N')),
           breachDesc:     clean(col(r, 'Breach_Description')),
           compassId:      clean(col(r, 'COMPASS ID')),
@@ -298,22 +301,6 @@
     window.RPT.uniqueValues=uv;
   }
 
-  /* ---- Build language checkbox list ---- */
-  function _buildLangDropdown() {
-    var list = document.getElementById('lang-dd-list');
-    if (!list) return;
-    var langs = (window.RPT.uniqueValues.languages || []).slice().sort();
-    list.innerHTML = langs.map(function(lang) {
-      var id = 'lang-cb-' + lang.replace(/[^a-zA-Z0-9]/g,'_');
-      return '<label class="lang-dd-item" for="'+id+'">'+
-        '<input type="checkbox" id="'+id+'" value="'+_escAttr(lang)+'" checked '+
-        'onchange="window._onLangChange()">'+
-        '<span>'+_esc(lang)+'</span>'+
-        '</label>';
-    }).join('');
-    if (typeof window._updateLangLabel === 'function') window._updateLangLabel();
-  }
-
   function _updateDropdowns(){
     var uv=window.RPT.uniqueValues;
     function fill(id,arr){
@@ -331,11 +318,23 @@
     if(fe)fe.innerHTML='<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
     var fa=document.getElementById('filter-aos');
     if(fa)fa.innerHTML='<option value="All">All</option><option value="Y">AOS Only</option><option value="N">Non-AOS</option>';
+    // NOTE: visibility is now controlled by _showData() / _showUpload() — not here
+  }
 
-    var up=document.getElementById('upload-section');
-    var dp=document.getElementById('data-section');
-    if(up) up.style.display='none';
-    if(dp) dp.style.display='flex';
+  /* ---- Build language checkbox list ---- */
+  function _buildLangDropdown() {
+    var list = document.getElementById('lang-dd-list');
+    if (!list) return;
+    var langs = (window.RPT.uniqueValues.languages || []).slice().sort();
+    list.innerHTML = langs.map(function(lang) {
+      var id = 'lang-cb-' + lang.replace(/[^a-zA-Z0-9]/g,'_');
+      return '<label class="lang-dd-item" for="'+id+'">'+
+        '<input type="checkbox" id="'+id+'" value="'+_escAttr(lang)+'" checked '+
+        'onchange="window._onLangChange()">'+
+        '<span>'+_esc(lang)+'</span>'+
+        '</label>';
+    }).join('');
+    if (typeof window._updateLangLabel === 'function') window._updateLangLabel();
   }
 
   function _applyFiltersOnly(){
@@ -371,7 +370,9 @@
   function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function _escAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
-  document.addEventListener('DOMContentLoaded',function(){
+  // Ensure upload screen shown on page load
+  document.addEventListener('DOMContentLoaded', function(){
+    _showUpload();
     ['filter-week','filter-sla','filter-excl',
      'filter-aos','filter-tool','filter-queue','filter-sheet']
       .forEach(function(id){
