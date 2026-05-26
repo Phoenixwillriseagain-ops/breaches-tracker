@@ -11,8 +11,12 @@
     // Legacy single-file entry point — now routes through multi-import
     loadFile: function(file) { window.RPT.loadFiles([file]); },
 
-    // Multi-file entry point
-    loadFiles: function(files) { _startMultiImport(files); },
+    // Multi-file entry point.
+    // Accepts an array of ALREADY-PARSED SheetJS workbook objects
+    // (reporter-importer.js reads files and passes workbooks here).
+    loadFiles: function(workbooks) {
+      _startMultiImport(workbooks);
+    },
 
     // Public method called by language dropdown checkboxes
     applyFilters: function() { _applyFilters(); },
@@ -23,7 +27,6 @@
       window.RPT.aosFiltered = [];
       window.RPT.uniqueValues= {};
       _hideImportLog();
-      // Reset lang dropdown label
       var lbl = document.getElementById('lang-trigger-label');
       if (lbl) lbl.textContent = 'All';
       var list = document.getElementById('lang-dd-list');
@@ -40,13 +43,15 @@
       if(rc) rc.textContent = '';
     },
 
+    // Alias used by reporter-importer.js clearAll button
+    clearAll: function() { window.RPT.clearData(); },
+
     clearFilters: function() {
       ['filter-week','filter-sla','filter-excl','filter-aos','filter-tool','filter-queue','filter-sheet']
         .forEach(function(id){
           var el=document.getElementById(id);
           if(el) el.value='All';
         });
-      // Reset language: check all
       document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb){
         cb.checked = true;
       });
@@ -70,8 +75,6 @@
     },
 
     // Returns the count of unique Incident Tickets in a given dataset array.
-    // V2 files always have multiple rows per ticket (one row per breach event).
-    // This is the only correct way to count tickets — never use data.length.
     countUniqueTickets: function(data) {
       var seen = new Set();
       (data || []).forEach(function(r) { if (r.ticket) seen.add(r.ticket); });
@@ -114,59 +117,47 @@
     if (el) el.style.display = 'none';
   }
 
-  /* ---- Multi-file sequential import ---- */
-  function _startMultiImport(files) {
+  /* ---- Multi-workbook import (workbooks already parsed by reporter-importer.js) ---- */
+  function _startMultiImport(workbooks) {
     _hideImportLog();
     var logLines = [];
-    var idx = 0;
 
-    function next() {
-      if (idx >= files.length) {
-        _populateUnique();
-        _updateDropdowns();
-        _buildLangDropdown();
-        _applyFiltersOnly();
-        window.renderTables();
-        _showImportLog(logLines);
-        console.log('[RPT] total allData:', window.RPT.allData.length);
-        return;
-      }
-      var file = files[idx++];
-      if (!/\.xlsx$/i.test(file.name)) {
-        logLines.push({ type:'error', msg: file.name + ' \u2014 only .xlsx files are accepted' });
-        next();
-        return;
-      }
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          var wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
-          var result = _mergeWorkbook(wb);
-          logLines.push({ type: 'ok', msg: file.name + ' \u2014 ' + result.added + ' row(s) imported (' + result.uniqueTickets + ' unique ticket(s))' });
-        } catch(err) {
-          logLines.push({ type:'error', msg: file.name + ' \u2014 ' + err.message });
-        }
-        next();
-      };
-      reader.onerror = function() {
-        logLines.push({ type:'error', msg: file.name + ' \u2014 read error' });
-        next();
-      };
-      reader.readAsArrayBuffer(file);
+    if (!Array.isArray(workbooks) || !workbooks.length) {
+      logLines.push({ type: 'error', msg: 'No workbooks provided.' });
+      _showImportLog(logLines);
+      return;
     }
 
-    next();
+    workbooks.forEach(function(wb) {
+      // wb is a SheetJS workbook object — already has .SheetNames & .Sheets
+      if (!wb || !wb.SheetNames) {
+        logLines.push({ type: 'error', msg: 'Invalid workbook object received.' });
+        return;
+      }
+      try {
+        var result = _mergeWorkbook(wb);
+        var name = wb._filename || ('workbook ' + (logLines.length + 1));
+        logLines.push({
+          type: 'ok',
+          msg: name + ' \u2014 ' + result.added + ' row(s) imported (' + result.uniqueTickets + ' unique ticket(s))'
+        });
+      } catch(err) {
+        logLines.push({ type: 'error', msg: (wb._filename || 'workbook') + ' \u2014 ' + err.message });
+      }
+    });
+
+    _populateUnique();
+    _updateDropdowns();
+    _buildLangDropdown();
+    _applyFiltersOnly();
+    window.renderTables();
+    _showImportLog(logLines);
+    console.log('[RPT] total allData:', window.RPT.allData.length);
   }
 
   /* ---- Merge one workbook into allData ---- */
-  // NOTE: We intentionally do NOT deduplicate rows by ticket number here.
-  // V2 data has multiple rows per ticket — one row per breach event.
-  // Row-level dedup would silently discard valid breach timestamps and
-  // corrupt the heatmap and dashboard counts.
-  // Unique ticket counting happens at render time via countUniqueTickets().
   function _mergeWorkbook(wb) {
     var added = 0;
-    // Track unique tickets in THIS workbook for the import log message only
     var ticketsInFile = new Set();
 
     wb.SheetNames.forEach(function(sn) {
@@ -179,7 +170,6 @@
 
         var aosF = normBool(r['AOS']||'');
         var aosI = normBool(r['AOS Issue']||'');
-        // KSL-4 uses 'DATE_TIME_Breach'; KM-1 uses 'DATE_TIME_Breach UTC'
         var breachRaw = r['DATE_TIME_Breach'] || r['DATE_TIME_Breach UTC'] || '';
         window.RPT.allData.push({
           ticket:         ticket,
@@ -196,13 +186,11 @@
           breachDesc:     clean(r['Breach_Description']||''),
           compassId:      clean(r['COMPASS ID']||''),
           reason:         clean(r['Reason']||''),
-          // KM-1 specific: caller action / reopen reason category
           action:         clean(r['Action']||''),
           aos:            aosF,
           agent:          clean(r['Agent']||''),
           bmsId:          clean(r['BMS ID']||''),
           comment:        clean(r['Comment']||''),
-          // KSL-4 specific: description of the AOS-side issue
           aosIssue:       clean(r['AOS Issue']||''),
           excluded:       normBool(r['Excluded']||''),
           jira:           clean(r['Jira']||''),
@@ -228,7 +216,6 @@
       if(r.queue    && uv.queues.indexOf(r.queue)<0)       uv.queues.push(r.queue);
       if(r.sheet    && uv.sheets.indexOf(r.sheet)<0)       uv.sheets.push(r.sheet);
     });
-    // Numeric sort for week numbers; alpha sort for the rest
     uv.weeks.sort(function(a,b){return Number(a)-Number(b);});
     uv.slas.sort();uv.languages.sort();uv.tools.sort();uv.queues.sort();
     window.RPT.uniqueValues=uv;
@@ -297,7 +284,6 @@
       if(shF!=='All'&&r.sheet    !==shF) return false;
       return true;
     });
-    // Toolbar pill now updated by renderTables() with unique ticket count
   }
 
   function _applyFilters(){
