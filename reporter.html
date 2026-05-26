@@ -335,140 +335,46 @@
     .ksl4-pivot td.cell-empty {
       color: var(--faint); font-style: italic; font-size: 11px;
     }
-    /* AOS badge inside pivot */
     .ksl4-pivot .aos-badge {
       display: inline-block; padding: 1px 7px; border-radius: 20px;
       font-size: 10px; font-weight: 700;
       background: #d6ecec; color: var(--primary);
     }
 
-    /* ================================================================
-       PIVOT TABLE (reporter-pivot.js)
-       ================================================================ */
+    /* ---- Pivot table (reporter-pivot.js) ---- */
     .pvt-wrap {}
-
-    .pvt-controls {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      margin-bottom: 14px;
-    }
-    .pvt-ctrl-lbl {
-      font-size: 12px; color: var(--muted);
-      display: flex; align-items: center; gap: 6px;
-    }
-    .pvt-sel {
-      padding: 5px 8px; border: 1px solid var(--border);
-      border-radius: 6px; background: var(--bg);
-      font-size: 12px; color: var(--text); font-family: inherit;
-      cursor: pointer;
-    }
+    .pvt-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .pvt-ctrl-lbl { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .pvt-sel { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 12px; color: var(--text); font-family: inherit; cursor: pointer; }
     .pvt-sel:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
-    .pvt-ctrl-sep {
-      font-size: 16px; color: var(--faint); font-weight: 300;
-    }
-    .pvt-export-btn {
-      margin-left: auto;
-      padding: 5px 12px; border: 1px solid var(--border);
-      border-radius: 6px; background: var(--bg);
-      font-size: 12px; color: var(--text); font-family: inherit;
-      cursor: pointer; transition: background .15s, border-color .15s;
-    }
+    .pvt-ctrl-sep { font-size: 16px; color: var(--faint); font-weight: 300; }
+    .pvt-export-btn { margin-left: auto; padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 12px; color: var(--text); font-family: inherit; cursor: pointer; transition: background .15s, border-color .15s; }
     .pvt-export-btn:hover { background: var(--surface-2); border-color: var(--primary); color: var(--primary); }
-
     .pvt-table-scroll { overflow-x: auto; }
-    .pvt-table {
-      border-collapse: collapse;
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    /* Corner / column headers */
-    .pvt-th {
-      background: var(--bg); padding: 6px 10px;
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .04em; color: var(--muted);
-      border-bottom: 2px solid var(--border);
-      border-right: 1px solid var(--divider);
-      white-space: nowrap;
-    }
+    .pvt-table { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .pvt-th { background: var(--bg); padding: 6px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 2px solid var(--border); border-right: 1px solid var(--divider); white-space: nowrap; }
     .pvt-th-corner { text-align: left; min-width: 90px; }
     .pvt-th-col    { text-align: center; min-width: 56px; }
-    .pvt-th-total  {
-      text-align: center; min-width: 56px;
-      border-left: 2px solid var(--border);
-      color: var(--text);
-    }
-
-    /* Row label cells */
-    .pvt-row-lbl {
-      padding: 5px 10px; border-bottom: 1px solid var(--divider);
-      border-right: 1px solid var(--divider);
-      font-size: 12px; font-weight: 600; color: var(--muted);
-      background: var(--bg); white-space: nowrap;
-    }
-
-    /* Data cells */
-    .pvt-cell {
-      padding: 5px 8px; border-bottom: 1px solid var(--divider);
-      border-right: 1px solid var(--divider);
-      text-align: center; font-weight: 700; font-size: 12px;
-      cursor: default; transition: transform .1s;
-    }
+    .pvt-th-total  { text-align: center; min-width: 56px; border-left: 2px solid var(--border); color: var(--text); }
+    .pvt-row-lbl { padding: 5px 10px; border-bottom: 1px solid var(--divider); border-right: 1px solid var(--divider); font-size: 12px; font-weight: 600; color: var(--muted); background: var(--bg); white-space: nowrap; }
+    .pvt-cell { padding: 5px 8px; border-bottom: 1px solid var(--divider); border-right: 1px solid var(--divider); text-align: center; font-weight: 700; font-size: 12px; cursor: default; transition: transform .1s; }
     .pvt-cell:hover { transform: scale(1.15); z-index: 2; position: relative; }
-
-    /* Totals */
-    .pvt-total-cell {
-      padding: 5px 10px; border-bottom: 1px solid var(--divider);
-      text-align: center; font-weight: 700; font-size: 12px;
-      background: var(--bg);
-    }
+    .pvt-total-cell { padding: 5px 10px; border-bottom: 1px solid var(--divider); text-align: center; font-weight: 700; font-size: 12px; background: var(--bg); }
     .pvt-row-total  { border-left: 2px solid var(--border); color: var(--text); }
     .pvt-col-total  { border-right: 1px solid var(--divider); color: var(--text); }
     .pvt-grand-total { border-left: 2px solid var(--border); color: var(--primary); font-size: 13px; }
-
-    /* Grand total row */
-    .pvt-grand-row .pvt-grand-lbl {
-      padding: 6px 10px; border-top: 2px solid var(--border);
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .04em; color: var(--text); background: var(--bg);
-      border-right: 1px solid var(--divider);
-    }
-    .pvt-grand-row .pvt-total-cell {
-      border-top: 2px solid var(--border);
-    }
-
-    /* Misc */
+    .pvt-grand-row .pvt-grand-lbl { padding: 6px 10px; border-top: 2px solid var(--border); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text); background: var(--bg); border-right: 1px solid var(--divider); }
+    .pvt-grand-row .pvt-total-cell { border-top: 2px solid var(--border); }
     .pvt-msg  { font-size: 12px; color: var(--muted); padding: 20px 0; }
     .pvt-warn { color: var(--warning, #964219); }
-    .pvt-note {
-      font-size: 10px; color: var(--faint); margin-top: 10px;
-    }
+    .pvt-note { font-size: 10px; color: var(--faint); margin-top: 10px; }
 
-    /* ================================================================
-       PER-SLA DRILL-DOWN PANELS (reporter-pivot.js)
-       ================================================================ */
-    .sla-pvt-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-    }
+    /* ---- Per-SLA drill-down panels ---- */
+    .sla-pvt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
     @media (max-width: 1200px) { .sla-pvt-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 800px)  { .sla-pvt-grid { grid-template-columns: 1fr; } }
-
-    .mini-pvt-wrap {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .mini-pvt-title {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .05em; color: var(--muted);
-      padding: 7px 10px;
-      border-bottom: 1px solid var(--divider);
-      background: var(--surface);
-    }
-
+    .mini-pvt-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .mini-pvt-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--divider); background: var(--surface); }
     .sla-pvt-panel .sc-head h2 { font-size: 13px; font-weight: 700; }
 
     @media (max-width: 720px) {
@@ -529,4 +435,523 @@
 
           <label>Tool</label>    <select id="filter-tool"><option value="All">All</option></select>
           <label>Queue</label>   <select id="filter-queue"><option value="All">All</option></select>
-          <label>Sheet</label>   <select id="filter-sheet">
+          <label>Sheet</label>   <select id="filter-sheet"><option value="All">All</option></select>
+          <label>Excluded</label><select id="filter-excl"><option value="All">All</option></select>
+          <label>AOS</label>     <select id="filter-aos"><option value="All">All</option></select>
+        </div>
+      </div>
+      <button class="btn-outline" style="margin-top:auto" onclick="window.RPT.clearFilters()">Reset Filters</button>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="reporter-main">
+
+      <div id="rpt-import-log"></div>
+
+      <!-- UPLOAD -->
+      <div id="upload-section">
+        <div class="drop-zone" id="drop-zone">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="12" y1="11" x2="12" y2="17"/>
+            <polyline points="9,14 12,11 15,14"/>
+          </svg>
+          <p>Drop your Breaches.xlsx file(s) here</p>
+          <span>or click to browse &nbsp;&middot;&nbsp; .xlsx only &nbsp;&middot;&nbsp; multiple files supported</span>
+        </div>
+        <div id="upload-status"></div>
+      </div>
+
+      <!-- DATA -->
+      <div id="data-section">
+        <div class="kpi-row" id="kpi-row"></div>
+        <div class="rpt-tabs" id="tab-bar">
+          <button class="rpt-tab active" data-tab="dashboard">Dashboard</button>
+          <button class="rpt-tab" data-tab="trends">Trends</button>
+          <button class="rpt-tab" data-tab="heatmap">Heatmap</button>
+          <button class="rpt-tab" data-tab="pivot">Pivot</button>
+          <button class="rpt-tab" data-tab="overview">Overview</button>
+          <button class="rpt-tab" data-tab="all">All Records</button>
+          <button class="rpt-tab" data-tab="ksl4">KSL-4</button>
+          <button class="rpt-tab" data-tab="km1">KM-1</button>
+          <button class="rpt-tab" data-tab="ksl5a">KSL-5a</button>
+          <button class="rpt-tab" data-tab="km2">KM-2</button>
+          <button class="rpt-tab" data-tab="aos">AOS</button>
+          <button class="rpt-tab" data-tab="jira">Jira Tracker</button>
+        </div>
+        <div id="tab-content"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="reporter-processor.js"></script>
+<script src="reporter-pivot.js"></script>
+<script src="reporter-importer.js"></script>
+
+<script>
+var _currentTab     = 'dashboard';
+var _currentPage    = 1;
+var _currentTabRows = [];
+var PAGE_SIZE       = 50;
+
+window.renderTables = function() {
+  var data = window.RPT ? window.RPT.filtered : [];
+  _buildKPIs(data);
+  _renderTab(_currentTab);
+  document.getElementById('rpt-sidebar').style.display = '';
+  document.getElementById('export-btns').style.display = '';
+  var cb = document.getElementById('rpt-clear-btn');
+  if (cb) cb.style.display = '';
+  var rc = document.getElementById('record-count');
+  if (rc) rc.textContent = window.RPT.countUniqueTickets(data) + ' unique ticket(s)';
+};
+window.renderCharts = function() {};
+
+function _tabRows(name, data) {
+  if (name === 'all')   return data;
+  if (name === 'ksl4')  return data.filter(function(r){return r.sla==='KSL-4';});
+  if (name === 'km1')   return data.filter(function(r){return r.sla==='KM-1';});
+  if (name === 'ksl5a') return data.filter(function(r){return r.sla==='KSL-5a';});
+  if (name === 'km2')   return data.filter(function(r){return r.sla==='KM-2';});
+  if (name === 'aos')   return data.filter(function(r){return r.isAos;});
+  return null;
+}
+
+function _renderTab(name) {
+  _currentTab  = name;
+  _currentPage = 1;
+  var data = window.RPT ? window.RPT.filtered : [];
+  var el   = document.getElementById('tab-content');
+  if (!el) return;
+
+  if (name === 'pivot') {
+    _currentTabRows = [];
+    el.innerHTML = '<div id="pivot-container"></div>';
+    if (typeof window.renderPivot === 'function') window.renderPivot();
+    return;
+  }
+
+  if (name === 'ksl4') {
+    var ksl4rows = data.filter(function(r){return r.sla==='KSL-4';});
+    _currentTabRows = ksl4rows;
+    el.innerHTML =
+      _buildKsl4Pivot(ksl4rows) +
+      _buildTable('KSL-4 — All Records', ksl4rows, 'ksl4');
+    return;
+  }
+
+  var rows = _tabRows(name, data);
+  if (rows !== null) {
+    _currentTabRows = rows;
+    var labels = {
+      all: 'All Records', km1: 'KM-1',
+      ksl5a: 'KSL-5a', km2: 'KM-2', aos: 'AOS Records'
+    };
+    el.innerHTML = _buildTable(labels[name] || name, rows, name);
+  } else {
+    _currentTabRows = [];
+    if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
+    else if (name === 'trends')    el.innerHTML = _buildTrends(data);
+    else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
+    else if (name === 'overview')  el.innerHTML = _buildOverview(data);
+    else if (name === 'jira')      el.innerHTML = _buildJiraTracker(data);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('tab-bar').addEventListener('click', function(e) {
+    var btn = e.target.closest('.rpt-tab');
+    if (!btn) return;
+    document.querySelectorAll('.rpt-tab').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    _renderTab(btn.dataset.tab);
+  });
+
+  var trigger  = document.getElementById('lang-trigger');
+  var dropdown = document.getElementById('lang-dropdown');
+
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    dropdown.classList.contains('open') ? _closeLangDropdown() : _openLangDropdown();
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('lang-filter-wrap').contains(e.target)) {
+      _closeLangDropdown();
+    }
+  });
+
+  document.getElementById('lang-select-all').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb) { cb.checked = true; });
+    _onLangChange();
+  });
+
+  document.getElementById('lang-deselect-all').addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+    _onLangChange();
+  });
+});
+
+function _openLangDropdown() {
+  var trigger  = document.getElementById('lang-trigger');
+  var dropdown = document.getElementById('lang-dropdown');
+  var wrap     = document.getElementById('lang-filter-wrap');
+  var rect     = wrap.getBoundingClientRect();
+  dropdown.style.top    = (rect.bottom + 4) + 'px';
+  dropdown.style.left   = rect.left + 'px';
+  dropdown.style.width  = Math.max(rect.width, 180) + 'px';
+  dropdown.classList.add('open');
+  trigger.classList.add('open');
+  trigger.setAttribute('aria-expanded', 'true');
+}
+
+function _closeLangDropdown() {
+  var trigger  = document.getElementById('lang-trigger');
+  var dropdown = document.getElementById('lang-dropdown');
+  dropdown.classList.remove('open');
+  trigger.classList.remove('open');
+  trigger.setAttribute('aria-expanded', 'false');
+}
+
+window._onLangChange = function _onLangChange() {
+  if (window.RPT) window.RPT.applyFilters();
+  _updateLangLabel();
+};
+
+function _updateLangLabel() {
+  var all     = document.querySelectorAll('#lang-dd-list input[type=checkbox]');
+  var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
+  var lbl     = document.getElementById('lang-trigger-label');
+  if (!lbl) return;
+  if (checked.length === 0)               lbl.textContent = 'None';
+  else if (checked.length === all.length) lbl.textContent = 'All';
+  else if (checked.length <= 2)           lbl.textContent = Array.from(checked).map(function(c){ return c.value; }).join(', ');
+  else                                     lbl.textContent = checked.length + ' selected';
+}
+
+window.getSelectedLanguages = function() {
+  var checked = document.querySelectorAll('#lang-dd-list input[type=checkbox]:checked');
+  return new Set(Array.from(checked).map(function(c){ return c.value; }));
+};
+</script>
+
+<script>
+/* ---- KPIs ---- */
+function _buildKPIs(data) {
+  var uniqueTotal = window.RPT.countUniqueTickets(data);
+  var activeData  = data.filter(function(r){return r.excluded==='N';});
+  var uniqueActive= window.RPT.countUniqueTickets(activeData);
+  var excl        = uniqueTotal - uniqueActive;
+
+  function bySla(s){
+    return window.RPT.countUniqueTickets(activeData.filter(function(r){return r.sla===s;}));
+  }
+  var aos = window.RPT.countUniqueTickets(activeData.filter(function(r){return r.isAos;}));
+  var wk  = {}; data.forEach(function(r){if(r.week)wk[r.week]=1;});
+
+  document.getElementById('kpi-row').innerHTML =
+    _kpi('c-total','Unique Tickets', uniqueTotal, Object.keys(wk).length+' week(s)')+
+    _kpi('c-ksl4', 'KSL-4',  bySla('KSL-4'),  _pct(bySla('KSL-4'),  uniqueActive))+
+    _kpi('c-km1',  'KM-1',   bySla('KM-1'),   _pct(bySla('KM-1'),   uniqueActive))+
+    _kpi('c-ksl5a','KSL-5a', bySla('KSL-5a'), _pct(bySla('KSL-5a'), uniqueActive))+
+    _kpi('c-km2',  'KM-2',   bySla('KM-2'),   _pct(bySla('KM-2'),   uniqueActive))+
+    _kpi('c-aos',  'AOS',    aos, _pct(aos, uniqueActive))+
+    _kpi('c-excl', 'Excluded', excl, _pct(excl, uniqueTotal));
+}
+function _kpi(cls,lbl,val,sub){
+  return '<div class="kpi-card '+cls+'">'+
+    '<div class="kpi-lbl">'+lbl+'</div>'+
+    '<div class="kpi-val">'+val+'</div>'+
+    '<div class="kpi-sub">'+sub+'</div></div>';
+}
+function _pct(n,d){return d?Math.round(n/d*100)+'%':'0%';}
+
+/* ---- KSL-4 pivot overview ---- */
+function _buildKsl4Pivot(rows) {
+  if (!rows || !rows.length) {
+    return '<div class="sc" style="margin-bottom:0">'+
+      '<div class="sc-head"><h2>KSL-4 — Comment &amp; AOS Issue Overview</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No KSL-4 records in the current filter.</p></div>'+
+      '</div>';
+  }
+  var seen = {}, deduped = [];
+  rows.forEach(function(r){ if (!seen[r.ticket]) { seen[r.ticket]=true; deduped.push(r); } });
+  deduped.sort(function(a,b){ if(a.isAos!==b.isAos) return a.isAos?-1:1; return a.ticket<b.ticket?-1:a.ticket>b.ticket?1:0; });
+  var aosCount=deduped.filter(function(r){return r.isAos;}).length;
+  var exclCount=deduped.filter(function(r){return r.excluded==='Y';}).length;
+  var withComment=deduped.filter(function(r){return r.comment&&r.comment.trim();}).length;
+  var withAosIssue=deduped.filter(function(r){return r.aosIssue&&r.aosIssue.trim();}).length;
+  var badge=deduped.length+' unique ticket'+(deduped.length!==1?'s':'');
+  if(aosCount)  badge+=' &bull; '+aosCount+' AOS';
+  if(exclCount) badge+=' &bull; '+exclCount+' excl';
+  var trs=deduped.map(function(r){
+    var hasComment=r.comment&&r.comment.trim();
+    var hasAosIssue=r.aosIssue&&r.aosIssue.trim();
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
+      '<td style="font-family:monospace;font-size:11px;white-space:nowrap">'+_esc(r.ticket)+'</td>'+
+      '<td style="white-space:nowrap;font-size:11px">'+_esc(r.week)+'</td>'+
+      '<td>'+_esc(r.language)+'</td>'+
+      '<td>'+_esc(r.tool)+'</td>'+
+      '<td>'+_esc(r.reason)+'</td>'+
+      '<td style="text-align:center">'+(r.isAos?'<span class="aos-badge">AOS</span>':'')+'</td>'+
+      '<td style="text-align:center">'+(r.excluded==='Y'?'<span class="chip ch-other">Excl</span>':'')+'</td>'+
+      (hasComment?'<td class="cell-comment">'+_esc(r.comment)+'</td>':'<td class="cell-empty">&mdash;</td>')+
+      (hasAosIssue?'<td class="cell-aos-issue">'+_esc(r.aosIssue)+'</td>':'<td class="cell-empty">&mdash;</td>')+
+    '</tr>';
+  }).join('');
+  var summaryNote=[];
+  if(withComment)  summaryNote.push(withComment+' ticket(s) have a comment');
+  if(withAosIssue) summaryNote.push(withAosIssue+' ticket(s) have an AOS Issue noted');
+  var noteHtml=summaryNote.length?'<p style="font-size:10px;color:var(--muted);margin-top:10px">&#9432;&nbsp;'+summaryNote.join(' &bull; ')+'. Excluded rows shown at reduced opacity. Sorted: AOS first, then by ticket ID.</p>':'';
+  return '<div class="sc" style="margin-bottom:0">'+
+    '<div class="sc-head"><h2>KSL-4 &mdash; Comment &amp; AOS Issue Overview</h2><span class="badge">'+badge+'</span></div>'+
+    '<div class="sc-body"><div class="ksl4-pivot-wrap">'+
+    '<table class="ksl4-pivot"><thead><tr>'+
+    '<th>Ticket</th><th>Week</th><th>Language</th><th>Tool</th><th>Reason</th>'+
+    '<th style="text-align:center">AOS</th><th style="text-align:center">Excl</th>'+
+    '<th class="col-comment">Comment</th><th class="col-aos-issue">AOS Issue</th>'+
+    '</tr></thead><tbody>'+(trs||'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+'</tbody></table>'+
+    '</div>'+noteHtml+'</div></div>';
+}
+
+/* ---- Dashboard ---- */
+function _buildDashboard(data) {
+  var a=data.filter(function(r){return r.excluded==='N';});
+  var T={},R={},L={},S={},Q={},P={},ACT={};
+  a.forEach(function(r){
+    if(r.tool)     T[r.tool]    =(T[r.tool]||0)+1;
+    if(r.reason)   R[r.reason]  =(R[r.reason]||0)+1;
+    if(r.language) L[r.language]=(L[r.language]||0)+1;
+    if(r.sla)      S[r.sla]     =(S[r.sla]||0)+1;
+    if(r.queue)    Q[r.queue]   =(Q[r.queue]||0)+1;
+    if(r.topic)    P[r.topic]   =(P[r.topic]||0)+1;
+    if(r.sla==='KM-1'&&r.action) ACT[r.action]=(ACT[r.action]||0)+1;
+  });
+  var km1Chart=Object.keys(ACT).length?_card('KM-1 Action Breakdown',_bar(_top(ACT,10),'#006494')):'';
+  return '<div class="dash-grid">'+
+    _card('Top Tools',      _bar(_top(T,10),'#006494'))+
+    _card('Breach Reasons', _bar(_top(R,10),'#964219'))+
+    _card('Languages',      _bar(_top(L,10),'#437a22'))+
+    _card('SLA Breakdown',  _bar(_top(S,8), '#7a39bb'))+
+    _card('By Queue',       _bar(_top(Q,8), '#01696f'))+
+    _card('By Topic',       _bar(_top(P,8), '#d19900'))+
+    km1Chart+'</div>';
+}
+function _top(map,n){ return Object.keys(map).map(function(k){return[k,map[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n); }
+function _bar(entries,color){
+  if(!entries.length) return '<p style="color:var(--muted);font-size:12px">No data</p>';
+  var max=entries[0][1];
+  return '<div class="bar-chart">'+entries.map(function(e){
+    return '<div class="bar-row">'+
+      '<div class="bar-lbl" title="'+_esc(e[0])+'">'+_esc(e[0])+'</div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+Math.round(e[1]/max*100)+'%;background:'+color+'"></div></div>'+
+      '<div class="bar-cnt">'+e[1]+'</div></div>';
+  }).join('')+'</div>';
+}
+function _card(title,body){ return '<div class="sc"><div class="sc-head"><h2>'+title+'</h2></div><div class="sc-body">'+body+'</div></div>'; }
+function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ---- Trends ---- */
+function _buildTrends(data) {
+  if (!data||!data.length) return '<div class="sc"><div class="sc-head"><h2>Trends</h2></div><div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No data loaded.</p></div></div>';
+  var weekSet={};
+  data.forEach(function(r){if(r.week)weekSet[r.week]=1;});
+  var weeks=Object.keys(weekSet).sort();
+  if(!weeks.length) return '<div class="sc"><div class="sc-head"><h2>Trends</h2></div><div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No week data found.</p></div></div>';
+  var COLS=[
+    {key:'total', label:'Total', rgb:[40,37,29],   f:function(r){return true;}},
+    {key:'ksl4',  label:'KSL-4', rgb:[0,100,148],  f:function(r){return r.sla==='KSL-4';}},
+    {key:'km1',   label:'KM-1',  rgb:[0,100,148],  f:function(r){return r.sla==='KM-1';}},
+    {key:'ksl5a', label:'KSL-5a',rgb:[150,66,25],  f:function(r){return r.sla==='KSL-5a';}},
+    {key:'km2',   label:'KM-2',  rgb:[122,57,187], f:function(r){return r.sla==='KM-2';}},
+    {key:'aos',   label:'AOS',   rgb:[1,105,111],  f:function(r){return r.isAos;}},
+    {key:'excl',  label:'Excl',  rgb:[160,44,123], f:function(r){return r.excluded==='Y';}}
+  ];
+  var activeData=data.filter(function(r){return r.excluded==='N';});
+  function countUniqByWeek(rows,weekVal){var seen={};rows.forEach(function(r){if(r.week===weekVal&&r.ticket)seen[r.ticket]=1;});return Object.keys(seen).length;}
+  var matrix={};
+  COLS.forEach(function(col){
+    matrix[col.key]={};
+    var src=(col.key==='total'||col.key==='excl')?data:activeData;
+    var filtered=src.filter(col.f);
+    weeks.forEach(function(w){matrix[col.key][w]=countUniqByWeek(filtered,w);});
+  });
+  var colMax={};
+  COLS.forEach(function(col){var m=0;weeks.forEach(function(w){if(matrix[col.key][w]>m)m=matrix[col.key][w];});colMax[col.key]=m||1;});
+  var BASE_RGB=[247,246,242];
+  function cellStyle(col,val){
+    if(val===0) return 'background:#f0eeea;color:#bab9b4';
+    var ratio=Math.pow(val/colMax[col.key],0.6);
+    var tr=col.rgb[0],tg=col.rgb[1],tb=col.rgb[2];
+    var r=Math.round(BASE_RGB[0]+ratio*(tr-BASE_RGB[0])),g=Math.round(BASE_RGB[1]+ratio*(tg-BASE_RGB[1])),b=Math.round(BASE_RGB[2]+ratio*(tb-BASE_RGB[2]));
+    return 'background:rgb('+r+','+g+','+b+');color:'+(0.299*r+0.587*g+0.114*b<145?'#ffffff':'#28251d');
+  }
+  function deltaStyle(val){if(val>0)return 'background:#fce8e8;color:#a12c3a';if(val<0)return 'background:#e3f2e8;color:#2e6b38';return 'background:#f0eeea;color:#bab9b4';}
+  function deltaLabel(val){if(val===null)return '&#8212;';if(val===0)return '&#177;0';return(val>0?'+':'')+val;}
+  var thead='<thead><tr><th class="tt-row-lbl">Week</th>'+COLS.map(function(c){return '<th>'+_esc(c.label)+'</th>';}).join('')+'</tr></thead>';
+  var tbodyRows='';
+  weeks.forEach(function(w,wi){
+    tbodyRows+='<tr><td class="tt-row-lbl">'+_esc(w)+'</td>'+COLS.map(function(col){var v=matrix[col.key][w];return '<td style="'+cellStyle(col,v)+'" title="'+_esc(col.label)+' | '+_esc(w)+' : '+v+' unique ticket(s)">'+v+'</td>';}).join('')+'</tr>';
+    tbodyRows+='<tr class="delta-row"><td class="tt-row-lbl" style="color:var(--faint,#bab9b4);font-size:9px">WoW &#916;</td>'+COLS.map(function(col){if(wi===0)return '<td style="'+deltaStyle(null)+'">&#8212;</td>';var d=matrix[col.key][w]-matrix[col.key][weeks[wi-1]];return '<td style="'+deltaStyle(d)+'" title="WoW delta '+_esc(col.label)+' | '+_esc(w)+'">'+deltaLabel(d)+'</td>';}).join('')+'</tr>';
+  });
+  var summaryRow='<tr style="border-top:2px solid var(--border)"><td class="tt-row-lbl" style="font-weight:700;color:var(--text)">All weeks</td>'+COLS.map(function(col){var total=0;weeks.forEach(function(w){total+=matrix[col.key][w];});return '<td style="background:var(--bg);font-weight:700;color:var(--text);border-radius:5px">'+total+'</td>';}).join('')+'</tr>';
+  var legendItems=COLS.map(function(col){return '<div class="trends-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb('+col.rgb[0]+','+col.rgb[1]+','+col.rgb[2]+')"></span><span>'+_esc(col.label)+'</span></div>';}).join('');
+  return '<div class="sc"><div class="sc-head"><h2>Weekly KPI Trends</h2><span class="badge">'+weeks.length+' week'+(weeks.length!==1?'s':'')+' &bull; '+window.RPT.countUniqueTickets(data)+' unique ticket(s)</span></div>'+
+    '<div class="sc-body"><div class="trend-table-wrap"><table class="trend-table">'+thead+'<tbody>'+tbodyRows+summaryRow+'</tbody></table></div>'+
+    '<div class="trends-legend" style="margin-top:12px">'+legendItems+'</div>'+
+    '<p style="font-size:10px;color:var(--faint);margin-top:8px">Counts = unique Incident Tickets per week. Total &amp; Excl include all rows; other columns count active (Excluded=N) rows only. WoW &#916; row shows change vs. previous week.</p></div></div>';
+}
+
+/* ---- Heatmap ---- */
+function _buildHeatmap(data) {
+  function parseBreach(str){
+    if(!str) return null;
+    var parts=str.split(' ');
+    if(parts.length<2) return null;
+    var dp=parts[0].split('.'),tp=parts[1].split(':');
+    if(dp.length<3||tp.length<2) return null;
+    var d=new Date(Date.UTC(parseInt(dp[2],10),parseInt(dp[1],10)-1,parseInt(dp[0],10),parseInt(tp[0],10)));
+    if(isNaN(d.getTime())) return null;
+    return{dow:(d.getUTCDay()+6)%7,hour:parseInt(tp[0],10)};
+  }
+  var days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  function buildMatrix(rows){
+    var mx=[],i,j;for(i=0;i<7;i++){mx.push([]);for(j=0;j<24;j++)mx[i].push(0);}
+    rows.forEach(function(r){var p=parseBreach(r.dateTimeBreach);if(p)mx[p.dow][p.hour]++;});
+    return mx;
+  }
+  function renderHM(mx,accentRgb){
+    var i,j,maxVal=0;
+    for(i=0;i<7;i++)for(j=0;j<24;j++)if(mx[i][j]>maxVal)maxVal=mx[i][j];
+    if(!maxVal)maxVal=1;
+    var BR=247,BG=246,BB=242,TR=accentRgb[0],TG=accentRgb[1],TB=accentRgb[2];
+    function hmC(v){if(!v)return 'background:#f0eeea;color:var(--faint)';var ratio=Math.pow(v/maxVal,0.65),r=Math.round(BR+ratio*(TR-BR)),g=Math.round(BG+ratio*(TG-BG)),b=Math.round(BB+ratio*(TB-BB));return 'background:rgb('+r+','+g+','+b+');color:'+(0.299*r+0.587*g+0.114*b<140?'#ffffff':'#28251d');}
+    var hdr='<th></th>';for(j=0;j<24;j++)hdr+='<th>'+(j%2===0?String(j).padStart(2,'0')+'h':'')+'</th>';
+    var body=days.map(function(dn,di){var c='<td class="hm-day-lbl">'+dn+'</td>';for(j=0;j<24;j++){var v=mx[di][j];c+='<td style="'+hmC(v)+'" title="'+dn+' '+String(j).padStart(2,'0')+':00 \u2014 '+v+' breach(es)">'+(v>0?v:'')+'</td>';}return '<tr>'+c+'</tr>';}).join('');
+    var sw='';[0,.2,.4,.6,.8,1].forEach(function(r){var rr=Math.round(BR+r*(TR-BR)),gg=Math.round(BG+r*(TG-BG)),bb=Math.round(BB+r*(TB-BB));sw+='<span style="background:rgb('+rr+','+gg+','+bb+')"></span>';});
+    return '<div class="heatmap-wrap"><table class="heatmap-table"><thead><tr>'+hdr+'</tr></thead><tbody>'+body+'</tbody></table><div class="hm-legend"><span>Less</span><div class="hm-legend-swatch">'+sw+'</div><span>More</span></div></div>';
+  }
+  var SLAs=[{key:'KSL-4',rgb:[0,100,148]},{key:'KM-1',rgb:[0,100,148]},{key:'KSL-5a',rgb:[150,66,25]},{key:'KM-2',rgb:[122,57,187]}];
+  var active=data.filter(function(r){return r.excluded==='N';});
+  var combinedMx=buildMatrix(active);
+  var panels=SLAs.map(function(s){
+    var rows=active.filter(function(r){return r.sla===s.key;});
+    var mx=buildMatrix(rows);
+    return '<div class="kpi-hm-panel"><div class="kpi-hm-head"><h3>'+s.key+'</h3><span class="badge">'+rows.length+' events</span></div><div class="kpi-hm-body">'+renderHM(mx,s.rgb)+'</div></div>';
+  }).join('');
+  return '<div class="sc"><div class="sc-head"><h2>Breach Heatmap — Combined (Active)</h2><span class="badge">'+active.length+' events</span></div><div class="sc-body">'+renderHM(combinedMx,[1,105,111])+'</div></div>'+
+    '<div class="kpi-heatmap-grid">'+panels+'</div>';
+}
+
+/* ---- Overview ---- */
+function _buildOverview(data) {
+  var wkSet={};
+  data.forEach(function(r){if(r.week)wkSet[r.week]=1;});
+  var weeks=Object.keys(wkSet).sort();
+  var SLAs=['KSL-4','KM-1','KSL-5a','KM-2'];
+  function uniq(rows){var s={};rows.forEach(function(r){if(r.ticket)s[r.ticket]=1;});return Object.keys(s).length;}
+  var thead='<tr><th>Week</th><th>Total</th><th>Active</th><th>Excl</th><th>AOS</th>'+SLAs.map(function(s){return '<th>'+s+'</th>';}).join('')+'</tr>';
+  var tbody=weeks.map(function(w){
+    var wr=data.filter(function(r){return r.week===w;});
+    var wa=wr.filter(function(r){return r.excluded==='N';});
+    return '<tr><td>'+_esc(w)+'</td><td>'+uniq(wr)+'</td><td>'+uniq(wa)+'</td>'+
+      '<td>'+(uniq(wr)-uniq(wa))+'</td><td>'+uniq(wa.filter(function(r){return r.isAos;}))+'</td>'+
+      SLAs.map(function(s){return '<td>'+uniq(wa.filter(function(r){return r.sla===s;}))+'</td>';}).join('')+'</tr>';
+  }).join('');
+  return '<div class="sc"><div class="sc-head"><h2>Weekly Overview</h2></div><div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div></div></div>';
+}
+
+/* ---- Table ---- */
+function _buildTable(title, rows, tab) {
+  var uniq={};rows.forEach(function(r){if(r.ticket)uniq[r.ticket]=1;});
+  var badge=Object.keys(uniq).length+' unique ticket(s) / '+rows.length+' row(s)';
+  var sliced=rows.slice((_currentPage-1)*PAGE_SIZE, _currentPage*PAGE_SIZE);
+  var aosCol=(tab==='aos');
+  var thead='<tr>'+
+    '<th>Ticket</th><th>Week</th><th>SLA</th><th>Language</th><th>Tool</th>'+
+    '<th>Queue</th><th>Reason</th>'+(aosCol?'<th>AOS Issue</th>':'')+'<th>Excl</th>'+
+  '</tr>';
+  var tbody=sliced.map(function(r){
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
+      '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
+      '<td>'+_esc(r.week)+'</td>'+
+      '<td><span class="chip ch-'+String(r.sla).toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(r.sla)+'</span></td>'+
+      '<td>'+_esc(r.language)+'</td>'+
+      '<td>'+_esc(r.tool)+'</td>'+
+      '<td>'+_esc(r.queue)+'</td>'+
+      '<td>'+_esc(r.reason)+'</td>'+
+      (aosCol?'<td style="font-size:11px;color:#006494">'+_esc(r.aosIssue||'')+'</td>':'')+
+      '<td style="text-align:center">'+(r.excluded==='Y'?'<span class="chip ch-other">Y</span>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+  var totalPages=Math.ceil(rows.length/PAGE_SIZE)||1;
+  var pg='';
+  if(totalPages>1){
+    pg='<div class="pg">';
+    pg+='<button class="pg-btn" '+((_currentPage===1)?'disabled':'')+' onclick="_goPage('+(_currentPage-1)+')">&#8592;</button>';
+    var s=Math.max(1,_currentPage-2),e=Math.min(totalPages,s+4);
+    for(var i=s;i<=e;i++) pg+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+    pg+='<button class="pg-btn" '+((_currentPage===totalPages)?'disabled':'')+' onclick="_goPage('+(_currentPage+1)+')">&#8594;</button>';
+    pg+='<span style="margin-left:4px">'+_currentPage+'/'+totalPages+'</span></div>';
+  }
+  return '<div class="sc"><div class="sc-head"><h2>'+_esc(title)+'</h2><span class="badge">'+badge+'</span></div>'+
+    '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div>'+pg+'</div></div>';
+}
+
+window._goPage = function(p) {
+  var total = Math.ceil(_currentTabRows.length / PAGE_SIZE) || 1;
+  _currentPage = Math.max(1, Math.min(p, total));
+  var el = document.getElementById('tab-content');
+  if (!el) return;
+  var labels = { all:'All Records', km1:'KM-1', ksl5a:'KSL-5a', km2:'KM-2', aos:'AOS Records' };
+  if (_currentTab === 'ksl4') {
+    el.innerHTML = _buildKsl4Pivot(_currentTabRows) + _buildTable('KSL-4 — All Records', _currentTabRows, 'ksl4');
+  } else {
+    el.innerHTML = _buildTable(labels[_currentTab] || _currentTab, _currentTabRows, _currentTab);
+  }
+};
+
+/* ---- Jira Tracker ---- */
+function _buildJiraTracker(data) {
+  var JIRA_BASE = (window.RPT_CONFIG && window.RPT_CONFIG.jiraBaseUrl) || 'https://atc.bmwgroup.net/jira/browse/';
+  var jiraRx = /IMQM-\d+/gi;
+  var seen = {}, tickets = [];
+  data.forEach(function(r) {
+    var t = r.ticket || '';
+    var matches = t.match(jiraRx);
+    if (!matches) return;
+    matches.forEach(function(jt) {
+      var key = jt.toUpperCase();
+      if (!seen[key]) {
+        seen[key] = true;
+        tickets.push({ jira: key, sla: r.sla, tool: r.tool, reason: r.reason, week: r.week });
+      }
+    });
+  });
+  if (!tickets.length) return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2></div><div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No IMQM-* tickets found in the current filter.</p></div></div>';
+  tickets.sort(function(a,b){ return a.jira < b.jira ? -1 : a.jira > b.jira ? 1 : 0; });
+  var tbody = tickets.map(function(t) {
+    var slaClass = 'ch-' + String(t.sla||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    return '<tr>'+
+      '<td><a class="jira-link" href="'+JIRA_BASE+t.jira+'" target="_blank" rel="noopener noreferrer">'+_esc(t.jira)+'</a></td>'+
+      '<td><span class="chip '+slaClass+'">'+_esc(t.sla||'')+'</span></td>'+
+      '<td>'+_esc(t.tool||'')+'</td>'+
+      '<td>'+_esc(t.reason||'')+'</td>'+
+      '<td>'+_esc(t.week||'')+'</td>'+
+    '</tr>';
+  }).join('');
+  return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2><span class="badge">'+tickets.length+' unique IMQM ticket(s)</span></div>'+
+    '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr><th>Jira Ticket</th><th>SLA</th><th>Tool</th><th>Reason</th><th>Week</th></tr></thead>'+
+    '<tbody>'+tbody+'</tbody></table></div></div></div>';
+}
+</script>
+
+</body>
+</html>
