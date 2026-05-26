@@ -502,7 +502,6 @@ var PAGE_SIZE       = 50;
 window.renderTables = function() {
   var data = window.RPT ? window.RPT.filtered : [];
 
-  // Show data section, hide upload section
   var up = document.getElementById('upload-section');
   var dp = document.getElementById('data-section');
   if (up) up.style.display = 'none';
@@ -679,6 +678,477 @@ function _kpi(cls,lbl,val,sub){
     '<div class="kpi-sub">'+sub+'</div></div>';
 }
 function _pct(n,d){return d?Math.round(n/d*100)+'%':'0%';}
+
+/* ---- KSL-4 pivot overview ---- */
+function _buildKsl4Pivot(rows) {
+  if (!rows || !rows.length) {
+    return '<div class="sc" style="margin-bottom:0">'+
+      '<div class="sc-head"><h2>KSL-4 — Comment &amp; AOS Issue Overview</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No KSL-4 records in the current filter.</p></div></div>';
+  }
+
+  /* group by jiraTicket, pick primary row (seenTicket first occurrence) */
+  var byTicket = {};
+  rows.forEach(function(r) {
+    var k = r.jiraTicket || r.ticket || '—';
+    if (!byTicket[k]) byTicket[k] = { primary: r, comments: [], aosIssues: [] };
+    var g = byTicket[k];
+    if (r.comment && r.comment.trim()) g.comments.push(r.comment.trim());
+    if (r.aosIssue && r.aosIssue.trim()) g.aosIssues.push(r.aosIssue.trim());
+  });
+
+  var keys = Object.keys(byTicket).sort();
+  var h = '<div class="sc" style="margin-bottom:0">'+
+    '<div class="sc-head"><h2>KSL-4 — Comment &amp; AOS Issue Overview</h2>'+
+    '<span class="badge">'+keys.length+' ticket(s)</span></div>'+
+    '<div class="sc-body"><div class="ksl4-pivot-wrap">'+
+    '<table class="ksl4-pivot">'+
+    '<thead><tr>'+
+    '<th>Week</th><th>Jira</th><th>Queue</th><th>Language</th><th>Tool</th>'+
+    '<th class="col-comment">Comment</th>'+
+    '<th class="col-aos-issue">AOS Issue</th>'+
+    '<th>Excl?</th>'+
+    '</tr></thead><tbody>';
+
+  keys.forEach(function(k) {
+    var g   = byTicket[k];
+    var r   = g.primary;
+    var exc = r.excluded === 'Y';
+    var comments  = g.comments.length  ? [...new Set(g.comments)].join(' / ')  : '';
+    var aosIssues = g.aosIssues.length ? [...new Set(g.aosIssues)].join(' / ') : '';
+
+    h += '<tr'+(exc?' class="excl"':'')+'>'+
+      '<td>'+_esc(r.week||'—')+'</td>'+
+      '<td>'+(r.jiraTicket?'<a class="jira-link" href="https://jira.example.com/browse/'+_esc(r.jiraTicket)+'" target="_blank">'+_esc(r.jiraTicket)+'</a>':_esc(k))+'</td>'+
+      '<td>'+_esc(r.queue||'—')+'</td>'+
+      '<td>'+_esc(r.language||'—')+'</td>'+
+      '<td>'+_esc(r.tool||'—')+'</td>'+
+      '<td class="cell-comment">'+(comments?_esc(comments):'<span class="cell-empty">—</span>')+'</td>'+
+      '<td class="cell-aos-issue">'+(aosIssues?'<span class="aos-badge">AOS</span> '+_esc(aosIssues):'<span class="cell-empty">—</span>')+'</td>'+
+      '<td>'+(exc?'<span class="chip ch-other">Y</span>':'')+'</td>'+
+      '</tr>';
+  });
+
+  h += '</tbody></table></div></div></div>';
+  return h;
+}
+
+/* ---- Generic table builder ---- */
+function _buildTable(title, rows, tabName) {
+  var unique = window.RPT.countUniqueTickets(rows);
+  var h = '<div class="sc">'+
+    '<div class="sc-head"><h2>'+_esc(title)+'</h2>'+
+    '<span class="badge">'+unique+' ticket(s) / '+rows.length+' row(s)</span>'+
+    '<button class="btn-outline" style="font-size:11px;padding:3px 10px;margin-left:8px" onclick="_exportCurrentTab()">Export Tab</button>'+
+    '</div>'+
+    '<div class="sc-body">'+
+    '<table class="dt"><thead><tr>'+
+    '<th>Week</th><th>SLA</th><th>Jira</th><th>Queue</th><th>Language</th>'+
+    '<th>Tool</th><th>Sheet</th><th>AOS?</th><th>Excl?</th><th>Comment</th>'+
+    '</tr></thead><tbody>';
+
+  var page  = _currentPage;
+  var start = (page-1)*PAGE_SIZE;
+  var slice = rows.slice(start, start+PAGE_SIZE);
+
+  slice.forEach(function(r){
+    var exc = r.excluded==='Y';
+    h += '<tr'+(exc?' class="excl"':'')+'>'+
+      '<td>'+_esc(r.week||'')+'</td>'+
+      '<td><span class="chip '+_slaChip(r.sla)+'">'+_esc(r.sla||'')+'</span></td>'+
+      '<td>'+(r.jiraTicket?'<a class="jira-link" href="https://jira.example.com/browse/'+_esc(r.jiraTicket)+'" target="_blank">'+_esc(r.jiraTicket)+'</a>':_esc(r.ticket||''))+'</td>'+
+      '<td>'+_esc(r.queue||'')+'</td>'+
+      '<td>'+_esc(r.language||'')+'</td>'+
+      '<td>'+_esc(r.tool||'')+'</td>'+
+      '<td>'+_esc(r.sheet||'')+'</td>'+
+      '<td>'+(r.isAos?'<span class="chip ch-y">Y</span>':'')+'</td>'+
+      '<td>'+(exc?'<span class="chip ch-other">Y</span>':'')+'</td>'+
+      '<td style="max-width:260px;font-size:11px;color:var(--muted)">'+_esc(r.comment||'')+'</td>'+
+      '</tr>';
+  });
+
+  h += '</tbody></table>';
+  h += _buildPager(rows.length, page);
+  h += '</div></div>';
+  return h;
+}
+
+/* ---- Pager ---- */
+function _buildPager(total, page) {
+  var pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) return '';
+  var h = '<div class="pg">';
+  h += '<button class="pg-btn" '+(page<=1?'disabled':'')+' onclick="_goPage('+( page-1)+')">&#8592;</button>';
+  var lo = Math.max(1, page-2), hi = Math.min(pages, page+2);
+  if (lo > 1) { h += '<button class="pg-btn" onclick="_goPage(1)">1</button>'; if (lo>2) h += '<span>…</span>'; }
+  for (var i=lo;i<=hi;i++) h += '<button class="pg-btn'+(i===page?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+  if (hi < pages) { if (hi<pages-1) h += '<span>…</span>'; h += '<button class="pg-btn" onclick="_goPage('+pages+')">'+pages+'</button>'; }
+  h += '<button class="pg-btn" '+(page>=pages?'disabled':'')+' onclick="_goPage('+(page+1)+')">&#8594;</button>';
+  h += '<span style="margin-left:4px">'+total+' row(s)</span></div>';
+  return h;
+}
+function _goPage(p) {
+  _currentPage = p;
+  var data  = window.RPT ? window.RPT.filtered : [];
+  var rows  = _currentTabRows;
+  var el    = document.getElementById('tab-content');
+  if (!el || !rows) return;
+  var labels = { all:'All Records', km1:'KM-1', ksl5a:'KSL-5a', km2:'KM-2', aos:'AOS Records' };
+  if (_currentTab === 'ksl4') {
+    el.innerHTML = _buildKsl4Pivot(rows) + _buildTable('KSL-4 — All Records', rows, 'ksl4');
+  } else {
+    el.innerHTML = _buildTable(labels[_currentTab]||_currentTab, rows, _currentTab);
+  }
+}
+function _exportCurrentTab() {
+  if (window.RPT && window.RPT.exportTab) window.RPT.exportTab(_currentTabRows, _currentTab);
+}
+
+/* ---- Dashboard ---- */
+function _buildDashboard(data) {
+  var active = data.filter(function(r){return r.excluded==='N';});
+
+  function countBySla(s){ return window.RPT.countUniqueTickets(active.filter(function(r){return r.sla===s;})); }
+
+  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
+  var slaTot = window.RPT.countUniqueTickets(active);
+
+  /* SLA breakdown bar chart */
+  var slaBar = '<div class="bar-chart">';
+  slas.forEach(function(s){
+    var n = countBySla(s);
+    var pct = slaTot ? Math.round(n/slaTot*100) : 0;
+    var col = s==='KSL-4'?'#006494':s==='KM-1'?'#4f98a3':s==='KSL-5a'?'#964219':'#7a39bb';
+    slaBar += '<div class="bar-row">'+
+      '<span class="bar-lbl">'+s+'</span>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
+      '<span class="bar-cnt">'+n+'</span></div>';
+  });
+  slaBar += '</div>';
+
+  /* Queue bar chart */
+  var qMap = {}; active.forEach(function(r){if(r.queue)qMap[r.queue]=(qMap[r.queue]||0)+1;});
+  var qArr = Object.keys(qMap).map(function(k){return{k:k,n:qMap[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10);
+  var qMax = qArr.length ? qArr[0].n : 1;
+  var qBar = '<div class="bar-chart">';
+  qArr.forEach(function(x){
+    var pct = Math.round(x.n/qMax*100);
+    qBar += '<div class="bar-row">'+
+      '<span class="bar-lbl" title="'+_esc(x.k)+'">'+_esc(x.k)+'</span>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--primary)"></div></div>'+
+      '<span class="bar-cnt">'+x.n+'</span></div>';
+  });
+  qBar += '</div>';
+
+  /* KSL-4 by Comment bar chart */
+  var ksl4active = active.filter(function(r){return r.sla==='KSL-4' && !r.isAos;});
+  var cmtMap = {};
+  ksl4active.forEach(function(r){
+    var c = (r.comment||'').trim() || '(no comment)';
+    if (!cmtMap[c]) cmtMap[c] = new Set();
+    cmtMap[c].add(r.jiraTicket || r.ticket || r._rowKey || Math.random());
+  });
+  var cmtArr = Object.keys(cmtMap).map(function(k){return{k:k,n:cmtMap[k].size};})
+    .sort(function(a,b){return b.n-a.n;}).slice(0,10);
+  var cmtMax  = cmtArr.length ? cmtArr[0].n : 1;
+  var cmtBar  = '<div class="bar-chart">';
+  cmtArr.forEach(function(x){
+    var pct = Math.round(x.n/cmtMax*100);
+    cmtBar += '<div class="bar-row">'+
+      '<span class="bar-lbl" title="'+_esc(x.k)+'">'+_esc(x.k)+'</span>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:#006494"></div></div>'+
+      '<span class="bar-cnt">'+x.n+'</span></div>';
+  });
+  cmtBar += '</div>';
+
+  /* Language bar */
+  var lMap = {}; active.forEach(function(r){if(r.language)lMap[r.language]=(lMap[r.language]||0)+1;});
+  var lArr = Object.keys(lMap).map(function(k){return{k:k,n:lMap[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10);
+  var lMax = lArr.length ? lArr[0].n : 1;
+  var lBar = '<div class="bar-chart">';
+  lArr.forEach(function(x){
+    var pct = Math.round(x.n/lMax*100);
+    lBar += '<div class="bar-row">'+
+      '<span class="bar-lbl" title="'+_esc(x.k)+'">'+_esc(x.k)+'</span>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--warning,#964219)"></div></div>'+
+      '<span class="bar-cnt">'+x.n+'</span></div>';
+  });
+  lBar += '</div>';
+
+  return '<div class="dash-grid">'+
+    _sc('SLA Breakdown', slaBar, slaTot+' active ticket(s)')+
+    _sc('Top Queues (rows)', qBar)+
+    _sc('KSL-4 by Comment', cmtBar)+
+    _sc('Top Languages (rows)', lBar)+
+    '</div>';
+}
+
+/* ---- Trends ---- */
+function _buildTrends(data) {
+  var active = data.filter(function(r){return r.excluded==='N';});
+  var weeks  = [];
+  var wSet   = {};
+  active.forEach(function(r){if(r.week && !wSet[r.week]){wSet[r.week]=1;weeks.push(r.week);}});
+  weeks.sort();
+
+  if (!weeks.length) return '<p style="color:var(--muted);font-size:12px;padding:20px">No data.</p>';
+
+  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
+  var colors = {'KSL-4':'#006494','KM-1':'#4f98a3','KSL-5a':'#964219','KM-2':'#7a39bb'};
+
+  /* build matrix: sla x week -> unique count */
+  function cell(s,w){
+    return window.RPT.countUniqueTickets(active.filter(function(r){return r.sla===s && r.week===w;}));
+  }
+
+  var maxVal = 0;
+  slas.forEach(function(s){ weeks.forEach(function(w){ var v=cell(s,w); if(v>maxVal)maxVal=v; }); });
+
+  function heatColor(v, col) {
+    if (!v) return 'background:var(--divider);color:transparent';
+    var pct = maxVal ? v/maxVal : 0;
+    var alpha = 0.15 + pct*0.75;
+    return 'background:'+col+Math.round(alpha*255).toString(16).padStart(2,'0')+';color:'+(pct>0.5?'#fff':col);
+  }
+
+  /* header */
+  var h = '<div class="trends-grid"><div class="sc"><div class="sc-head"><h2>Weekly Breach Trends</h2></div><div class="sc-body">';
+  h += '<div class="trend-table-wrap"><table class="trend-table">';
+  h += '<thead><tr><th class="tt-row-lbl">SLA</th>';
+  weeks.forEach(function(w){ h += '<th>'+_esc(w)+'</th>'; });
+  h += '<th>Total</th></tr></thead><tbody>';
+
+  slas.forEach(function(s){
+    var col = colors[s];
+    h += '<tr><td class="tt-row-lbl">'+s+'</td>';
+    var rowTotal = 0;
+    weeks.forEach(function(w){
+      var v = cell(s,w); rowTotal+=v;
+      h += '<td style="'+heatColor(v,col)+'">'+( v||'')+'</td>';
+    });
+    h += '<td style="font-weight:700;text-align:center;padding:0 8px">'+rowTotal+'</td>';
+    h += '</tr>';
+
+    /* delta row */
+    h += '<tr class="delta-row"><td class="tt-row-lbl"></td>';
+    for (var i=0;i<weeks.length;i++){
+      if (i===0){ h += '<td></td>'; continue; }
+      var prev = cell(s,weeks[i-1]), curr = cell(s,weeks[i]);
+      var d = curr-prev;
+      var dc = d>0?'color:#a12c7b':d<0?'color:#437a22':'color:var(--faint)';
+      h += '<td style="'+dc+';text-align:center;font-size:10px">'+(d>0?'+':'')+( d||'')+'</td>';
+    }
+    h += '<td></td></tr>';
+    h += '<tr class="spacer-row"><td colspan="'+(weeks.length+2)+'"></td></tr>';
+  });
+
+  h += '</tbody></table></div>';
+  h += '<div class="trends-legend">';
+  slas.forEach(function(s){
+    h += '<div class="trends-legend-item"><div class="trends-legend-swatch"><span style="background:'+colors[s]+'"></span></div>'+s+'</div>';
+  });
+  h += '</div></div></div></div>';
+  return h;
+}
+
+/* ---- Heatmap ---- */
+function _buildHeatmap(data) {
+  var active = data.filter(function(r){return r.excluded==='N';});
+
+  /* day-of-week x hour matrix */
+  var days  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var hours = [];
+  for (var i=0;i<24;i++) hours.push(i);
+
+  var matrix = {};
+  days.forEach(function(d){ matrix[d]={}; hours.forEach(function(h){ matrix[d][h]=0; }); });
+
+  active.forEach(function(r){
+    if (!r.breachDate) return;
+    var dt = new Date(r.breachDate);
+    if (isNaN(dt)) return;
+    var dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+    var hr  = dt.getHours();
+    if (matrix[dow]) matrix[dow][hr] = (matrix[dow][hr]||0)+1;
+  });
+
+  var maxVal = 0;
+  days.forEach(function(d){ hours.forEach(function(h){ if(matrix[d][h]>maxVal) maxVal=matrix[d][h]; }); });
+
+  function hmColor(v){
+    if (!v) return 'background:var(--divider);color:transparent';
+    var pct  = maxVal ? v/maxVal : 0;
+    var r    = Math.round(1 + pct*14);
+    var g    = Math.round(105 - pct*50);
+    var b    = Math.round(148 - pct*80);
+    return 'background:rgb('+r+','+g+','+b+');color:'+(pct>0.5?'#fff':'#006494');
+  }
+
+  var h = '<div class="sc"><div class="sc-head"><h2>Breach Heatmap — Day &times; Hour</h2></div><div class="sc-body">';
+  h += '<div class="heatmap-wrap"><table class="heatmap-table"><thead><tr><th></th>';
+  hours.forEach(function(hr){ h += '<th>'+(hr<10?'0':'')+hr+'</th>'; });
+  h += '</tr></thead><tbody>';
+  days.forEach(function(d){
+    h += '<tr><td class="hm-day-lbl">'+d+'</td>';
+    hours.forEach(function(hr){
+      var v = matrix[d][hr]||0;
+      h += '<td style="'+hmColor(v)+'" title="'+d+' '+hr+'h: '+v+'">'+( v||'')+'</td>';
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+
+  /* legend */
+  h += '<div class="hm-legend">Less ';
+  h += '<div class="hm-legend-swatch">';
+  [0,0.2,0.4,0.6,0.8,1].forEach(function(p){
+    var v = Math.round(p*maxVal);
+    h += '<span style="'+hmColor(v)+';display:inline-block;width:18px;height:12px;border-radius:2px"></span>';
+  });
+  h += '</div> More</div>';
+  h += '</div></div>';
+
+  /* per-KPI panels */
+  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
+  var colors = {'KSL-4':'#006494','KM-1':'#4f98a3','KSL-5a':'#964219','KM-2':'#7a39bb'};
+
+  h += '<div class="kpi-heatmap-grid">';
+  slas.forEach(function(sla){
+    var slaRows = active.filter(function(r){return r.sla===sla;});
+    var mat2 = {}; days.forEach(function(d){mat2[d]={}; hours.forEach(function(hr){mat2[d][hr]=0;});});
+    slaRows.forEach(function(r){
+      if(!r.breachDate) return;
+      var dt=new Date(r.breachDate); if(isNaN(dt)) return;
+      var dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+      var hr=dt.getHours();
+      if(mat2[dow]) mat2[dow][hr]=(mat2[dow][hr]||0)+1;
+    });
+    var mx2=0; days.forEach(function(d){hours.forEach(function(hr){if(mat2[d][hr]>mx2)mx2=mat2[d][hr];});});
+    var col = colors[sla];
+
+    function hmCol2(v){
+      if(!v) return 'background:var(--divider);color:transparent';
+      var pct=mx2?v/mx2:0;
+      var alpha=0.18+pct*0.72;
+      return 'background:'+col+Math.round(alpha*255).toString(16).padStart(2,'0')+';color:'+(pct>0.55?'#fff':col);
+    }
+
+    h += '<div class="kpi-hm-panel"><div class="kpi-hm-head"><h3>'+sla+'</h3>'+
+      '<span class="badge">'+window.RPT.countUniqueTickets(slaRows)+' tickets</span></div>'+
+      '<div class="kpi-hm-body"><div class="heatmap-wrap"><table class="heatmap-table"><thead><tr><th></th>';
+    hours.forEach(function(hr){h+='<th>'+(hr<10?'0':'')+hr+'</th>';});
+    h+='</tr></thead><tbody>';
+    days.forEach(function(d){
+      h+='<tr><td class="hm-day-lbl">'+d+'</td>';
+      hours.forEach(function(hr){
+        var v=mat2[d][hr]||0;
+        h+='<td style="'+hmCol2(v)+'" title="'+d+' '+hr+'h: '+v+'">'+( v||'')+'</td>';
+      });
+      h+='</tr>';
+    });
+    h+='</tbody></table></div></div></div>';
+  });
+  h += '</div>';
+
+  return h;
+}
+
+/* ---- Overview ---- */
+function _buildOverview(data) {
+  var active = data.filter(function(r){return r.excluded==='N';});
+  var weeks  = []; var wSet={}; active.forEach(function(r){if(r.week&&!wSet[r.week]){wSet[r.week]=1;weeks.push(r.week);}});
+  weeks.sort();
+  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
+
+  var h = '<div class="sc"><div class="sc-head"><h2>Overview — Unique Tickets by Week &amp; SLA</h2>'+
+    '<span class="badge">'+weeks.length+' week(s)</span></div><div class="sc-body">';
+
+  if (!weeks.length) { h += '<p style="color:var(--muted);font-size:12px;padding:20px">No data.</p></div></div>'; return h; }
+
+  h += '<div class="ksl4-pivot-wrap"><table class="ksl4-pivot"><thead><tr>'+
+    '<th>Week</th>';
+  slas.forEach(function(s){ h += '<th>'+s+'</th>'; });
+  h += '<th>Total</th></tr></thead><tbody>';
+
+  weeks.forEach(function(w){
+    var wRows = active.filter(function(r){return r.week===w;});
+    var tot   = window.RPT.countUniqueTickets(wRows);
+    h += '<tr><td style="font-weight:600">'+_esc(w)+'</td>';
+    slas.forEach(function(s){
+      var n = window.RPT.countUniqueTickets(wRows.filter(function(r){return r.sla===s;}));
+      h += '<td style="text-align:center;font-weight:700">'+( n||'')+'</td>';
+    });
+    h += '<td style="text-align:center;font-weight:700;color:var(--primary)">'+tot+'</td></tr>';
+  });
+
+  /* totals row */
+  h += '<tr style="border-top:2px solid var(--border)"><td style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--muted)">Total</td>';
+  slas.forEach(function(s){
+    var n = window.RPT.countUniqueTickets(active.filter(function(r){return r.sla===s;}));
+    h += '<td style="text-align:center;font-weight:700">'+n+'</td>';
+  });
+  h += '<td style="text-align:center;font-weight:700;color:var(--primary)">'+window.RPT.countUniqueTickets(active)+'</td></tr>';
+  h += '</tbody></table></div></div></div>';
+  return h;
+}
+
+/* ---- Jira Tracker ---- */
+function _buildJiraTracker(data) {
+  var jiraRows = data.filter(function(r){return r.jiraTicket && r.jiraTicket.trim();});
+  if (!jiraRows.length) {
+    return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px">No Jira tickets found in the current data.</p></div></div>';
+  }
+
+  var byJira = {};
+  jiraRows.forEach(function(r){
+    var k = r.jiraTicket.trim();
+    if (!byJira[k]) byJira[k] = { rows:[], slas:new Set(), weeks:new Set(), queues:new Set() };
+    byJira[k].rows.push(r);
+    if (r.sla)   byJira[k].slas.add(r.sla);
+    if (r.week)  byJira[k].weeks.add(r.week);
+    if (r.queue) byJira[k].queues.add(r.queue);
+  });
+
+  var keys = Object.keys(byJira).sort();
+  var h = '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2>'+
+    '<span class="badge">'+keys.length+' Jira ticket(s)</span></div><div class="sc-body">'+
+    '<table class="dt"><thead><tr>'+
+    '<th>Jira Ticket</th><th>SLA(s)</th><th>Week(s)</th><th>Queue(s)</th><th>Breach Rows</th><th>Excl?</th>'+
+    '</tr></thead><tbody>';
+
+  keys.forEach(function(k){
+    var g   = byJira[k];
+    var exc = g.rows.every(function(r){return r.excluded==='Y';});
+    h += '<tr'+(exc?' class="excl"':'')+'>'+
+      '<td><a class="jira-link" href="https://jira.example.com/browse/'+_esc(k)+'" target="_blank">'+_esc(k)+'</a></td>'+
+      '<td>'+Array.from(g.slas).map(function(s){return '<span class="chip '+_slaChip(s)+'">'+s+'</span>';}).join(' ')+'</td>'+
+      '<td>'+_esc(Array.from(g.weeks).sort().join(', '))+'</td>'+
+      '<td>'+_esc(Array.from(g.queues).join(', '))+'</td>'+
+      '<td style="text-align:center;font-weight:700">'+g.rows.length+'</td>'+
+      '<td>'+(exc?'<span class="chip ch-other">Y</span>':'')+'</td>'+
+      '</tr>';
+  });
+
+  h += '</tbody></table></div></div>';
+  return h;
+}
+
+/* ---- helpers ---- */
+function _sc(title, body, badge) {
+  return '<div class="sc"><div class="sc-head"><h2>'+_esc(title)+'</h2>'+(badge?'<span class="badge">'+badge+'</span>':'')+
+    '</div><div class="sc-body">'+body+'</div></div>';
+}
+function _slaChip(s){
+  if(s==='KSL-4') return 'ch-ksl4';
+  if(s==='KM-1')  return 'ch-km1';
+  if(s==='KSL-5a')return 'ch-ksl5a';
+  if(s==='KM-2')  return 'ch-km2';
+  return 'ch-other';
+}
+function _esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 </script>
 </body>
 </html>
