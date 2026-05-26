@@ -303,6 +303,45 @@
     }
     .jira-link:hover { text-decoration: underline; }
 
+    /* ---- KSL-4 Pivot table ---- */
+    .ksl4-pivot-wrap { overflow-x: auto; }
+    .ksl4-pivot {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .ksl4-pivot th {
+      background: var(--bg); padding: 6px 10px;
+      text-align: left; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .04em;
+      color: var(--muted); border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    .ksl4-pivot th.col-comment   { min-width: 220px; }
+    .ksl4-pivot th.col-aos-issue { min-width: 200px; }
+    .ksl4-pivot td {
+      padding: 7px 10px; border-bottom: 1px solid var(--divider);
+      vertical-align: top; font-size: 12px;
+    }
+    .ksl4-pivot tr:last-child td { border-bottom: none; }
+    .ksl4-pivot tr:hover td { background: var(--surface-2); }
+    .ksl4-pivot tr.excl td { opacity: .45; }
+    .ksl4-pivot td.cell-comment {
+      color: var(--text); font-size: 11px; line-height: 1.5;
+      max-width: 320px;
+    }
+    .ksl4-pivot td.cell-aos-issue {
+      color: #006494; font-size: 11px; line-height: 1.5;
+      max-width: 280px;
+    }
+    .ksl4-pivot td.cell-empty {
+      color: var(--faint); font-style: italic; font-size: 11px;
+    }
+    /* AOS badge inside pivot */
+    .ksl4-pivot .aos-badge {
+      display: inline-block; padding: 1px 7px; border-radius: 20px;
+      font-size: 10px; font-weight: 700;
+      background: #d6ecec; color: var(--primary);
+    }
+
     @media (max-width: 720px) {
       .reporter-layout { flex-direction: column; }
       .reporter-sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); }
@@ -451,11 +490,20 @@ function _renderTab(name) {
   var el   = document.getElementById('tab-content');
   if (!el) return;
 
+  if (name === 'ksl4') {
+    var ksl4rows = data.filter(function(r){return r.sla==='KSL-4';});
+    _currentTabRows = ksl4rows;
+    el.innerHTML =
+      _buildKsl4Pivot(ksl4rows) +
+      _buildTable('KSL-4 — All Records', ksl4rows, 'ksl4');
+    return;
+  }
+
   var rows = _tabRows(name, data);
   if (rows !== null) {
     _currentTabRows = rows;
     var labels = {
-      all: 'All Records', ksl4: 'KSL-4', km1: 'KM-1',
+      all: 'All Records', km1: 'KM-1',
       ksl5a: 'KSL-5a', km2: 'KM-2', aos: 'AOS Records'
     };
     el.innerHTML = _buildTable(labels[name] || name, rows, name);
@@ -578,6 +626,109 @@ function _kpi(cls,lbl,val,sub){
     '<div class="kpi-sub">'+sub+'</div></div>';
 }
 function _pct(n,d){return d?Math.round(n/d*100)+'%':'0%';}
+
+/* ============================================================
+   KSL-4 PIVOT OVERVIEW
+   One row per unique ticket — shows Comment + AOS Issue
+   alongside key fields for a fast qualitative overview.
+   ============================================================ */
+function _buildKsl4Pivot(rows) {
+  if (!rows || !rows.length) {
+    return '<div class="sc" style="margin-bottom:0">'+
+      '<div class="sc-head"><h2>KSL-4 — Comment &amp; AOS Issue Overview</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No KSL-4 records in the current filter.</p></div>'+
+      '</div>';
+  }
+
+  /* Deduplicate by ticket: keep the first row per ticket.
+     A ticket may have multiple breach-event rows (V2 model);
+     Comment and AOS Issue are ticket-level fields so we collapse. */
+  var seen = {};
+  var deduped = [];
+  rows.forEach(function(r) {
+    if (!seen[r.ticket]) {
+      seen[r.ticket] = true;
+      deduped.push(r);
+    }
+  });
+
+  /* Sort: AOS rows first, then by ticket */
+  deduped.sort(function(a, b) {
+    if (a.isAos !== b.isAos) return a.isAos ? -1 : 1;
+    return a.ticket < b.ticket ? -1 : a.ticket > b.ticket ? 1 : 0;
+  });
+
+  var aosCount  = deduped.filter(function(r){ return r.isAos; }).length;
+  var exclCount = deduped.filter(function(r){ return r.excluded==='Y'; }).length;
+  var withComment   = deduped.filter(function(r){ return r.comment && r.comment.trim(); }).length;
+  var withAosIssue  = deduped.filter(function(r){ return r.aosIssue && r.aosIssue.trim(); }).length;
+
+  var badge = deduped.length + ' unique ticket' + (deduped.length !== 1 ? 's' : '');
+  if (aosCount)  badge += ' &bull; ' + aosCount + ' AOS';
+  if (exclCount) badge += ' &bull; ' + exclCount + ' excl';
+
+  var trs = deduped.map(function(r) {
+    var hasComment  = r.comment  && r.comment.trim();
+    var hasAosIssue = r.aosIssue && r.aosIssue.trim();
+
+    var commentCell = hasComment
+      ? '<td class="cell-comment">'+_esc(r.comment)+'</td>'
+      : '<td class="cell-empty">&mdash;</td>';
+
+    var aosIssueCell = hasAosIssue
+      ? '<td class="cell-aos-issue">'+_esc(r.aosIssue)+'</td>'
+      : '<td class="cell-empty">&mdash;</td>';
+
+    var aosBadge = r.isAos
+      ? '<span class="aos-badge">AOS</span>'
+      : '';
+
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
+      '<td style="font-family:monospace;font-size:11px;white-space:nowrap">'+_esc(r.ticket)+'</td>'+
+      '<td style="white-space:nowrap;font-size:11px">'+_esc(r.week)+'</td>'+
+      '<td>'+_esc(r.language)+'</td>'+
+      '<td>'+_esc(r.tool)+'</td>'+
+      '<td>'+_esc(r.reason)+'</td>'+
+      '<td style="text-align:center">'+aosBadge+'</td>'+
+      '<td style="text-align:center">'+(r.excluded==='Y'?'<span class="chip ch-other">Excl</span>':'')+'</td>'+
+      commentCell+
+      aosIssueCell+
+    '</tr>';
+  }).join('');
+
+  var summaryNote = [];
+  if (withComment)  summaryNote.push(withComment + ' ticket(s) have a comment');
+  if (withAosIssue) summaryNote.push(withAosIssue + ' ticket(s) have an AOS Issue noted');
+  var noteHtml = summaryNote.length
+    ? '<p style="font-size:10px;color:var(--muted);margin-top:10px">&#9432;&nbsp;' + summaryNote.join(' &bull; ') + '. Excluded rows are shown at reduced opacity. Sorted: AOS first, then by ticket ID.</p>'
+    : '';
+
+  return '<div class="sc" style="margin-bottom:0">'+
+    '<div class="sc-head">'+
+      '<h2>KSL-4 &mdash; Comment &amp; AOS Issue Overview</h2>'+
+      '<span class="badge">'+badge+'</span>'+
+    '</div>'+
+    '<div class="sc-body">'+
+      '<div class="ksl4-pivot-wrap">'+
+      '<table class="ksl4-pivot">'+
+        '<thead><tr>'+
+          '<th>Ticket</th>'+
+          '<th>Week</th>'+
+          '<th>Language</th>'+
+          '<th>Tool</th>'+
+          '<th>Reason</th>'+
+          '<th style="text-align:center">AOS</th>'+
+          '<th style="text-align:center">Excl</th>'+
+          '<th class="col-comment">Comment</th>'+
+          '<th class="col-aos-issue">AOS Issue</th>'+
+        '</tr></thead>'+
+        '<tbody>'+(trs || '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+'</tbody>'+
+      '</table>'+
+      '</div>'+
+      noteHtml+
+    '</div>'+
+  '</div>';
+}
 
 /* ---- Dashboard ---- */
 function _buildDashboard(data) {
