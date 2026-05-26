@@ -335,6 +335,7 @@
     .ksl4-pivot td.cell-empty {
       color: var(--faint); font-style: italic; font-size: 11px;
     }
+    /* AOS badge inside pivot */
     .ksl4-pivot .aos-badge {
       display: inline-block; padding: 1px 7px; border-radius: 20px;
       font-size: 10px; font-weight: 700;
@@ -380,6 +381,8 @@
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
+
+    /* Corner / column headers */
     .pvt-th {
       background: var(--bg); padding: 6px 10px;
       font-size: 11px; font-weight: 600; text-transform: uppercase;
@@ -395,12 +398,16 @@
       border-left: 2px solid var(--border);
       color: var(--text);
     }
+
+    /* Row label cells */
     .pvt-row-lbl {
       padding: 5px 10px; border-bottom: 1px solid var(--divider);
       border-right: 1px solid var(--divider);
       font-size: 12px; font-weight: 600; color: var(--muted);
       background: var(--bg); white-space: nowrap;
     }
+
+    /* Data cells */
     .pvt-cell {
       padding: 5px 8px; border-bottom: 1px solid var(--divider);
       border-right: 1px solid var(--divider);
@@ -408,6 +415,8 @@
       cursor: default; transition: transform .1s;
     }
     .pvt-cell:hover { transform: scale(1.15); z-index: 2; position: relative; }
+
+    /* Totals */
     .pvt-total-cell {
       padding: 5px 10px; border-bottom: 1px solid var(--divider);
       text-align: center; font-weight: 700; font-size: 12px;
@@ -416,16 +425,24 @@
     .pvt-row-total  { border-left: 2px solid var(--border); color: var(--text); }
     .pvt-col-total  { border-right: 1px solid var(--divider); color: var(--text); }
     .pvt-grand-total { border-left: 2px solid var(--border); color: var(--primary); font-size: 13px; }
+
+    /* Grand total row */
     .pvt-grand-row .pvt-grand-lbl {
       padding: 6px 10px; border-top: 2px solid var(--border);
       font-size: 11px; font-weight: 700; text-transform: uppercase;
       letter-spacing: .04em; color: var(--text); background: var(--bg);
       border-right: 1px solid var(--divider);
     }
-    .pvt-grand-row .pvt-total-cell { border-top: 2px solid var(--border); }
+    .pvt-grand-row .pvt-total-cell {
+      border-top: 2px solid var(--border);
+    }
+
+    /* Misc */
     .pvt-msg  { font-size: 12px; color: var(--muted); padding: 20px 0; }
     .pvt-warn { color: var(--warning, #964219); }
-    .pvt-note { font-size: 10px; color: var(--faint); margin-top: 10px; }
+    .pvt-note {
+      font-size: 10px; color: var(--faint); margin-top: 10px;
+    }
 
     /* ================================================================
        PER-SLA DRILL-DOWN PANELS (reporter-pivot.js)
@@ -512,160 +529,4 @@
 
           <label>Tool</label>    <select id="filter-tool"><option value="All">All</option></select>
           <label>Queue</label>   <select id="filter-queue"><option value="All">All</option></select>
-          <label>Sheet</label>   <select id="filter-sheet"><option value="All">All</option></select>
-          <label>Excluded</label><select id="filter-excl"><option value="All">All</option></select>
-          <label>AOS</label>     <select id="filter-aos"><option value="All">All</option></select>
-        </div>
-      </div>
-      <button class="btn-outline" style="margin-top:auto" onclick="window.RPT.clearFilters()">Reset Filters</button>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="reporter-main">
-
-      <div id="rpt-import-log"></div>
-
-      <!-- UPLOAD -->
-      <div id="upload-section">
-        <div class="drop-zone" id="drop-zone">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14,2 14,8 20,8"/>
-            <line x1="12" y1="11" x2="12" y2="17"/>
-            <polyline points="9,14 12,11 15,14"/>
-          </svg>
-          <p>Drop your Breaches.xlsx file(s) here</p>
-          <span>or click to browse &nbsp;&middot;&nbsp; .xlsx only &nbsp;&middot;&nbsp; multiple files supported</span>
-        </div>
-        <div id="upload-status"></div>
-      </div>
-
-      <!-- DATA -->
-      <div id="data-section">
-        <div class="kpi-row" id="kpi-row"></div>
-        <div class="rpt-tabs" id="tab-bar">
-          <button class="rpt-tab active" data-tab="dashboard">Dashboard</button>
-          <button class="rpt-tab" data-tab="trends">Trends</button>
-          <button class="rpt-tab" data-tab="heatmap">Heatmap</button>
-          <button class="rpt-tab" data-tab="pivot">Pivot</button>
-          <button class="rpt-tab" data-tab="overview">Overview</button>
-          <button class="rpt-tab" data-tab="all">All Records</button>
-          <button class="rpt-tab" data-tab="ksl4">KSL-4</button>
-          <button class="rpt-tab" data-tab="km1">KM-1</button>
-          <button class="rpt-tab" data-tab="ksl5a">KSL-5a</button>
-          <button class="rpt-tab" data-tab="km2">KM-2</button>
-          <button class="rpt-tab" data-tab="aos">AOS</button>
-          <button class="rpt-tab" data-tab="jira">Jira Tracker</button>
-        </div>
-        <div id="tab-content"></div>
-      </div>
-
-    </main>
-  </div>
-</div>
-
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="config.js"></script>
-
-<script>
-var _currentTab     = 'dashboard';
-var _currentPage    = 1;
-var _currentTabRows = [];
-var PAGE_SIZE       = 50;
-
-window.renderTables = function() {
-  var data = window.RPT ? window.RPT.filtered : [];
-  _buildKPIs(data);
-  _renderTab(_currentTab);
-  document.getElementById('rpt-sidebar').style.display = '';
-  document.getElementById('export-btns').style.display = '';
-  var cb = document.getElementById('rpt-clear-btn');
-  if (cb) cb.style.display = '';
-  var rc = document.getElementById('record-count');
-  if (rc) rc.textContent = window.RPT.countUniqueTickets(data) + ' unique ticket(s)';
-};
-window.renderCharts = function() {};
-
-function _tabRows(name, data) {
-  if (name === 'all')   return data;
-  if (name === 'ksl4')  return data.filter(function(r){return r.sla==='KSL-4';});
-  if (name === 'km1')   return data.filter(function(r){return r.sla==='KM-1';});
-  if (name === 'ksl5a') return data.filter(function(r){return r.sla==='KSL-5a';});
-  if (name === 'km2')   return data.filter(function(r){return r.sla==='KM-2';});
-  if (name === 'aos')   return data.filter(function(r){return r.isAos;});
-  return null;
-}
-
-function _renderTab(name) {
-  _currentTab  = name;
-  _currentPage = 1;
-  var data = window.RPT ? window.RPT.filtered : [];
-  var el   = document.getElementById('tab-content');
-  if (!el) return;
-
-  if (name === 'pivot') {
-    _currentTabRows = [];
-    el.innerHTML = '<div id="pivot-container"></div>';
-    if (typeof window.renderPivot === 'function') window.renderPivot();
-    return;
-  }
-
-  if (name === 'ksl4') {
-    var ksl4rows = data.filter(function(r){return r.sla==='KSL-4';});
-    _currentTabRows = ksl4rows;
-    el.innerHTML =
-      _buildKsl4Pivot(ksl4rows) +
-      _buildTable('KSL-4 — All Records', ksl4rows, 'ksl4');
-    return;
-  }
-
-  var rows = _tabRows(name, data);
-  if (rows !== null) {
-    _currentTabRows = rows;
-    var labels = {
-      all: 'All Records', km1: 'KM-1',
-      ksl5a: 'KSL-5a', km2: 'KM-2', aos: 'AOS Records'
-    };
-    el.innerHTML = _buildTable(labels[name] || name, rows, name);
-  } else {
-    _currentTabRows = [];
-    if      (name === 'dashboard') el.innerHTML = _buildDashboard(data);
-    else if (name === 'trends')    el.innerHTML = _buildTrends(data);
-    else if (name === 'heatmap')   el.innerHTML = _buildHeatmap(data);
-    else if (name === 'overview')  el.innerHTML = _buildOverview(data);
-    else if (name === 'jira')      el.innerHTML = _buildJiraTracker(data);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('tab-bar').addEventListener('click', function(e) {
-    var btn = e.target.closest('.rpt-tab');
-    if (!btn) return;
-    document.querySelectorAll('.rpt-tab').forEach(function(b){b.classList.remove('active');});
-    btn.classList.add('active');
-    _renderTab(btn.dataset.tab);
-  });
-
-  var trigger  = document.getElementById('lang-trigger');
-  var dropdown = document.getElementById('lang-dropdown');
-
-  trigger.addEventListener('click', function(e) {
-    e.stopPropagation();
-    dropdown.classList.contains('open') ? _closeLangDropdown() : _openLangDropdown();
-  });
-
-  document.addEventListener('click', function(e) {
-    if (!document.getElementById('lang-filter-wrap').contains(e.target)) {
-      _closeLangDropdown();
-    }
-  });
-
-  document.getElementById('lang-select-all').addEventListener('click', function(e) {
-    e.stopPropagation();
-    document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb) { cb.checked = true; });
-    _onLangChange();
-  });
-
-  document.getElementById('lang-deselect-all').addEventListener('click', function(e) {
-    e.stopPropagation();
-    document.querySelectorAll('#lang-dd-list input[type=checkbox]').forEach(function(cb) { cb.checke
+          <label>Sheet</label>   <select id="filter-sheet">
