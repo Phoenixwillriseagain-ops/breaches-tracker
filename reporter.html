@@ -491,6 +491,8 @@
 <script src="config.js"></script>
 <script src="reporter-processor.js"></script>
 <script src="reporter-pivot.js"></script>
+<script src="reporter-exporter.js"></script>
+<script src="reporter-uploader.js"></script>
 <script src="reporter-importer.js"></script>
 
 <script>
@@ -725,7 +727,6 @@ function _buildKsl4Pivot(rows) {
 function _buildDashboard(data) {
   var a = data.filter(function(r){ return r.excluded==='N'; });
 
-  /* ---- standard aggregations ---- */
   var R={}, L={}, S={}, Q={}, P={}, ACT={};
   a.forEach(function(r){
     if(r.reason)   R[r.reason]  =(R[r.reason]||0)+1;
@@ -736,18 +737,14 @@ function _buildDashboard(data) {
     if(r.sla==='KM-1'&&r.action) ACT[r.action]=(ACT[r.action]||0)+1;
   });
 
-  /* ---- KSL-4 Comment aggregation (unique tickets, active only) ---- */
-  /* Exclude AOS portal tickets that have no comment — they add no signal */
   var ksl4Active = a.filter(function(r){ return r.sla==='KSL-4'; });
   var commentMap = {}, seenTicket = {};
   ksl4Active.forEach(function(r){
-    if (seenTicket[r.ticket]) return;   // dedupe per unique ticket
+    if (seenTicket[r.ticket]) return;
     seenTicket[r.ticket] = true;
     var hasComment = r.comment && r.comment.trim();
-    /* Skip AOS tickets that have no comment */
     if (!hasComment && r.isAos) return;
     var raw = hasComment ? r.comment.trim() : '(no comment)';
-    /* Truncate very long values to keep the bar chart readable */
     var lbl = raw.length > 60 ? raw.substring(0, 57) + '...' : raw;
     commentMap[lbl] = (commentMap[lbl] || 0) + 1;
   });
@@ -821,7 +818,7 @@ function _buildTrends(data) {
     tbodyRows+='<tr class="delta-row"><td class="tt-row-lbl" style="color:var(--faint,#bab9b4);font-size:9px">WoW &#916;</td>'+COLS.map(function(col){if(wi===0)return '<td style="'+deltaStyle(null)+'">&#8212;</td>';var d=matrix[col.key][w]-matrix[col.key][weeks[wi-1]];return '<td style="'+deltaStyle(d)+'" title="WoW delta '+_esc(col.label)+' | '+_esc(w)+'">'+deltaLabel(d)+'</td>';}).join('')+'</tr>';
   });
   var summaryRow='<tr style="border-top:2px solid var(--border)"><td class="tt-row-lbl" style="font-weight:700;color:var(--text)">All weeks</td>'+COLS.map(function(col){var total=0;weeks.forEach(function(w){total+=matrix[col.key][w];});return '<td style="background:var(--bg);font-weight:700;color:var(--text);border-radius:5px">'+total+'</td>';}).join('')+'</tr>';
-  var legendItems=COLS.map(function(col){return '<div class="trends-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb('+col.rgb[0]+','+col.rgb[1]+','+col.rgb[2]+')\"></span><span>'+_esc(col.label)+'</span></div>';}).join('');
+  var legendItems=COLS.map(function(col){return '<div class="trends-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb('+col.rgb[0]+','+col.rgb[1]+','+col.rgb[2]+')"></span><span>'+_esc(col.label)+'</span></div>';}).join('');
   return '<div class="sc"><div class="sc-head"><h2>Weekly KPI Trends</h2><span class="badge">'+weeks.length+' week'+(weeks.length!==1?'s':'')+' &bull; '+window.RPT.countUniqueTickets(data)+' unique ticket(s)</span></div>'+
     '<div class="sc-body"><div class="trend-table-wrap"><table class="trend-table">'+thead+'<tbody>'+tbodyRows+summaryRow+'</tbody></table></div>'+
     '<div class="trends-legend" style="margin-top:12px">'+legendItems+'</div>'+
@@ -854,7 +851,7 @@ function _buildHeatmap(data) {
     function hmC(v){if(!v)return 'background:#f0eeea;color:var(--faint)';var ratio=Math.pow(v/maxVal,0.65),r=Math.round(BR+ratio*(TR-BR)),g=Math.round(BG+ratio*(TG-BG)),b=Math.round(BB+ratio*(TB-BB));return 'background:rgb('+r+','+g+','+b+');color:'+(0.299*r+0.587*g+0.114*b<140?'#ffffff':'#28251d');}
     var hdr='<th></th>';for(j=0;j<24;j++)hdr+='<th>'+(j%2===0?String(j).padStart(2,'0')+'h':'')+'</th>';
     var body=days.map(function(dn,di){var c='<td class="hm-day-lbl">'+dn+'</td>';for(j=0;j<24;j++){var v=mx[di][j];c+='<td style="'+hmC(v)+'" title="'+dn+' '+String(j).padStart(2,'0')+':00 \u2014 '+v+' breach(es)">'+(v>0?v:'')+'</td>';}return '<tr>'+c+'</tr>';}).join('');
-    var sw='';[0,.2,.4,.6,.8,1].forEach(function(r){var rr=Math.round(BR+r*(TR-BR)),gg=Math.round(BG+r*(TG-BG)),bb=Math.round(BB+r*(TB-BB));sw+='<span style="background:rgb('+rr+','+gg+','+bb+')\"></span>';});
+    var sw='';[0,.2,.4,.6,.8,1].forEach(function(r){var rr=Math.round(BR+r*(TR-BR)),gg=Math.round(BG+r*(TG-BG)),bb=Math.round(BB+r*(TB-BB));sw+='<span style="background:rgb('+rr+','+gg+','+bb+')"></span>';});
     return '<div class="heatmap-wrap"><table class="heatmap-table"><thead><tr>'+hdr+'</tr></thead><tbody>'+body+'</tbody></table><div class="hm-legend"><span>Less</span><div class="hm-legend-swatch">'+sw+'</div><span>More</span></div></div>';
   }
   var SLAs=[{key:'KSL-4',rgb:[0,100,148]},{key:'KM-1',rgb:[0,100,148]},{key:'KSL-5a',rgb:[150,66,25]},{key:'KM-2',rgb:[122,57,187]}];
@@ -916,18 +913,20 @@ function _buildTable(title, rows, tab) {
     pg='<div class="pg">';
     pg+='<button class="pg-btn" '+((_currentPage===1)?'disabled':'')+' onclick="_goPage('+(_currentPage-1)+')">&#8592;</button>';
     var s=Math.max(1,_currentPage-2),e=Math.min(totalPages,s+4);
-    for(var i=s;i<=e;i++) pg+='<button class="pg-btn'+(i===_currentPage?' on':'')+'\" onclick="_goPage('+i+')">'+i+'</button>';
+    for(var i=s;i<=e;i++) pg+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
     pg+='<button class="pg-btn" '+((_currentPage===totalPages)?'disabled':'')+' onclick="_goPage('+(_currentPage+1)+')">&#8594;</button>';
-    pg+='<span style="margin-left:4px">'+_currentPage+'/'+totalPages+'</span></div>';
+    pg+='<span>'+_currentPage+' / '+totalPages+'</span></div>';
   }
-  return '<div class="sc"><div class="sc-head"><h2>'+_esc(title)+'</h2><span class="badge">'+badge+'</span></div>'+
-    '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div>'+pg+'</div></div>';
+  return '<div class="sc"><div class="sc-head"><h2>'+title+'</h2><span class="badge">'+badge+'</span></div>'+
+    '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead>'+thead+'</thead><tbody>'+
+    (tbody||'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+
+    '</tbody></table></div>'+pg+'</div></div>';
 }
 
-window._goPage = function(p) {
-  var total = Math.ceil(_currentTabRows.length / PAGE_SIZE) || 1;
-  _currentPage = Math.max(1, Math.min(p, total));
-  var el = document.getElementById('tab-content');
+function _goPage(p) {
+  _currentPage = p;
+  var data = window.RPT ? window.RPT.filtered : [];
+  var el   = document.getElementById('tab-content');
   if (!el) return;
   var labels = { all:'All Records', km1:'KM-1', ksl5a:'KSL-5a', km2:'KM-2', aos:'AOS Records' };
   if (_currentTab === 'ksl4') {
@@ -935,37 +934,37 @@ window._goPage = function(p) {
   } else {
     el.innerHTML = _buildTable(labels[_currentTab] || _currentTab, _currentTabRows, _currentTab);
   }
-};
+}
 
 /* ---- Jira Tracker ---- */
 function _buildJiraTracker(data) {
-  var JIRA_BASE = (window.RPT_CONFIG && window.RPT_CONFIG.jiraBaseUrl) || 'https://atc.bmwgroup.net/jira/browse/';
-  var jiraRx = /IMQM-\d+/gi;
-  var seen = {}, tickets = [];
-  data.forEach(function(r) {
-    var t = r.ticket || '';
-    var matches = t.match(jiraRx);
-    if (!matches) return;
-    matches.forEach(function(jt) {
-      var key = jt.toUpperCase();
-      if (!seen[key]) {
-        seen[key] = true;
-        tickets.push({ jira: key, sla: r.sla, tool: r.tool, reason: r.reason, week: r.week });
-      }
-    });
-  });
-  if (!tickets.length) return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2></div><div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No IMQM-* tickets found in the current filter.</p></div></div>';
-  tickets.sort(function(a,b){ return a.jira < b.jira ? -1 : a.jira > b.jira ? 1 : 0; });
-  var tbody = tickets.map(function(t) {
-    var slaClass = 'ch-' + String(t.sla||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-    return '<tr>'+
-      '<td><a class="jira-link" href="'+JIRA_BASE+t.jira+'" target="_blank" rel="noopener noreferrer">'+_esc(t.jira)+'</a></td>'+
-      '<td><span class="chip '+slaClass+'">'+_esc(t.sla||'')+'</span></td>'+
-      '<td>'+_esc(t.tool||'')+'</td>'+
-      '<td>'+_esc(t.reason||'')+'</td>'+
-      '<td>'+_esc(t.week||'')+'</td>'+
+  var jiraRows = data.filter(function(r){ return r.jiraTicket && r.jiraTicket.trim(); });
+  if (!jiraRows.length) {
+    return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No Jira tickets found in the current data. Make sure your file has a <em>Jira Ticket</em> column.</p></div></div>';
+  }
+  var seen={}, deduped=[];
+  jiraRows.forEach(function(r){ if(!seen[r.jiraTicket]){seen[r.jiraTicket]=true;deduped.push(r);} });
+  deduped.sort(function(a,b){ return String(a.jiraTicket).localeCompare(String(b.jiraTicket)); });
+  var badge = deduped.length + ' unique Jira ticket(s)';
+  var rows = deduped.map(function(r){
+    var url = 'https://jira.example.com/browse/' + encodeURIComponent(r.jiraTicket);
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
+      '<td><a class="jira-link" href="'+url+'" target="_blank" rel="noopener">'+_esc(r.jiraTicket)+'</a></td>'+
+      '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
+      '<td>'+_esc(r.week)+'</td>'+
+      '<td><span class="chip ch-'+String(r.sla).toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(r.sla)+'</span></td>'+
+      '<td>'+_esc(r.language)+'</td>'+
+      '<td>'+_esc(r.queue)+'</td>'+
+      '<td style="text-align:center">'+(r.excluded==='Y'?'<span class="chip ch-other">Y</span>':'')+'</td>'+
     '</tr>';
   }).join('');
-  return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2><span class="badge">'+tickets.length+' unique IMQM ticket(s)</span></div>'+
-    '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr><th>Jira Ticket</th><th>SLA</th><th>Tool</th><th>Reason</th><th>Week</th></tr></thead>'+
-    '<tbody>'+tbody+'</
+  return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2><span class="badge">'+badge+'</span></div>'+
+    '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr>'+
+    '<th>Jira Ticket</th><th>Incident Ticket</th><th>Week</th><th>SLA</th><th>Language</th><th>Queue</th><th>Excl</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
+}
+</script>
+
+</body>
+</html>
