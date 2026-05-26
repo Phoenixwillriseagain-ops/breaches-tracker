@@ -8,17 +8,12 @@
     aosFiltered: [],
     uniqueValues: {},
 
-    // Legacy single-file entry point — now routes through multi-import
     loadFile: function(file) { window.RPT.loadFiles([file]); },
 
-    // Multi-file entry point.
-    // Accepts an array of ALREADY-PARSED SheetJS workbook objects
-    // (reporter-importer.js reads files and passes workbooks here).
     loadFiles: function(workbooks) {
       _startMultiImport(workbooks);
     },
 
-    // Public method called by language dropdown checkboxes
     applyFilters: function() { _applyFilters(); },
 
     clearData: function() {
@@ -43,7 +38,6 @@
       if(rc) rc.textContent = '';
     },
 
-    // Alias used by reporter-importer.js clearAll button
     clearAll: function() { window.RPT.clearData(); },
 
     clearFilters: function() {
@@ -74,7 +68,6 @@
       else alert('Exporter not loaded');
     },
 
-    // Returns the count of unique Incident Tickets in a given dataset array.
     countUniqueTickets: function(data) {
       var seen = new Set();
       (data || []).forEach(function(r) { if (r.ticket) seen.add(r.ticket); });
@@ -89,7 +82,7 @@
     if(!val) return '';
     var d=new Date(val);
     if(isNaN(d.getTime())) return clean(val);
-    var t=new Date(d.getTime()+3*3600*1000); // UTC+3 (EEST)
+    var t=new Date(d.getTime()+3*3600*1000);
     function p(n){return String(n).padStart(2,'0');}
     return p(t.getUTCDate())+'.'+p(t.getUTCMonth()+1)+'.'+t.getUTCFullYear()+
            ' '+p(t.getUTCHours())+':'+p(t.getUTCMinutes())+':'+p(t.getUTCSeconds());
@@ -98,6 +91,73 @@
   function normBool(v){
     var s=clean(v).toLowerCase();
     return(['t','true','yes','y','1'].indexOf(s)!==-1)?'Y':'N';
+  }
+
+  /*
+   * Column resolver — builds a case-insensitive, whitespace-normalised lookup
+   * from the actual keys present in a parsed row object.
+   *
+   * Usage:
+   *   var col = _makeColResolver(rows[0]);
+   *   col(row, 'Incident Ticket')  // finds key regardless of case/spacing
+   *
+   * Each canonical name maps to one or more accepted aliases tried in order.
+   */
+  var COL_ALIASES = {
+    'Incident Ticket':    ['incident ticket', 'incidentticket', 'ticket', 'inc ticket', 'incident_ticket'],
+    'DATE_CLOSE':         ['date_close', 'dateclose', 'date close', 'closed date', 'date closed'],
+    'DATE_TIME_Breach':   ['date_time_breach', 'datetimebreach', 'datetime breach', 'breach datetime', 'breach_datetime', 'breach date'],
+    'DATE_TIME_Breach UTC': ['date_time_breach utc', 'date_time_breach_utc', 'breach datetime utc'],
+    'Status':             ['status'],
+    'Queue':              ['queue'],
+    'Priority':           ['priority'],
+    'ISO_Language':       ['iso_language', 'isolanguage', 'language', 'lang', 'iso language'],
+    'Tool':               ['tool'],
+    'TOPIC':              ['topic'],
+    'SLA_Code':           ['sla_code', 'slacode', 'sla code', 'sla'],
+    'SLA_N':              ['sla_n', 'slan', 'sla n', 'sla number'],
+    'Breach_Description': ['breach_description', 'breachdescription', 'breach description', 'breach desc'],
+    'COMPASS ID':         ['compass id', 'compassid', 'compass_id'],
+    'Reason':             ['reason'],
+    'Action':             ['action'],
+    'AOS':                ['aos'],
+    'Agent':              ['agent'],
+    'BMS ID':             ['bms id', 'bmsid', 'bms_id'],
+    'Comment':            ['comment', 'comments'],
+    'AOS Issue':          ['aos issue', 'aosissue', 'aos_issue'],
+    'Excluded':           ['excluded', 'exclude'],
+    'Jira':               ['jira', 'jira ticket', 'jira id', 'jira_ticket'],
+    'Week':               ['week', 'wk', 'week number', 'week no'],
+    'Unique':             ['unique'],
+  };
+
+  function _makeColResolver(sampleRow) {
+    // Build a normalised-key → actual-key map from whatever the row has
+    var keyMap = {};
+    Object.keys(sampleRow).forEach(function(k) {
+      keyMap[k.toLowerCase().replace(/\s+/g,' ').trim()] = k;
+    });
+
+    return function get(row, canonicalName) {
+      // 1. Try exact match first (fastest, covers most cases)
+      if (row[canonicalName] !== undefined) return row[canonicalName];
+
+      // 2. Try each alias
+      var aliases = COL_ALIASES[canonicalName] || [];
+      for (var i = 0; i < aliases.length; i++) {
+        var actualKey = keyMap[aliases[i]];
+        if (actualKey !== undefined && row[actualKey] !== undefined) {
+          return row[actualKey];
+        }
+      }
+
+      // 3. Fallback: case-insensitive scan of the canonical name itself
+      var normCanon = canonicalName.toLowerCase().replace(/\s+/g,' ').trim();
+      var fallbackKey = keyMap[normCanon];
+      if (fallbackKey !== undefined) return row[fallbackKey];
+
+      return '';
+    };
   }
 
   /* ---- Import log ---- */
@@ -117,7 +177,7 @@
     if (el) el.style.display = 'none';
   }
 
-  /* ---- Multi-workbook import (workbooks already parsed by reporter-importer.js) ---- */
+  /* ---- Multi-workbook import ---- */
   function _startMultiImport(workbooks) {
     _hideImportLog();
     var logLines = [];
@@ -129,17 +189,17 @@
     }
 
     workbooks.forEach(function(wb) {
-      // wb is a SheetJS workbook object — already has .SheetNames & .Sheets
       if (!wb || !wb.SheetNames) {
         logLines.push({ type: 'error', msg: 'Invalid workbook object received.' });
         return;
       }
       try {
-        var result = _mergeWorkbook(wb);
+        var result = _mergeWorkbook(wb, logLines);
         var name = wb._filename || ('workbook ' + (logLines.length + 1));
         logLines.push({
-          type: 'ok',
+          type: result.added > 0 ? 'ok' : 'warn',
           msg: name + ' \u2014 ' + result.added + ' row(s) imported (' + result.uniqueTickets + ' unique ticket(s))'
+             + (result.colWarning ? ' \u26a0 ' + result.colWarning : '')
         });
       } catch(err) {
         logLines.push({ type: 'error', msg: (wb._filename || 'workbook') + ' \u2014 ' + err.message });
@@ -152,58 +212,75 @@
     _applyFiltersOnly();
     window.renderTables();
     _showImportLog(logLines);
-    console.log('[RPT] total allData:', window.RPT.allData.length);
+    console.log('[RPT] total allData:', window.RPT.allData.length, '| filtered:', window.RPT.filtered.length);
   }
 
   /* ---- Merge one workbook into allData ---- */
   function _mergeWorkbook(wb) {
     var added = 0;
     var ticketsInFile = new Set();
+    var colWarning = '';
 
     wb.SheetNames.forEach(function(sn) {
       if (sn === 'Instructions') return;
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval:'' });
+      if (!rows.length) return;
+
+      // Build column resolver once per sheet using the first row as sample
+      var col = _makeColResolver(rows[0]);
+
+      // Warn once if the ticket column couldn't be found by exact match
+      var sampleTicket = col(rows[0], 'Incident Ticket');
+      if (sampleTicket === '' && rows.length > 1) {
+        // Check if resolved via alias by logging actual keys
+        var actualKeys = Object.keys(rows[0]).join(', ');
+        colWarning = 'Header "Incident Ticket" not found exactly — resolved via alias. Actual headers: ' + actualKeys.slice(0, 120);
+      }
+
       rows.forEach(function(r) {
-        var ticket = clean(r['Incident Ticket']||'');
+        var ticket = clean(col(r, 'Incident Ticket'));
         if (!ticket) return;
         ticketsInFile.add(ticket);
 
-        var aosF = normBool(r['AOS']||'');
-        var aosI = normBool(r['AOS Issue']||'');
-        var breachRaw = r['DATE_TIME_Breach'] || r['DATE_TIME_Breach UTC'] || '';
+        var aosF     = normBool(col(r, 'AOS'));
+        var aosIRaw  = col(r, 'AOS Issue');
+        var aosI     = normBool(aosIRaw);
+        var breachRaw = col(r, 'DATE_TIME_Breach') || col(r, 'DATE_TIME_Breach UTC') || '';
+
         window.RPT.allData.push({
           ticket:         ticket,
-          dateClosed:     formatDate(r['DATE_CLOSE']||''),
+          dateClosed:     formatDate(col(r, 'DATE_CLOSE')),
           dateTimeBreach: formatDate(breachRaw),
-          status:         clean(r['Status']||'N/A'),
-          queue:          clean(r['Queue']||''),
-          priority:       clean(r['Priority']||''),
-          language:       clean(r['ISO_Language']||'Unknown'),
-          tool:           clean(r['Tool']||'Unknown'),
-          topic:          clean(r['TOPIC']||''),
-          sla:            clean(r['SLA_Code']||'Unknown'),
-          slaN:           clean(r['SLA_N']||''),
-          breachDesc:     clean(r['Breach_Description']||''),
-          compassId:      clean(r['COMPASS ID']||''),
-          reason:         clean(r['Reason']||''),
-          action:         clean(r['Action']||''),
+          status:         clean(col(r, 'Status'))   || 'N/A',
+          queue:          clean(col(r, 'Queue')),
+          priority:       clean(col(r, 'Priority')),
+          language:       clean(col(r, 'ISO_Language')) || 'Unknown',
+          tool:           clean(col(r, 'Tool'))         || 'Unknown',
+          topic:          clean(col(r, 'TOPIC')),
+          sla:            clean(col(r, 'SLA_Code'))     || 'Unknown',
+          slaN:           clean(col(r, 'SLA_N')),
+          breachDesc:     clean(col(r, 'Breach_Description')),
+          compassId:      clean(col(r, 'COMPASS ID')),
+          reason:         clean(col(r, 'Reason')),
+          action:         clean(col(r, 'Action')),
           aos:            aosF,
-          agent:          clean(r['Agent']||''),
-          bmsId:          clean(r['BMS ID']||''),
-          comment:        clean(r['Comment']||''),
-          aosIssue:       clean(r['AOS Issue']||''),
-          excluded:       normBool(r['Excluded']||''),
-          jira:           clean(r['Jira']||''),
-          week:           clean(r['Week']||''),
-          unique:         clean(r['Unique']||''),
+          agent:          clean(col(r, 'Agent')),
+          bmsId:          clean(col(r, 'BMS ID')),
+          comment:        clean(col(r, 'Comment')),
+          aosIssue:       clean(aosIRaw),
+          excluded:       normBool(col(r, 'Excluded')),
+          jira:           clean(col(r, 'Jira')),
+          week:           clean(col(r, 'Week')),
+          unique:         clean(col(r, 'Unique')),
           sheet:          sn,
-          isAos:          aosF==='Y'||aosI==='Y',
+          isAos:          aosF==='Y' || aosI==='Y',
         });
         added++;
       });
     });
+
     window.RPT.aosFiltered = window.RPT.allData.filter(function(r){return r.isAos;});
-    return { added: added, uniqueTickets: ticketsInFile.size };
+    return { added: added, uniqueTickets: ticketsInFile.size, colWarning: colWarning };
   }
 
   function _populateUnique(){
