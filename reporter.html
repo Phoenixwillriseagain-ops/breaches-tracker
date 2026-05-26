@@ -723,10 +723,11 @@ function _buildKsl4Pivot(rows) {
 
 /* ---- Dashboard ---- */
 function _buildDashboard(data) {
-  var a=data.filter(function(r){return r.excluded==='N';});
-  var T={},R={},L={},S={},Q={},P={},ACT={};
+  var a = data.filter(function(r){ return r.excluded==='N'; });
+
+  /* ---- standard aggregations ---- */
+  var R={}, L={}, S={}, Q={}, P={}, ACT={};
   a.forEach(function(r){
-    if(r.tool)     T[r.tool]    =(T[r.tool]||0)+1;
     if(r.reason)   R[r.reason]  =(R[r.reason]||0)+1;
     if(r.language) L[r.language]=(L[r.language]||0)+1;
     if(r.sla)      S[r.sla]     =(S[r.sla]||0)+1;
@@ -734,14 +735,28 @@ function _buildDashboard(data) {
     if(r.topic)    P[r.topic]   =(P[r.topic]||0)+1;
     if(r.sla==='KM-1'&&r.action) ACT[r.action]=(ACT[r.action]||0)+1;
   });
-  var km1Chart=Object.keys(ACT).length?_card('KM-1 Action Breakdown',_bar(_top(ACT,10),'#006494')):'';
+
+  /* ---- KSL-4 Comment aggregation (unique tickets, active only) ---- */
+  var ksl4Active = a.filter(function(r){ return r.sla==='KSL-4'; });
+  var commentMap = {}, seenTicket = {};
+  ksl4Active.forEach(function(r){
+    if (seenTicket[r.ticket]) return;   // dedupe per unique ticket
+    seenTicket[r.ticket] = true;
+    var raw = (r.comment && r.comment.trim()) ? r.comment.trim() : '(no comment)';
+    /* Truncate very long values to keep the bar chart readable */
+    var lbl = raw.length > 60 ? raw.substring(0, 57) + '...' : raw;
+    commentMap[lbl] = (commentMap[lbl] || 0) + 1;
+  });
+
+  var km1Chart = Object.keys(ACT).length ? _card('KM-1 Action Breakdown', _bar(_top(ACT,10),'#006494')) : '';
+
   return '<div class="dash-grid">'+
-    _card('Top Tools',      _bar(_top(T,10),'#006494'))+
-    _card('Breach Reasons', _bar(_top(R,10),'#964219'))+
-    _card('Languages',      _bar(_top(L,10),'#437a22'))+
-    _card('SLA Breakdown',  _bar(_top(S,8), '#7a39bb'))+
-    _card('By Queue',       _bar(_top(Q,8), '#01696f'))+
-    _card('By Topic',       _bar(_top(P,8), '#d19900'))+
+    _card('KSL-4 by Comment',  _bar(_top(commentMap,12),'#006494'))+
+    _card('Breach Reasons',    _bar(_top(R,10),'#964219'))+
+    _card('Languages',         _bar(_top(L,10),'#437a22'))+
+    _card('SLA Breakdown',     _bar(_top(S,8), '#7a39bb'))+
+    _card('By Queue',          _bar(_top(Q,8), '#01696f'))+
+    _card('By Topic',          _bar(_top(P,8), '#d19900'))+
     km1Chart+'</div>';
 }
 function _top(map,n){ return Object.keys(map).map(function(k){return[k,map[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n); }
@@ -897,7 +912,7 @@ function _buildTable(title, rows, tab) {
     pg='<div class="pg">';
     pg+='<button class="pg-btn" '+((_currentPage===1)?'disabled':'')+' onclick="_goPage('+(_currentPage-1)+')">&#8592;</button>';
     var s=Math.max(1,_currentPage-2),e=Math.min(totalPages,s+4);
-    for(var i=s;i<=e;i++) pg+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+    for(var i=s;i<=e;i++) pg+='<button class="pg-btn'+(i===_currentPage?' on':'')+'\" onclick="_goPage('+i+')">'+i+'</button>';
     pg+='<button class="pg-btn" '+((_currentPage===totalPages)?'disabled':'')+' onclick="_goPage('+(_currentPage+1)+')">&#8594;</button>';
     pg+='<span style="margin-left:4px">'+_currentPage+'/'+totalPages+'</span></div>';
   }
