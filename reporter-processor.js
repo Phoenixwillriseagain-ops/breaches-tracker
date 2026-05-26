@@ -8,12 +8,17 @@
     aosFiltered: [],
     uniqueValues: {},
 
+    // Legacy single-file entry point — now routes through multi-import
     loadFile: function(file) { window.RPT.loadFiles([file]); },
 
+    // Multi-file entry point.
+    // Accepts an array of ALREADY-PARSED SheetJS workbook objects
+    // (reporter-importer.js reads files and passes workbooks here).
     loadFiles: function(workbooks) {
       _startMultiImport(workbooks);
     },
 
+    // Public method called by language dropdown checkboxes
     applyFilters: function() { _applyFilters(); },
 
     clearData: function() {
@@ -26,11 +31,19 @@
       if (lbl) lbl.textContent = 'All';
       var list = document.getElementById('lang-dd-list');
       if (list) list.innerHTML = '';
-      _showUpload();
+      var up = document.getElementById('upload-section');
+      var dp = document.getElementById('data-section');
+      var sb = document.getElementById('rpt-sidebar');
+      var eb = document.getElementById('export-btns');
+      if(up) up.style.display = '';
+      if(dp) { dp.style.display = 'none'; }
+      if(sb) sb.style.display  = 'none';
+      if(eb) eb.style.display  = 'none';
       var rc = document.getElementById('record-count');
       if(rc) rc.textContent = '';
     },
 
+    // Alias used by reporter-importer.js clearAll button
     clearAll: function() { window.RPT.clearData(); },
 
     clearFilters: function() {
@@ -61,33 +74,13 @@
       else alert('Exporter not loaded');
     },
 
+    // Returns the count of unique Incident Tickets in a given dataset array.
     countUniqueTickets: function(data) {
       var seen = new Set();
       (data || []).forEach(function(r) { if (r.ticket) seen.add(r.ticket); });
       return seen.size;
     },
   };
-
-  /* ---- UI state helpers ---- */
-  function _showUpload() {
-    var up = document.getElementById('upload-section');
-    var dp = document.getElementById('data-section');
-    var sb = document.getElementById('rpt-sidebar');
-    var eb = document.getElementById('export-btns');
-    var cb = document.getElementById('rpt-clear-btn');
-    if(up) up.style.display = '';
-    if(dp) dp.style.display = 'none';
-    if(sb) sb.style.display = 'none';
-    if(eb) eb.style.display = 'none';
-    if(cb) cb.style.display = 'none';
-  }
-
-  function _showData() {
-    var up = document.getElementById('upload-section');
-    var dp = document.getElementById('data-section');
-    if(up) up.style.display = 'none';
-    if(dp) dp.style.display = 'flex';
-  }
 
   /* ---- helpers ---- */
   function clean(v){ return String(v==null?'':v).trim(); }
@@ -96,7 +89,7 @@
     if(!val) return '';
     var d=new Date(val);
     if(isNaN(d.getTime())) return clean(val);
-    var t=new Date(d.getTime()+3*3600*1000);
+    var t=new Date(d.getTime()+3*3600*1000); // UTC+3 (EEST)
     function p(n){return String(n).padStart(2,'0');}
     return p(t.getUTCDate())+'.'+p(t.getUTCMonth()+1)+'.'+t.getUTCFullYear()+
            ' '+p(t.getUTCHours())+':'+p(t.getUTCMinutes())+':'+p(t.getUTCSeconds());
@@ -105,57 +98,6 @@
   function normBool(v){
     var s=clean(v).toLowerCase();
     return(['t','true','yes','y','1'].indexOf(s)!==-1)?'Y':'N';
-  }
-
-  /*
-   * Column resolver — builds a case-insensitive, whitespace-normalised lookup
-   * from the actual keys present in a parsed row object.
-   */
-  var COL_ALIASES = {
-    'Incident Ticket':    ['incident ticket', 'incidentticket', 'ticket', 'inc ticket', 'incident_ticket'],
-    'DATE_CLOSE':         ['date_close', 'dateclose', 'date close', 'closed date', 'date closed'],
-    'DATE_TIME_Breach':   ['date_time_breach', 'datetimebreach', 'datetime breach', 'breach datetime', 'breach_datetime', 'breach date'],
-    'DATE_TIME_Breach UTC': ['date_time_breach utc', 'date_time_breach_utc', 'breach datetime utc'],
-    'Status':             ['status'],
-    'Queue':              ['queue'],
-    'Priority':           ['priority'],
-    'ISO_Language':       ['iso_language', 'isolanguage', 'language', 'lang', 'iso language'],
-    'Tool':               ['tool'],
-    'TOPIC':              ['topic'],
-    'SLA_Code':           ['sla_code', 'slacode', 'sla code', 'sla'],
-    'SLA_N':              ['sla_n', 'slan', 'sla n', 'sla number'],
-    'Breach_Description': ['breach_description', 'breachdescription', 'breach description', 'breach desc'],
-    'COMPASS ID':         ['compass id', 'compassid', 'compass_id'],
-    'Reason':             ['reason'],
-    'Action':             ['action'],
-    'AOS':                ['aos'],
-    'Agent':              ['agent'],
-    'BMS ID':             ['bms id', 'bmsid', 'bms_id'],
-    'Comment':            ['comment', 'comments'],
-    'AOS Issue':          ['aos issue', 'aosissue', 'aos_issue'],
-    'Excluded':           ['excluded', 'exclude'],
-    'Jira':               ['jira', 'jira ticket', 'jira id', 'jira_ticket'],
-    'Week':               ['week', 'wk', 'week number', 'week no'],
-    'Unique':             ['unique'],
-  };
-
-  function _makeColResolver(sampleRow) {
-    var keyMap = {};
-    Object.keys(sampleRow).forEach(function(k) {
-      keyMap[k.toLowerCase().replace(/\s+/g,' ').trim()] = k;
-    });
-    return function get(row, canonicalName) {
-      if (row[canonicalName] !== undefined) return row[canonicalName];
-      var aliases = COL_ALIASES[canonicalName] || [];
-      for (var i = 0; i < aliases.length; i++) {
-        var actualKey = keyMap[aliases[i]];
-        if (actualKey !== undefined && row[actualKey] !== undefined) return row[actualKey];
-      }
-      var normCanon = canonicalName.toLowerCase().replace(/\s+/g,' ').trim();
-      var fallbackKey = keyMap[normCanon];
-      if (fallbackKey !== undefined) return row[fallbackKey];
-      return '';
-    };
   }
 
   /* ---- Import log ---- */
@@ -175,7 +117,7 @@
     if (el) el.style.display = 'none';
   }
 
-  /* ---- Multi-workbook import ---- */
+  /* ---- Multi-workbook import (workbooks already parsed by reporter-importer.js) ---- */
   function _startMultiImport(workbooks) {
     _hideImportLog();
     var logLines = [];
@@ -187,6 +129,7 @@
     }
 
     workbooks.forEach(function(wb) {
+      // wb is a SheetJS workbook object — already has .SheetNames & .Sheets
       if (!wb || !wb.SheetNames) {
         logLines.push({ type: 'error', msg: 'Invalid workbook object received.' });
         return;
@@ -195,95 +138,72 @@
         var result = _mergeWorkbook(wb);
         var name = wb._filename || ('workbook ' + (logLines.length + 1));
         logLines.push({
-          type: result.added > 0 ? 'ok' : 'warn',
+          type: 'ok',
           msg: name + ' \u2014 ' + result.added + ' row(s) imported (' + result.uniqueTickets + ' unique ticket(s))'
-             + (result.colWarning ? ' \u26a0 ' + result.colWarning : '')
         });
       } catch(err) {
         logLines.push({ type: 'error', msg: (wb._filename || 'workbook') + ' \u2014 ' + err.message });
       }
     });
 
-    // Only proceed to show data UI if we actually got rows
-    if (window.RPT.allData.length === 0) {
-      logLines.push({ type: 'warn', msg: 'No rows were imported. Check that the file has an "Incident Ticket" column and at least one data row.' });
-      _showImportLog(logLines);
-      return;
-    }
-
     _populateUnique();
     _updateDropdowns();
     _buildLangDropdown();
     _applyFiltersOnly();
-    _showData();           // ← explicitly show data section only now
     window.renderTables();
     _showImportLog(logLines);
-    console.log('[RPT] allData:', window.RPT.allData.length, '| filtered:', window.RPT.filtered.length);
+    console.log('[RPT] total allData:', window.RPT.allData.length);
   }
 
   /* ---- Merge one workbook into allData ---- */
   function _mergeWorkbook(wb) {
     var added = 0;
     var ticketsInFile = new Set();
-    var colWarning = '';
 
     wb.SheetNames.forEach(function(sn) {
       if (sn === 'Instructions') return;
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval:'' });
-      if (!rows.length) return;
-
-      var col = _makeColResolver(rows[0]);
-
-      // Diagnostic: warn if exact header match failed
-      if (rows[0]['Incident Ticket'] === undefined && !colWarning) {
-        colWarning = 'Headers resolved via alias. Sheet "' + sn + '" actual headers: '
-          + Object.keys(rows[0]).slice(0, 10).join(', ');
-      }
-
       rows.forEach(function(r) {
-        var ticket = clean(col(r, 'Incident Ticket'));
+        var ticket = clean(r['Incident Ticket']||'');
         if (!ticket) return;
         ticketsInFile.add(ticket);
 
-        var aosF     = normBool(col(r, 'AOS'));
-        var aosIRaw  = col(r, 'AOS Issue');
-        var aosI     = normBool(aosIRaw);
-        var breachRaw = col(r, 'DATE_TIME_Breach') || col(r, 'DATE_TIME_Breach UTC') || '';
-
+        var aosF = normBool(r['AOS']||'');
+        var aosI = normBool(r['AOS Issue']||'');
+        var breachRaw = r['DATE_TIME_Breach'] || r['DATE_TIME_Breach UTC'] || '';
         window.RPT.allData.push({
           ticket:         ticket,
-          dateClosed:     formatDate(col(r, 'DATE_CLOSE')),
+          dateClosed:     formatDate(r['DATE_CLOSE']||''),
           dateTimeBreach: formatDate(breachRaw),
-          status:         clean(col(r, 'Status'))        || 'N/A',
-          queue:          clean(col(r, 'Queue')),
-          priority:       clean(col(r, 'Priority')),
-          language:       clean(col(r, 'ISO_Language'))  || 'Unknown',
-          tool:           clean(col(r, 'Tool'))          || 'Unknown',
-          topic:          clean(col(r, 'TOPIC')),
-          sla:            clean(col(r, 'SLA_Code'))      || 'Unknown',
-          slaN:           clean(col(r, 'SLA_N')),
-          breachDesc:     clean(col(r, 'Breach_Description')),
-          compassId:      clean(col(r, 'COMPASS ID')),
-          reason:         clean(col(r, 'Reason')),
-          action:         clean(col(r, 'Action')),
+          status:         clean(r['Status']||'N/A'),
+          queue:          clean(r['Queue']||''),
+          priority:       clean(r['Priority']||''),
+          language:       clean(r['ISO_Language']||'Unknown'),
+          tool:           clean(r['Tool']||'Unknown'),
+          topic:          clean(r['TOPIC']||''),
+          sla:            clean(r['SLA_Code']||'Unknown'),
+          slaN:           clean(r['SLA_N']||''),
+          breachDesc:     clean(r['Breach_Description']||''),
+          compassId:      clean(r['COMPASS ID']||''),
+          reason:         clean(r['Reason']||''),
+          action:         clean(r['Action']||''),
           aos:            aosF,
-          agent:          clean(col(r, 'Agent')),
-          bmsId:          clean(col(r, 'BMS ID')),
-          comment:        clean(col(r, 'Comment')),
-          aosIssue:       clean(aosIRaw),
-          excluded:       normBool(col(r, 'Excluded')),
-          jira:           clean(col(r, 'Jira')),
-          week:           clean(col(r, 'Week')),
-          unique:         clean(col(r, 'Unique')),
+          agent:          clean(r['Agent']||''),
+          bmsId:          clean(r['BMS ID']||''),
+          comment:        clean(r['Comment']||''),
+          aosIssue:       clean(r['AOS Issue']||''),
+          excluded:       normBool(r['Excluded']||''),
+          jira:           clean(r['Jira']||''),
+          week:           clean(r['Week']||''),
+          unique:         clean(r['Unique']||''),
           sheet:          sn,
-          isAos:          aosF==='Y' || aosI==='Y',
+          isAos:          aosF==='Y'||aosI==='Y',
         });
         added++;
       });
     });
-
     window.RPT.aosFiltered = window.RPT.allData.filter(function(r){return r.isAos;});
-    return { added: added, uniqueTickets: ticketsInFile.size, colWarning: colWarning };
+    return { added: added, uniqueTickets: ticketsInFile.size };
   }
 
   function _populateUnique(){
@@ -299,6 +219,22 @@
     uv.weeks.sort(function(a,b){return Number(a)-Number(b);});
     uv.slas.sort();uv.languages.sort();uv.tools.sort();uv.queues.sort();
     window.RPT.uniqueValues=uv;
+  }
+
+  /* ---- Build language checkbox list ---- */
+  function _buildLangDropdown() {
+    var list = document.getElementById('lang-dd-list');
+    if (!list) return;
+    var langs = (window.RPT.uniqueValues.languages || []).slice().sort();
+    list.innerHTML = langs.map(function(lang) {
+      var id = 'lang-cb-' + lang.replace(/[^a-zA-Z0-9]/g,'_');
+      return '<label class="lang-dd-item" for="'+id+'">'+
+        '<input type="checkbox" id="'+id+'" value="'+_escAttr(lang)+'" checked '+
+        'onchange="window._onLangChange()">'+
+        '<span>'+_esc(lang)+'</span>'+
+        '</label>';
+    }).join('');
+    if (typeof window._updateLangLabel === 'function') window._updateLangLabel();
   }
 
   function _updateDropdowns(){
@@ -318,23 +254,11 @@
     if(fe)fe.innerHTML='<option value="All">All</option><option value="Y">Excluded</option><option value="N">Counted</option>';
     var fa=document.getElementById('filter-aos');
     if(fa)fa.innerHTML='<option value="All">All</option><option value="Y">AOS Only</option><option value="N">Non-AOS</option>';
-    // NOTE: visibility is now controlled by _showData() / _showUpload() — not here
-  }
 
-  /* ---- Build language checkbox list ---- */
-  function _buildLangDropdown() {
-    var list = document.getElementById('lang-dd-list');
-    if (!list) return;
-    var langs = (window.RPT.uniqueValues.languages || []).slice().sort();
-    list.innerHTML = langs.map(function(lang) {
-      var id = 'lang-cb-' + lang.replace(/[^a-zA-Z0-9]/g,'_');
-      return '<label class="lang-dd-item" for="'+id+'">'+
-        '<input type="checkbox" id="'+id+'" value="'+_escAttr(lang)+'" checked '+
-        'onchange="window._onLangChange()">'+
-        '<span>'+_esc(lang)+'</span>'+
-        '</label>';
-    }).join('');
-    if (typeof window._updateLangLabel === 'function') window._updateLangLabel();
+    var up=document.getElementById('upload-section');
+    var dp=document.getElementById('data-section');
+    if(up) up.style.display='none';
+    if(dp) dp.style.display='flex';
   }
 
   function _applyFiltersOnly(){
@@ -370,9 +294,7 @@
   function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function _escAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
-  // Ensure upload screen shown on page load
-  document.addEventListener('DOMContentLoaded', function(){
-    _showUpload();
+  document.addEventListener('DOMContentLoaded',function(){
     ['filter-week','filter-sla','filter-excl',
      'filter-aos','filter-tool','filter-queue','filter-sheet']
       .forEach(function(id){
