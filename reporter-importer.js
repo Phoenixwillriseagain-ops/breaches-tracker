@@ -2,6 +2,14 @@
    Handles the Import button, file-input, drag-and-drop zone,
    and the Clear-All button in reporter.html.
    Depends on: XLSX (cdn), reporter-processor.js
+
+   Flow:
+     1. User selects / drops .xlsx file(s)
+     2. FileReader reads each file as ArrayBuffer
+     3. XLSX.read() parses it into a SheetJS workbook
+     4. Workbook is tagged with ._filename for the import log
+     5. Array of workbooks passed to window.RPT.loadFiles()
+        (reporter-processor.js owns all data merging from this point)
 */
 (function () {
   'use strict';
@@ -14,41 +22,10 @@
     el.className = type || '';
   }
 
-  function showLog(lines) {
-    var el = document.getElementById('rpt-import-log');
-    if (!el) return;
-    if (!lines || !lines.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
-    el.style.display = 'block';
-    el.innerHTML = lines.map(function (l) { return '<div>' + l + '</div>'; }).join('');
-  }
-
-  function showData() {
-    var up = document.getElementById('upload-section');
-    var ds = document.getElementById('data-section');
-    if (up) up.style.display = 'none';
-    if (ds) { ds.style.display = 'flex'; ds.classList.add('visible'); }
-  }
-
-  function hideData() {
-    var up = document.getElementById('upload-section');
-    var ds = document.getElementById('data-section');
-    var sb = document.getElementById('rpt-sidebar');
-    var eb = document.getElementById('export-btns');
-    var cb = document.getElementById('rpt-clear-btn');
-    var rc = document.getElementById('record-count');
-    if (up) up.style.display = '';
-    if (ds) { ds.style.display = 'none'; ds.classList.remove('visible'); }
-    if (sb) sb.style.display = 'none';
-    if (eb) eb.style.display = 'none';
-    if (cb) cb.style.display = 'none';
-    if (rc) rc.textContent = '';
-    showLog([]);
-    setStatus('');
-  }
-
   /* ── file processing ─────────────────────────────────────────── */
   function processFiles(files) {
     if (!files || !files.length) return;
+
     if (typeof XLSX === 'undefined') {
       setStatus('SheetJS library not loaded — cannot read .xlsx files.', 'err');
       return;
@@ -59,59 +36,64 @@
     }
 
     setStatus('Reading file(s)…', '');
+
     var fileArray = Array.prototype.slice.call(files);
-    var results = [];
-    var pending = fileArray.length;
+    var workbooks = [];
+    var errors    = [];
+    var pending   = fileArray.length;
 
     fileArray.forEach(function (file) {
+      if (!/\.xlsx$/i.test(file.name)) {
+        errors.push(file.name + ' — only .xlsx files are accepted');
+        pending--;
+        if (pending === 0) done();
+        return;
+      }
+
       var reader = new FileReader();
+
       reader.onload = function (e) {
         try {
-          var wb = XLSX.read(e.target.result, { type: 'array' });
-          results.push({ name: file.name, wb: wb });
+          var wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+          wb._filename = file.name;   // tag for import log in processor
+          workbooks.push(wb);
         } catch (err) {
-          results.push({ name: file.name, error: err.message });
+          errors.push(file.name + ' — ' + err.message);
         }
         pending--;
-        if (pending === 0) finalize(results);
+        if (pending === 0) done();
       };
+
       reader.onerror = function () {
-        results.push({ name: file.name, error: 'File read error' });
+        errors.push(file.name + ' — file read error');
         pending--;
-        if (pending === 0) finalize(results);
+        if (pending === 0) done();
       };
+
       reader.readAsArrayBuffer(file);
     });
-  }
 
-  function finalize(results) {
-    var logs = [];
-    var workbooks = [];
-    results.forEach(function (r) {
-      if (r.error) {
-        logs.push('&#10060; ' + r.name + ' — ' + r.error);
-      } else {
-        logs.push('&#9989; ' + r.name + ' loaded (' + r.wb.SheetNames.length + ' sheet(s))');
-        workbooks.push(r.wb);
-      }
-    });
-
-    if (!workbooks.length) {
-      setStatus('No valid files could be read.', 'err');
-      showLog(logs);
-      return;
-    }
-
-    try {
-      var summary = window.RPT.loadFiles(workbooks);
-      if (summary && summary.log) logs = logs.concat(summary.log);
-      showLog(logs);
-      showData();
+    function done() {
       setStatus('');
-      if (typeof window.renderTables === 'function') window.renderTables();
-    } catch (err) {
-      setStatus('Error processing file(s): ' + err.message, 'err');
-      showLog(logs.concat(['&#9888; Processing error: ' + err.message]));
+
+      if (errors.length) {
+        // Show any pre-parse errors in the import log area
+        var logEl = document.getElementById('rpt-import-log');
+        if (logEl) {
+          logEl.innerHTML = errors.map(function (e) {
+            return '<span style="color:var(--error,#a12c7b);margin-right:8px;">&#10007;</span>' + e;
+          }).join('<br>');
+          logEl.style.display = 'block';
+        }
+      }
+
+      if (!workbooks.length) {
+        if (!errors.length) setStatus('No valid .xlsx files selected.', 'err');
+        return;
+      }
+
+      // Hand off to processor — it handles merging, filter rebuild, and renderTables()
+      window.RPT.loadFiles(workbooks);
     }
   }
 
@@ -138,7 +120,6 @@
         if (typeof window.RPT !== 'undefined' && typeof window.RPT.clearAll === 'function') {
           window.RPT.clearAll();
         }
-        hideData();
       });
     }
 
