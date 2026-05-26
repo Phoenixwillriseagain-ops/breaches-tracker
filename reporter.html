@@ -48,6 +48,7 @@
     #upload-status.err { color: var(--error); }
 
     #data-section { display: none; flex-direction: column; gap: 20px; }
+    #data-section.visible { display: flex; }
 
     #rpt-import-log {
       display: none;
@@ -463,7 +464,7 @@
       </div>
 
       <!-- DATA -->
-      <div id="data-section" style="display:none">
+      <div id="data-section">
         <div class="kpi-row" id="kpi-row"></div>
         <div class="rpt-tabs" id="tab-bar">
           <button class="rpt-tab active" data-tab="dashboard">Dashboard</button>
@@ -490,7 +491,6 @@
 <script src="config.js"></script>
 <script src="reporter-processor.js"></script>
 <script src="reporter-pivot.js"></script>
-<script src="reporter-exporter.js"></script>
 <script src="reporter-importer.js"></script>
 
 <script>
@@ -501,12 +501,6 @@ var PAGE_SIZE       = 50;
 
 window.renderTables = function() {
   var data = window.RPT ? window.RPT.filtered : [];
-
-  var up = document.getElementById('upload-section');
-  var dp = document.getElementById('data-section');
-  if (up) up.style.display = 'none';
-  if (dp) dp.style.display = 'flex';
-
   _buildKPIs(data);
   _renderTab(_currentTab);
   document.getElementById('rpt-sidebar').style.display = '';
@@ -684,470 +678,292 @@ function _buildKsl4Pivot(rows) {
   if (!rows || !rows.length) {
     return '<div class="sc" style="margin-bottom:0">'+
       '<div class="sc-head"><h2>KSL-4 — Comment &amp; AOS Issue Overview</h2></div>'+
-      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No KSL-4 records in the current filter.</p></div></div>';
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No KSL-4 records in the current filter.</p></div>'+
+      '</div>';
   }
-
-  /* group by jiraTicket, pick primary row (seenTicket first occurrence) */
-  var byTicket = {};
-  rows.forEach(function(r) {
-    var k = r.jiraTicket || r.ticket || '—';
-    if (!byTicket[k]) byTicket[k] = { primary: r, comments: [], aosIssues: [] };
-    var g = byTicket[k];
-    if (r.comment && r.comment.trim()) g.comments.push(r.comment.trim());
-    if (r.aosIssue && r.aosIssue.trim()) g.aosIssues.push(r.aosIssue.trim());
-  });
-
-  var keys = Object.keys(byTicket).sort();
-  var h = '<div class="sc" style="margin-bottom:0">'+
-    '<div class="sc-head"><h2>KSL-4 — Comment &amp; AOS Issue Overview</h2>'+
-    '<span class="badge">'+keys.length+' ticket(s)</span></div>'+
+  var seen = {}, deduped = [];
+  rows.forEach(function(r){ if (!seen[r.ticket]) { seen[r.ticket]=true; deduped.push(r); } });
+  deduped.sort(function(a,b){ if(a.isAos!==b.isAos) return a.isAos?-1:1; return a.ticket<b.ticket?-1:a.ticket>b.ticket?1:0; });
+  var aosCount=deduped.filter(function(r){return r.isAos;}).length;
+  var exclCount=deduped.filter(function(r){return r.excluded==='Y';}).length;
+  var withComment=deduped.filter(function(r){return r.comment&&r.comment.trim();}).length;
+  var withAosIssue=deduped.filter(function(r){return r.aosIssue&&r.aosIssue.trim();}).length;
+  var badge=deduped.length+' unique ticket'+(deduped.length!==1?'s':'');
+  if(aosCount)  badge+=' &bull; '+aosCount+' AOS';
+  if(exclCount) badge+=' &bull; '+exclCount+' excl';
+  var trs=deduped.map(function(r){
+    var hasComment=r.comment&&r.comment.trim();
+    var hasAosIssue=r.aosIssue&&r.aosIssue.trim();
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
+      '<td style="font-family:monospace;font-size:11px;white-space:nowrap">'+_esc(r.ticket)+'</td>'+
+      '<td style="white-space:nowrap;font-size:11px">'+_esc(r.week)+'</td>'+
+      '<td>'+_esc(r.language)+'</td>'+
+      '<td>'+_esc(r.tool)+'</td>'+
+      '<td>'+_esc(r.reason)+'</td>'+
+      '<td style="text-align:center">'+(r.isAos?'<span class="aos-badge">AOS</span>':'')+'</td>'+
+      '<td style="text-align:center">'+(r.excluded==='Y'?'<span class="chip ch-other">Excl</span>':'')+'</td>'+
+      (hasComment?'<td class="cell-comment">'+_esc(r.comment)+'</td>':'<td class="cell-empty">&mdash;</td>')+
+      (hasAosIssue?'<td class="cell-aos-issue">'+_esc(r.aosIssue)+'</td>':'<td class="cell-empty">&mdash;</td>')+
+    '</tr>';
+  }).join('');
+  var summaryNote=[];
+  if(withComment)  summaryNote.push(withComment+' ticket(s) have a comment');
+  if(withAosIssue) summaryNote.push(withAosIssue+' ticket(s) have an AOS Issue noted');
+  var noteHtml=summaryNote.length?'<p style="font-size:10px;color:var(--muted);margin-top:10px">&#9432;&nbsp;'+summaryNote.join(' &bull; ')+'. Excluded rows shown at reduced opacity. Sorted: AOS first, then by ticket ID.</p>':'';
+  return '<div class="sc" style="margin-bottom:0">'+
+    '<div class="sc-head"><h2>KSL-4 &mdash; Comment &amp; AOS Issue Overview</h2><span class="badge">'+badge+'</span></div>'+
     '<div class="sc-body"><div class="ksl4-pivot-wrap">'+
-    '<table class="ksl4-pivot">'+
-    '<thead><tr>'+
-    '<th>Week</th><th>Jira</th><th>Queue</th><th>Language</th><th>Tool</th>'+
-    '<th class="col-comment">Comment</th>'+
-    '<th class="col-aos-issue">AOS Issue</th>'+
-    '<th>Excl?</th>'+
-    '</tr></thead><tbody>';
-
-  keys.forEach(function(k) {
-    var g   = byTicket[k];
-    var r   = g.primary;
-    var exc = r.excluded === 'Y';
-    var comments  = g.comments.length  ? [...new Set(g.comments)].join(' / ')  : '';
-    var aosIssues = g.aosIssues.length ? [...new Set(g.aosIssues)].join(' / ') : '';
-
-    h += '<tr'+(exc?' class="excl"':'')+'>'+
-      '<td>'+_esc(r.week||'—')+'</td>'+
-      '<td>'+(r.jiraTicket?'<a class="jira-link" href="https://jira.example.com/browse/'+_esc(r.jiraTicket)+'" target="_blank">'+_esc(r.jiraTicket)+'</a>':_esc(k))+'</td>'+
-      '<td>'+_esc(r.queue||'—')+'</td>'+
-      '<td>'+_esc(r.language||'—')+'</td>'+
-      '<td>'+_esc(r.tool||'—')+'</td>'+
-      '<td class="cell-comment">'+(comments?_esc(comments):'<span class="cell-empty">—</span>')+'</td>'+
-      '<td class="cell-aos-issue">'+(aosIssues?'<span class="aos-badge">AOS</span> '+_esc(aosIssues):'<span class="cell-empty">—</span>')+'</td>'+
-      '<td>'+(exc?'<span class="chip ch-other">Y</span>':'')+'</td>'+
-      '</tr>';
-  });
-
-  h += '</tbody></table></div></div></div>';
-  return h;
-}
-
-/* ---- Generic table builder ---- */
-function _buildTable(title, rows, tabName) {
-  var unique = window.RPT.countUniqueTickets(rows);
-  var h = '<div class="sc">'+
-    '<div class="sc-head"><h2>'+_esc(title)+'</h2>'+
-    '<span class="badge">'+unique+' ticket(s) / '+rows.length+' row(s)</span>'+
-    '<button class="btn-outline" style="font-size:11px;padding:3px 10px;margin-left:8px" onclick="_exportCurrentTab()">Export Tab</button>'+
-    '</div>'+
-    '<div class="sc-body">'+
-    '<table class="dt"><thead><tr>'+
-    '<th>Week</th><th>SLA</th><th>Jira</th><th>Queue</th><th>Language</th>'+
-    '<th>Tool</th><th>Sheet</th><th>AOS?</th><th>Excl?</th><th>Comment</th>'+
-    '</tr></thead><tbody>';
-
-  var page  = _currentPage;
-  var start = (page-1)*PAGE_SIZE;
-  var slice = rows.slice(start, start+PAGE_SIZE);
-
-  slice.forEach(function(r){
-    var exc = r.excluded==='Y';
-    h += '<tr'+(exc?' class="excl"':'')+'>'+
-      '<td>'+_esc(r.week||'')+'</td>'+
-      '<td><span class="chip '+_slaChip(r.sla)+'">'+_esc(r.sla||'')+'</span></td>'+
-      '<td>'+(r.jiraTicket?'<a class="jira-link" href="https://jira.example.com/browse/'+_esc(r.jiraTicket)+'" target="_blank">'+_esc(r.jiraTicket)+'</a>':_esc(r.ticket||''))+'</td>'+
-      '<td>'+_esc(r.queue||'')+'</td>'+
-      '<td>'+_esc(r.language||'')+'</td>'+
-      '<td>'+_esc(r.tool||'')+'</td>'+
-      '<td>'+_esc(r.sheet||'')+'</td>'+
-      '<td>'+(r.isAos?'<span class="chip ch-y">Y</span>':'')+'</td>'+
-      '<td>'+(exc?'<span class="chip ch-other">Y</span>':'')+'</td>'+
-      '<td style="max-width:260px;font-size:11px;color:var(--muted)">'+_esc(r.comment||'')+'</td>'+
-      '</tr>';
-  });
-
-  h += '</tbody></table>';
-  h += _buildPager(rows.length, page);
-  h += '</div></div>';
-  return h;
-}
-
-/* ---- Pager ---- */
-function _buildPager(total, page) {
-  var pages = Math.ceil(total / PAGE_SIZE);
-  if (pages <= 1) return '';
-  var h = '<div class="pg">';
-  h += '<button class="pg-btn" '+(page<=1?'disabled':'')+' onclick="_goPage('+( page-1)+')">&#8592;</button>';
-  var lo = Math.max(1, page-2), hi = Math.min(pages, page+2);
-  if (lo > 1) { h += '<button class="pg-btn" onclick="_goPage(1)">1</button>'; if (lo>2) h += '<span>…</span>'; }
-  for (var i=lo;i<=hi;i++) h += '<button class="pg-btn'+(i===page?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
-  if (hi < pages) { if (hi<pages-1) h += '<span>…</span>'; h += '<button class="pg-btn" onclick="_goPage('+pages+')">'+pages+'</button>'; }
-  h += '<button class="pg-btn" '+(page>=pages?'disabled':'')+' onclick="_goPage('+(page+1)+')">&#8594;</button>';
-  h += '<span style="margin-left:4px">'+total+' row(s)</span></div>';
-  return h;
-}
-function _goPage(p) {
-  _currentPage = p;
-  var data  = window.RPT ? window.RPT.filtered : [];
-  var rows  = _currentTabRows;
-  var el    = document.getElementById('tab-content');
-  if (!el || !rows) return;
-  var labels = { all:'All Records', km1:'KM-1', ksl5a:'KSL-5a', km2:'KM-2', aos:'AOS Records' };
-  if (_currentTab === 'ksl4') {
-    el.innerHTML = _buildKsl4Pivot(rows) + _buildTable('KSL-4 — All Records', rows, 'ksl4');
-  } else {
-    el.innerHTML = _buildTable(labels[_currentTab]||_currentTab, rows, _currentTab);
-  }
-}
-function _exportCurrentTab() {
-  if (window.RPT && window.RPT.exportTab) window.RPT.exportTab(_currentTabRows, _currentTab);
+    '<table class="ksl4-pivot"><thead><tr>'+
+    '<th>Ticket</th><th>Week</th><th>Language</th><th>Tool</th><th>Reason</th>'+
+    '<th style="text-align:center">AOS</th><th style="text-align:center">Excl</th>'+
+    '<th class="col-comment">Comment</th><th class="col-aos-issue">AOS Issue</th>'+
+    '</tr></thead><tbody>'+(trs||'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+'</tbody></table>'+
+    '</div>'+noteHtml+'</div></div>';
 }
 
 /* ---- Dashboard ---- */
 function _buildDashboard(data) {
-  var active = data.filter(function(r){return r.excluded==='N';});
+  var a = data.filter(function(r){ return r.excluded==='N'; });
 
-  function countBySla(s){ return window.RPT.countUniqueTickets(active.filter(function(r){return r.sla===s;})); }
-
-  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
-  var slaTot = window.RPT.countUniqueTickets(active);
-
-  /* SLA breakdown bar chart */
-  var slaBar = '<div class="bar-chart">';
-  slas.forEach(function(s){
-    var n = countBySla(s);
-    var pct = slaTot ? Math.round(n/slaTot*100) : 0;
-    var col = s==='KSL-4'?'#006494':s==='KM-1'?'#4f98a3':s==='KSL-5a'?'#964219':'#7a39bb';
-    slaBar += '<div class="bar-row">'+
-      '<span class="bar-lbl">'+s+'</span>'+
-      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
-      '<span class="bar-cnt">'+n+'</span></div>';
+  /* ---- standard aggregations ---- */
+  var R={}, L={}, S={}, Q={}, P={}, ACT={};
+  a.forEach(function(r){
+    if(r.reason)   R[r.reason]  =(R[r.reason]||0)+1;
+    if(r.language) L[r.language]=(L[r.language]||0)+1;
+    if(r.sla)      S[r.sla]     =(S[r.sla]||0)+1;
+    if(r.queue)    Q[r.queue]   =(Q[r.queue]||0)+1;
+    if(r.topic)    P[r.topic]   =(P[r.topic]||0)+1;
+    if(r.sla==='KM-1'&&r.action) ACT[r.action]=(ACT[r.action]||0)+1;
   });
-  slaBar += '</div>';
 
-  /* Queue bar chart */
-  var qMap = {}; active.forEach(function(r){if(r.queue)qMap[r.queue]=(qMap[r.queue]||0)+1;});
-  var qArr = Object.keys(qMap).map(function(k){return{k:k,n:qMap[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10);
-  var qMax = qArr.length ? qArr[0].n : 1;
-  var qBar = '<div class="bar-chart">';
-  qArr.forEach(function(x){
-    var pct = Math.round(x.n/qMax*100);
-    qBar += '<div class="bar-row">'+
-      '<span class="bar-lbl" title="'+_esc(x.k)+'">'+_esc(x.k)+'</span>'+
-      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--primary)"></div></div>'+
-      '<span class="bar-cnt">'+x.n+'</span></div>';
+  /* ---- KSL-4 Comment aggregation (unique tickets, active only) ---- */
+  var ksl4Active = a.filter(function(r){ return r.sla==='KSL-4'; });
+  var commentMap = {}, seenTicket = {};
+  ksl4Active.forEach(function(r){
+    if (seenTicket[r.ticket]) return;   // dedupe per unique ticket
+    seenTicket[r.ticket] = true;
+    var raw = (r.comment && r.comment.trim()) ? r.comment.trim() : '(no comment)';
+    /* Truncate very long values to keep the bar chart readable */
+    var lbl = raw.length > 60 ? raw.substring(0, 57) + '...' : raw;
+    commentMap[lbl] = (commentMap[lbl] || 0) + 1;
   });
-  qBar += '</div>';
 
-  /* KSL-4 by Comment bar chart */
-  var ksl4active = active.filter(function(r){return r.sla==='KSL-4' && !r.isAos;});
-  var cmtMap = {};
-  ksl4active.forEach(function(r){
-    var c = (r.comment||'').trim() || '(no comment)';
-    if (!cmtMap[c]) cmtMap[c] = new Set();
-    cmtMap[c].add(r.jiraTicket || r.ticket || r._rowKey || Math.random());
-  });
-  var cmtArr = Object.keys(cmtMap).map(function(k){return{k:k,n:cmtMap[k].size};})
-    .sort(function(a,b){return b.n-a.n;}).slice(0,10);
-  var cmtMax  = cmtArr.length ? cmtArr[0].n : 1;
-  var cmtBar  = '<div class="bar-chart">';
-  cmtArr.forEach(function(x){
-    var pct = Math.round(x.n/cmtMax*100);
-    cmtBar += '<div class="bar-row">'+
-      '<span class="bar-lbl" title="'+_esc(x.k)+'">'+_esc(x.k)+'</span>'+
-      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:#006494"></div></div>'+
-      '<span class="bar-cnt">'+x.n+'</span></div>';
-  });
-  cmtBar += '</div>';
-
-  /* Language bar */
-  var lMap = {}; active.forEach(function(r){if(r.language)lMap[r.language]=(lMap[r.language]||0)+1;});
-  var lArr = Object.keys(lMap).map(function(k){return{k:k,n:lMap[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10);
-  var lMax = lArr.length ? lArr[0].n : 1;
-  var lBar = '<div class="bar-chart">';
-  lArr.forEach(function(x){
-    var pct = Math.round(x.n/lMax*100);
-    lBar += '<div class="bar-row">'+
-      '<span class="bar-lbl" title="'+_esc(x.k)+'">'+_esc(x.k)+'</span>'+
-      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--warning,#964219)"></div></div>'+
-      '<span class="bar-cnt">'+x.n+'</span></div>';
-  });
-  lBar += '</div>';
+  var km1Chart = Object.keys(ACT).length ? _card('KM-1 Action Breakdown', _bar(_top(ACT,10),'#006494')) : '';
 
   return '<div class="dash-grid">'+
-    _sc('SLA Breakdown', slaBar, slaTot+' active ticket(s)')+
-    _sc('Top Queues (rows)', qBar)+
-    _sc('KSL-4 by Comment', cmtBar)+
-    _sc('Top Languages (rows)', lBar)+
-    '</div>';
+    _card('KSL-4 by Comment',  _bar(_top(commentMap,12),'#006494'))+
+    _card('Breach Reasons',    _bar(_top(R,10),'#964219'))+
+    _card('Languages',         _bar(_top(L,10),'#437a22'))+
+    _card('SLA Breakdown',     _bar(_top(S,8), '#7a39bb'))+
+    _card('By Queue',          _bar(_top(Q,8), '#01696f'))+
+    _card('By Topic',          _bar(_top(P,8), '#d19900'))+
+    km1Chart+'</div>';
 }
+function _top(map,n){ return Object.keys(map).map(function(k){return[k,map[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n); }
+function _bar(entries,color){
+  if(!entries.length) return '<p style="color:var(--muted);font-size:12px">No data</p>';
+  var max=entries[0][1];
+  return '<div class="bar-chart">'+entries.map(function(e){
+    return '<div class="bar-row">'+
+      '<div class="bar-lbl" title="'+_esc(e[0])+'">'+_esc(e[0])+'</div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+Math.round(e[1]/max*100)+'%;background:'+color+'"></div></div>'+
+      '<div class="bar-cnt">'+e[1]+'</div></div>';
+  }).join('')+'</div>';
+}
+function _card(title,body){ return '<div class="sc"><div class="sc-head"><h2>'+title+'</h2></div><div class="sc-body">'+body+'</div></div>'; }
+function _esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 /* ---- Trends ---- */
 function _buildTrends(data) {
-  var active = data.filter(function(r){return r.excluded==='N';});
-  var weeks  = [];
-  var wSet   = {};
-  active.forEach(function(r){if(r.week && !wSet[r.week]){wSet[r.week]=1;weeks.push(r.week);}});
-  weeks.sort();
-
-  if (!weeks.length) return '<p style="color:var(--muted);font-size:12px;padding:20px">No data.</p>';
-
-  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
-  var colors = {'KSL-4':'#006494','KM-1':'#4f98a3','KSL-5a':'#964219','KM-2':'#7a39bb'};
-
-  /* build matrix: sla x week -> unique count */
-  function cell(s,w){
-    return window.RPT.countUniqueTickets(active.filter(function(r){return r.sla===s && r.week===w;}));
-  }
-
-  var maxVal = 0;
-  slas.forEach(function(s){ weeks.forEach(function(w){ var v=cell(s,w); if(v>maxVal)maxVal=v; }); });
-
-  function heatColor(v, col) {
-    if (!v) return 'background:var(--divider);color:transparent';
-    var pct = maxVal ? v/maxVal : 0;
-    var alpha = 0.15 + pct*0.75;
-    return 'background:'+col+Math.round(alpha*255).toString(16).padStart(2,'0')+';color:'+(pct>0.5?'#fff':col);
-  }
-
-  /* header */
-  var h = '<div class="trends-grid"><div class="sc"><div class="sc-head"><h2>Weekly Breach Trends</h2></div><div class="sc-body">';
-  h += '<div class="trend-table-wrap"><table class="trend-table">';
-  h += '<thead><tr><th class="tt-row-lbl">SLA</th>';
-  weeks.forEach(function(w){ h += '<th>'+_esc(w)+'</th>'; });
-  h += '<th>Total</th></tr></thead><tbody>';
-
-  slas.forEach(function(s){
-    var col = colors[s];
-    h += '<tr><td class="tt-row-lbl">'+s+'</td>';
-    var rowTotal = 0;
-    weeks.forEach(function(w){
-      var v = cell(s,w); rowTotal+=v;
-      h += '<td style="'+heatColor(v,col)+'">'+( v||'')+'</td>';
-    });
-    h += '<td style="font-weight:700;text-align:center;padding:0 8px">'+rowTotal+'</td>';
-    h += '</tr>';
-
-    /* delta row */
-    h += '<tr class="delta-row"><td class="tt-row-lbl"></td>';
-    for (var i=0;i<weeks.length;i++){
-      if (i===0){ h += '<td></td>'; continue; }
-      var prev = cell(s,weeks[i-1]), curr = cell(s,weeks[i]);
-      var d = curr-prev;
-      var dc = d>0?'color:#a12c7b':d<0?'color:#437a22':'color:var(--faint)';
-      h += '<td style="'+dc+';text-align:center;font-size:10px">'+(d>0?'+':'')+( d||'')+'</td>';
-    }
-    h += '<td></td></tr>';
-    h += '<tr class="spacer-row"><td colspan="'+(weeks.length+2)+'"></td></tr>';
+  if (!data||!data.length) return '<div class="sc"><div class="sc-head"><h2>Trends</h2></div><div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No data loaded.</p></div></div>';
+  var weekSet={};
+  data.forEach(function(r){if(r.week)weekSet[r.week]=1;});
+  var weeks=Object.keys(weekSet).sort();
+  if(!weeks.length) return '<div class="sc"><div class="sc-head"><h2>Trends</h2></div><div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No week data found.</p></div></div>';
+  var COLS=[
+    {key:'total', label:'Total', rgb:[40,37,29],   f:function(r){return true;}},
+    {key:'ksl4',  label:'KSL-4', rgb:[0,100,148],  f:function(r){return r.sla==='KSL-4';}},
+    {key:'km1',   label:'KM-1',  rgb:[0,100,148],  f:function(r){return r.sla==='KM-1';}},
+    {key:'ksl5a', label:'KSL-5a',rgb:[150,66,25],  f:function(r){return r.sla==='KSL-5a';}},
+    {key:'km2',   label:'KM-2',  rgb:[122,57,187], f:function(r){return r.sla==='KM-2';}},
+    {key:'aos',   label:'AOS',   rgb:[1,105,111],  f:function(r){return r.isAos;}},
+    {key:'excl',  label:'Excl',  rgb:[160,44,123], f:function(r){return r.excluded==='Y';}}
+  ];
+  var activeData=data.filter(function(r){return r.excluded==='N';});
+  function countUniqByWeek(rows,weekVal){var seen={};rows.forEach(function(r){if(r.week===weekVal&&r.ticket)seen[r.ticket]=1;});return Object.keys(seen).length;}
+  var matrix={};
+  COLS.forEach(function(col){
+    matrix[col.key]={};
+    var src=(col.key==='total'||col.key==='excl')?data:activeData;
+    var filtered=src.filter(col.f);
+    weeks.forEach(function(w){matrix[col.key][w]=countUniqByWeek(filtered,w);});
   });
-
-  h += '</tbody></table></div>';
-  h += '<div class="trends-legend">';
-  slas.forEach(function(s){
-    h += '<div class="trends-legend-item"><div class="trends-legend-swatch"><span style="background:'+colors[s]+'"></span></div>'+s+'</div>';
+  var colMax={};
+  COLS.forEach(function(col){var m=0;weeks.forEach(function(w){if(matrix[col.key][w]>m)m=matrix[col.key][w];});colMax[col.key]=m||1;});
+  var BASE_RGB=[247,246,242];
+  function cellStyle(col,val){
+    if(val===0) return 'background:#f0eeea;color:#bab9b4';
+    var ratio=Math.pow(val/colMax[col.key],0.6);
+    var tr=col.rgb[0],tg=col.rgb[1],tb=col.rgb[2];
+    var r=Math.round(BASE_RGB[0]+ratio*(tr-BASE_RGB[0])),g=Math.round(BASE_RGB[1]+ratio*(tg-BASE_RGB[1])),b=Math.round(BASE_RGB[2]+ratio*(tb-BASE_RGB[2]));
+    return 'background:rgb('+r+','+g+','+b+');color:'+(0.299*r+0.587*g+0.114*b<145?'#ffffff':'#28251d');
+  }
+  function deltaStyle(val){if(val>0)return 'background:#fce8e8;color:#a12c3a';if(val<0)return 'background:#e3f2e8;color:#2e6b38';return 'background:#f0eeea;color:#bab9b4';}
+  function deltaLabel(val){if(val===null)return '&#8212;';if(val===0)return '&#177;0';return(val>0?'+':'')+val;}
+  var thead='<thead><tr><th class="tt-row-lbl">Week</th>'+COLS.map(function(c){return '<th>'+_esc(c.label)+'</th>';}).join('')+'</tr></thead>';
+  var tbodyRows='';
+  weeks.forEach(function(w,wi){
+    tbodyRows+='<tr><td class="tt-row-lbl">'+_esc(w)+'</td>'+COLS.map(function(col){var v=matrix[col.key][w];return '<td style="'+cellStyle(col,v)+'" title="'+_esc(col.label)+' | '+_esc(w)+' : '+v+' unique ticket(s)">'+v+'</td>';}).join('')+'</tr>';
+    tbodyRows+='<tr class="delta-row"><td class="tt-row-lbl" style="color:var(--faint,#bab9b4);font-size:9px">WoW &#916;</td>'+COLS.map(function(col){if(wi===0)return '<td style="'+deltaStyle(null)+'">&#8212;</td>';var d=matrix[col.key][w]-matrix[col.key][weeks[wi-1]];return '<td style="'+deltaStyle(d)+'" title="WoW delta '+_esc(col.label)+' | '+_esc(w)+'">'+deltaLabel(d)+'</td>';}).join('')+'</tr>';
   });
-  h += '</div></div></div></div>';
-  return h;
+  var summaryRow='<tr style="border-top:2px solid var(--border)"><td class="tt-row-lbl" style="font-weight:700;color:var(--text)">All weeks</td>'+COLS.map(function(col){var total=0;weeks.forEach(function(w){total+=matrix[col.key][w];});return '<td style="background:var(--bg);font-weight:700;color:var(--text);border-radius:5px">'+total+'</td>';}).join('')+'</tr>';
+  var legendItems=COLS.map(function(col){return '<div class="trends-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb('+col.rgb[0]+','+col.rgb[1]+','+col.rgb[2]+')"></span><span>'+_esc(col.label)+'</span></div>';}).join('');
+  return '<div class="sc"><div class="sc-head"><h2>Weekly KPI Trends</h2><span class="badge">'+weeks.length+' week'+(weeks.length!==1?'s':'')+' &bull; '+window.RPT.countUniqueTickets(data)+' unique ticket(s)</span></div>'+
+    '<div class="sc-body"><div class="trend-table-wrap"><table class="trend-table">'+thead+'<tbody>'+tbodyRows+summaryRow+'</tbody></table></div>'+
+    '<div class="trends-legend" style="margin-top:12px">'+legendItems+'</div>'+
+    '<p style="font-size:10px;color:var(--faint);margin-top:8px">Counts = unique Incident Tickets per week. Total &amp; Excl include all rows; other columns count active (Excluded=N) rows only. WoW &#916; row shows change vs. previous week.</p></div></div>';
 }
 
 /* ---- Heatmap ---- */
 function _buildHeatmap(data) {
-  var active = data.filter(function(r){return r.excluded==='N';});
-
-  /* day-of-week x hour matrix */
-  var days  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  var hours = [];
-  for (var i=0;i<24;i++) hours.push(i);
-
-  var matrix = {};
-  days.forEach(function(d){ matrix[d]={}; hours.forEach(function(h){ matrix[d][h]=0; }); });
-
-  active.forEach(function(r){
-    if (!r.breachDate) return;
-    var dt = new Date(r.breachDate);
-    if (isNaN(dt)) return;
-    var dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
-    var hr  = dt.getHours();
-    if (matrix[dow]) matrix[dow][hr] = (matrix[dow][hr]||0)+1;
-  });
-
-  var maxVal = 0;
-  days.forEach(function(d){ hours.forEach(function(h){ if(matrix[d][h]>maxVal) maxVal=matrix[d][h]; }); });
-
-  function hmColor(v){
-    if (!v) return 'background:var(--divider);color:transparent';
-    var pct  = maxVal ? v/maxVal : 0;
-    var r    = Math.round(1 + pct*14);
-    var g    = Math.round(105 - pct*50);
-    var b    = Math.round(148 - pct*80);
-    return 'background:rgb('+r+','+g+','+b+');color:'+(pct>0.5?'#fff':'#006494');
+  function parseBreach(str){
+    if(!str) return null;
+    var parts=str.split(' ');
+    if(parts.length<2) return null;
+    var dp=parts[0].split('.'),tp=parts[1].split(':');
+    if(dp.length<3||tp.length<2) return null;
+    var d=new Date(Date.UTC(parseInt(dp[2],10),parseInt(dp[1],10)-1,parseInt(dp[0],10),parseInt(tp[0],10)));
+    if(isNaN(d.getTime())) return null;
+    return{dow:(d.getUTCDay()+6)%7,hour:parseInt(tp[0],10)};
   }
-
-  var h = '<div class="sc"><div class="sc-head"><h2>Breach Heatmap — Day &times; Hour</h2></div><div class="sc-body">';
-  h += '<div class="heatmap-wrap"><table class="heatmap-table"><thead><tr><th></th>';
-  hours.forEach(function(hr){ h += '<th>'+(hr<10?'0':'')+hr+'</th>'; });
-  h += '</tr></thead><tbody>';
-  days.forEach(function(d){
-    h += '<tr><td class="hm-day-lbl">'+d+'</td>';
-    hours.forEach(function(hr){
-      var v = matrix[d][hr]||0;
-      h += '<td style="'+hmColor(v)+'" title="'+d+' '+hr+'h: '+v+'">'+( v||'')+'</td>';
-    });
-    h += '</tr>';
-  });
-  h += '</tbody></table></div>';
-
-  /* legend */
-  h += '<div class="hm-legend">Less ';
-  h += '<div class="hm-legend-swatch">';
-  [0,0.2,0.4,0.6,0.8,1].forEach(function(p){
-    var v = Math.round(p*maxVal);
-    h += '<span style="'+hmColor(v)+';display:inline-block;width:18px;height:12px;border-radius:2px"></span>';
-  });
-  h += '</div> More</div>';
-  h += '</div></div>';
-
-  /* per-KPI panels */
-  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
-  var colors = {'KSL-4':'#006494','KM-1':'#4f98a3','KSL-5a':'#964219','KM-2':'#7a39bb'};
-
-  h += '<div class="kpi-heatmap-grid">';
-  slas.forEach(function(sla){
-    var slaRows = active.filter(function(r){return r.sla===sla;});
-    var mat2 = {}; days.forEach(function(d){mat2[d]={}; hours.forEach(function(hr){mat2[d][hr]=0;});});
-    slaRows.forEach(function(r){
-      if(!r.breachDate) return;
-      var dt=new Date(r.breachDate); if(isNaN(dt)) return;
-      var dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
-      var hr=dt.getHours();
-      if(mat2[dow]) mat2[dow][hr]=(mat2[dow][hr]||0)+1;
-    });
-    var mx2=0; days.forEach(function(d){hours.forEach(function(hr){if(mat2[d][hr]>mx2)mx2=mat2[d][hr];});});
-    var col = colors[sla];
-
-    function hmCol2(v){
-      if(!v) return 'background:var(--divider);color:transparent';
-      var pct=mx2?v/mx2:0;
-      var alpha=0.18+pct*0.72;
-      return 'background:'+col+Math.round(alpha*255).toString(16).padStart(2,'0')+';color:'+(pct>0.55?'#fff':col);
-    }
-
-    h += '<div class="kpi-hm-panel"><div class="kpi-hm-head"><h3>'+sla+'</h3>'+
-      '<span class="badge">'+window.RPT.countUniqueTickets(slaRows)+' tickets</span></div>'+
-      '<div class="kpi-hm-body"><div class="heatmap-wrap"><table class="heatmap-table"><thead><tr><th></th>';
-    hours.forEach(function(hr){h+='<th>'+(hr<10?'0':'')+hr+'</th>';});
-    h+='</tr></thead><tbody>';
-    days.forEach(function(d){
-      h+='<tr><td class="hm-day-lbl">'+d+'</td>';
-      hours.forEach(function(hr){
-        var v=mat2[d][hr]||0;
-        h+='<td style="'+hmCol2(v)+'" title="'+d+' '+hr+'h: '+v+'">'+( v||'')+'</td>';
-      });
-      h+='</tr>';
-    });
-    h+='</tbody></table></div></div></div>';
-  });
-  h += '</div>';
-
-  return h;
+  var days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  function buildMatrix(rows){
+    var mx=[],i,j;for(i=0;i<7;i++){mx.push([]);for(j=0;j<24;j++)mx[i].push(0);}
+    rows.forEach(function(r){var p=parseBreach(r.dateTimeBreach);if(p)mx[p.dow][p.hour]++;});
+    return mx;
+  }
+  function renderHM(mx,accentRgb){
+    var i,j,maxVal=0;
+    for(i=0;i<7;i++)for(j=0;j<24;j++)if(mx[i][j]>maxVal)maxVal=mx[i][j];
+    if(!maxVal)maxVal=1;
+    var BR=247,BG=246,BB=242,TR=accentRgb[0],TG=accentRgb[1],TB=accentRgb[2];
+    function hmC(v){if(!v)return 'background:#f0eeea;color:var(--faint)';var ratio=Math.pow(v/maxVal,0.65),r=Math.round(BR+ratio*(TR-BR)),g=Math.round(BG+ratio*(TG-BG)),b=Math.round(BB+ratio*(TB-BB));return 'background:rgb('+r+','+g+','+b+');color:'+(0.299*r+0.587*g+0.114*b<140?'#ffffff':'#28251d');}
+    var hdr='<th></th>';for(j=0;j<24;j++)hdr+='<th>'+(j%2===0?String(j).padStart(2,'0')+'h':'')+'</th>';
+    var body=days.map(function(dn,di){var c='<td class="hm-day-lbl">'+dn+'</td>';for(j=0;j<24;j++){var v=mx[di][j];c+='<td style="'+hmC(v)+'" title="'+dn+' '+String(j).padStart(2,'0')+':00 \u2014 '+v+' breach(es)">'+(v>0?v:'')+'</td>';}return '<tr>'+c+'</tr>';}).join('');
+    var sw='';[0,.2,.4,.6,.8,1].forEach(function(r){var rr=Math.round(BR+r*(TR-BR)),gg=Math.round(BG+r*(TG-BG)),bb=Math.round(BB+r*(TB-BB));sw+='<span style="background:rgb('+rr+','+gg+','+bb+')"></span>';});
+    return '<div class="heatmap-wrap"><table class="heatmap-table"><thead><tr>'+hdr+'</tr></thead><tbody>'+body+'</tbody></table><div class="hm-legend"><span>Less</span><div class="hm-legend-swatch">'+sw+'</div><span>More</span></div></div>';
+  }
+  var SLAs=[{key:'KSL-4',rgb:[0,100,148]},{key:'KM-1',rgb:[0,100,148]},{key:'KSL-5a',rgb:[150,66,25]},{key:'KM-2',rgb:[122,57,187]}];
+  var active=data.filter(function(r){return r.excluded==='N';});
+  var combinedMx=buildMatrix(active);
+  var panels=SLAs.map(function(s){
+    var rows=active.filter(function(r){return r.sla===s.key;});
+    var mx=buildMatrix(rows);
+    return '<div class="kpi-hm-panel"><div class="kpi-hm-head"><h3>'+s.key+'</h3><span class="badge">'+rows.length+' events</span></div><div class="kpi-hm-body">'+renderHM(mx,s.rgb)+'</div></div>';
+  }).join('');
+  return '<div class="sc"><div class="sc-head"><h2>Breach Heatmap — Combined (Active)</h2><span class="badge">'+active.length+' events</span></div><div class="sc-body">'+renderHM(combinedMx,[1,105,111])+'</div></div>'+
+    '<div class="kpi-heatmap-grid">'+panels+'</div>';
 }
 
 /* ---- Overview ---- */
 function _buildOverview(data) {
-  var active = data.filter(function(r){return r.excluded==='N';});
-  var weeks  = []; var wSet={}; active.forEach(function(r){if(r.week&&!wSet[r.week]){wSet[r.week]=1;weeks.push(r.week);}});
-  weeks.sort();
-  var slas   = ['KSL-4','KM-1','KSL-5a','KM-2'];
+  var wkSet={};
+  data.forEach(function(r){if(r.week)wkSet[r.week]=1;});
+  var weeks=Object.keys(wkSet).sort();
+  var SLAs=['KSL-4','KM-1','KSL-5a','KM-2'];
+  function uniq(rows){var s={};rows.forEach(function(r){if(r.ticket)s[r.ticket]=1;});return Object.keys(s).length;}
+  var thead='<tr><th>Week</th><th>Total</th><th>Active</th><th>Excl</th><th>AOS</th>'+SLAs.map(function(s){return '<th>'+s+'</th>';}).join('')+'</tr>';
+  var tbody=weeks.map(function(w){
+    var wr=data.filter(function(r){return r.week===w;});
+    var wa=wr.filter(function(r){return r.excluded==='N';});
+    return '<tr><td>'+_esc(w)+'</td><td>'+uniq(wr)+'</td><td>'+uniq(wa)+'</td>'+
+      '<td>'+(uniq(wr)-uniq(wa))+'</td><td>'+uniq(wa.filter(function(r){return r.isAos;}))+'</td>'+
+      SLAs.map(function(s){return '<td>'+uniq(wa.filter(function(r){return r.sla===s;}))+'</td>';}).join('')+'</tr>';
+  }).join('');
+  return '<div class="sc"><div class="sc-head"><h2>Weekly Overview</h2></div><div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div></div></div>';
+}
 
-  var h = '<div class="sc"><div class="sc-head"><h2>Overview — Unique Tickets by Week &amp; SLA</h2>'+
-    '<span class="badge">'+weeks.length+' week(s)</span></div><div class="sc-body">';
+/* ---- Table ---- */
+function _buildTable(title, rows, tab) {
+  var uniq={};rows.forEach(function(r){if(r.ticket)uniq[r.ticket]=1;});
+  var badge=Object.keys(uniq).length+' unique ticket(s) / '+rows.length+' row(s)';
+  var sliced=rows.slice((_currentPage-1)*PAGE_SIZE, _currentPage*PAGE_SIZE);
+  var aosCol=(tab==='aos');
+  var thead='<tr>'+
+    '<th>Ticket</th><th>Week</th><th>SLA</th><th>Language</th><th>Tool</th>'+
+    '<th>Queue</th><th>Reason</th>'+(aosCol?'<th>AOS Issue</th>':'')+'<th>Excl</th>'+
+  '</tr>';
+  var tbody=sliced.map(function(r){
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
+      '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
+      '<td>'+_esc(r.week)+'</td>'+
+      '<td><span class="chip ch-'+String(r.sla).toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(r.sla)+'</span></td>'+
+      '<td>'+_esc(r.language)+'</td>'+
+      '<td>'+_esc(r.tool)+'</td>'+
+      '<td>'+_esc(r.queue)+'</td>'+
+      '<td>'+_esc(r.reason)+'</td>'+
+      (aosCol?'<td style="font-size:11px;color:#006494">'+_esc(r.aosIssue||'')+'</td>':'')+
+      '<td style="text-align:center">'+(r.excluded==='Y'?'<span class="chip ch-other">Y</span>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+  var totalPages=Math.ceil(rows.length/PAGE_SIZE)||1;
+  var pg='';
+  if(totalPages>1){
+    pg='<div class="pg">';
+    pg+='<button class="pg-btn" '+((_currentPage===1)?'disabled':'')+' onclick="_goPage('+(_currentPage-1)+')">&#8592;</button>';
+    var s=Math.max(1,_currentPage-2),e=Math.min(totalPages,s+4);
+    for(var i=s;i<=e;i++) pg+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
+    pg+='<button class="pg-btn" '+((_currentPage===totalPages)?'disabled':'')+' onclick="_goPage('+(_currentPage+1)+')">&#8594;</button>';
+    pg+='<span style="margin-left:4px">'+_currentPage+'/'+totalPages+'</span></div>';
+  }
+  return '<div class="sc"><div class="sc-head"><h2>'+_esc(title)+'</h2><span class="badge">'+badge+'</span></div>'+
+    '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div>'+pg+'</div></div>';
+}
 
-  if (!weeks.length) { h += '<p style="color:var(--muted);font-size:12px;padding:20px">No data.</p></div></div>'; return h; }
-
-  h += '<div class="ksl4-pivot-wrap"><table class="ksl4-pivot"><thead><tr>'+
-    '<th>Week</th>';
-  slas.forEach(function(s){ h += '<th>'+s+'</th>'; });
-  h += '<th>Total</th></tr></thead><tbody>';
-
-  weeks.forEach(function(w){
-    var wRows = active.filter(function(r){return r.week===w;});
-    var tot   = window.RPT.countUniqueTickets(wRows);
-    h += '<tr><td style="font-weight:600">'+_esc(w)+'</td>';
-    slas.forEach(function(s){
-      var n = window.RPT.countUniqueTickets(wRows.filter(function(r){return r.sla===s;}));
-      h += '<td style="text-align:center;font-weight:700">'+( n||'')+'</td>';
-    });
-    h += '<td style="text-align:center;font-weight:700;color:var(--primary)">'+tot+'</td></tr>';
-  });
-
-  /* totals row */
-  h += '<tr style="border-top:2px solid var(--border)"><td style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--muted)">Total</td>';
-  slas.forEach(function(s){
-    var n = window.RPT.countUniqueTickets(active.filter(function(r){return r.sla===s;}));
-    h += '<td style="text-align:center;font-weight:700">'+n+'</td>';
-  });
-  h += '<td style="text-align:center;font-weight:700;color:var(--primary)">'+window.RPT.countUniqueTickets(active)+'</td></tr>';
-  h += '</tbody></table></div></div></div>';
-  return h;
+function _goPage(p){
+  _currentPage=p;
+  var data=window.RPT?window.RPT.filtered:[];
+  var el=document.getElementById('tab-content');
+  if(!el) return;
+  if(_currentTab==='ksl4'){
+    el.innerHTML=_buildKsl4Pivot(_currentTabRows)+_buildTable('KSL-4 — All Records',_currentTabRows,'ksl4');
+  } else {
+    var labels={all:'All Records',km1:'KM-1',ksl5a:'KSL-5a',km2:'KM-2',aos:'AOS Records'};
+    el.innerHTML=_buildTable(labels[_currentTab]||_currentTab,_currentTabRows,_currentTab);
+  }
 }
 
 /* ---- Jira Tracker ---- */
 function _buildJiraTracker(data) {
-  var jiraRows = data.filter(function(r){return r.jiraTicket && r.jiraTicket.trim();});
-  if (!jiraRows.length) {
-    return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2></div>'+
-      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px">No Jira tickets found in the current data.</p></div></div>';
-  }
-
-  var byJira = {};
-  jiraRows.forEach(function(r){
-    var k = r.jiraTicket.trim();
-    if (!byJira[k]) byJira[k] = { rows:[], slas:new Set(), weeks:new Set(), queues:new Set() };
-    byJira[k].rows.push(r);
-    if (r.sla)   byJira[k].slas.add(r.sla);
-    if (r.week)  byJira[k].weeks.add(r.week);
-    if (r.queue) byJira[k].queues.add(r.queue);
+  var jRows=data.filter(function(r){return r.jiraTicket&&r.jiraTicket.trim();});
+  if(!jRows.length) return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2></div><div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No Jira tickets in current data.</p></div></div>';
+  var byJ={};
+  jRows.forEach(function(r){
+    var k=r.jiraTicket.trim();
+    if(!byJ[k]) byJ[k]={rows:[],slas:new Set(),weeks:new Set(),queues:new Set()};
+    byJ[k].rows.push(r);
+    if(r.sla) byJ[k].slas.add(r.sla);
+    if(r.week) byJ[k].weeks.add(r.week);
+    if(r.queue) byJ[k].queues.add(r.queue);
   });
-
-  var keys = Object.keys(byJira).sort();
-  var h = '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2>'+
-    '<span class="badge">'+keys.length+' Jira ticket(s)</span></div><div class="sc-body">'+
-    '<table class="dt"><thead><tr>'+
-    '<th>Jira Ticket</th><th>SLA(s)</th><th>Week(s)</th><th>Queue(s)</th><th>Breach Rows</th><th>Excl?</th>'+
+  var keys=Object.keys(byJ).sort();
+  var h='<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2><span class="badge">'+keys.length+' Jira ticket(s)</span></div><div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr>'+
+    '<th>Jira</th><th>SLA(s)</th><th>Week(s)</th><th>Queue(s)</th><th>Rows</th><th>Excl</th>'+
     '</tr></thead><tbody>';
-
   keys.forEach(function(k){
-    var g   = byJira[k];
-    var exc = g.rows.every(function(r){return r.excluded==='Y';});
-    h += '<tr'+(exc?' class="excl"':'')+'>'+
-      '<td><a class="jira-link" href="https://jira.example.com/browse/'+_esc(k)+'" target="_blank">'+_esc(k)+'</a></td>'+
-      '<td>'+Array.from(g.slas).map(function(s){return '<span class="chip '+_slaChip(s)+'">'+s+'</span>';}).join(' ')+'</td>'+
+    var g=byJ[k];
+    var exc=g.rows.every(function(r){return r.excluded==='Y';});
+    h+='<tr class="'+(exc?'excl':'')+'">'+
+      '<td><a class="jira-link" href="https://jira.atlassian.com/browse/'+_esc(k)+'" target="_blank">'+_esc(k)+'</a></td>'+
+      '<td>'+Array.from(g.slas).map(function(s){return '<span class="chip ch-'+String(s).toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(s)+'</span>';}).join(' ')+'</td>'+
       '<td>'+_esc(Array.from(g.weeks).sort().join(', '))+'</td>'+
       '<td>'+_esc(Array.from(g.queues).join(', '))+'</td>'+
       '<td style="text-align:center;font-weight:700">'+g.rows.length+'</td>'+
-      '<td>'+(exc?'<span class="chip ch-other">Y</span>':'')+'</td>'+
-      '</tr>';
+      '<td style="text-align:center">'+(exc?'<span class="chip ch-other">Y</span>':'')+'</td>'+
+    '</tr>';
   });
-
-  h += '</tbody></table></div></div>';
+  h+='</tbody></table></div></div></div>';
   return h;
-}
-
-/* ---- helpers ---- */
-function _sc(title, body, badge) {
-  return '<div class="sc"><div class="sc-head"><h2>'+_esc(title)+'</h2>'+(badge?'<span class="badge">'+badge+'</span>':'')+
-    '</div><div class="sc-body">'+body+'</div></div>';
-}
-function _slaChip(s){
-  if(s==='KSL-4') return 'ch-ksl4';
-  if(s==='KM-1')  return 'ch-km1';
-  if(s==='KSL-5a')return 'ch-ksl5a';
-  if(s==='KM-2')  return 'ch-km2';
-  return 'ch-other';
-}
-function _esc(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 </body>
