@@ -342,6 +342,108 @@
       background: #d6ecec; color: var(--primary);
     }
 
+    /* ================================================================
+       PIVOT TABLE (reporter-pivot.js)
+       ================================================================ */
+    .pvt-wrap {}
+
+    .pvt-controls {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .pvt-ctrl-lbl {
+      font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pvt-sel {
+      padding: 5px 8px; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--bg);
+      font-size: 12px; color: var(--text); font-family: inherit;
+      cursor: pointer;
+    }
+    .pvt-sel:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .pvt-ctrl-sep {
+      font-size: 16px; color: var(--faint); font-weight: 300;
+    }
+    .pvt-export-btn {
+      margin-left: auto;
+      padding: 5px 12px; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--bg);
+      font-size: 12px; color: var(--text); font-family: inherit;
+      cursor: pointer; transition: background .15s, border-color .15s;
+    }
+    .pvt-export-btn:hover { background: var(--surface-2); border-color: var(--primary); color: var(--primary); }
+
+    .pvt-table-scroll { overflow-x: auto; }
+    .pvt-table {
+      border-collapse: collapse;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* Corner / column headers */
+    .pvt-th {
+      background: var(--bg); padding: 6px 10px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--muted);
+      border-bottom: 2px solid var(--border);
+      border-right: 1px solid var(--divider);
+      white-space: nowrap;
+    }
+    .pvt-th-corner { text-align: left; min-width: 90px; }
+    .pvt-th-col    { text-align: center; min-width: 56px; }
+    .pvt-th-total  {
+      text-align: center; min-width: 56px;
+      border-left: 2px solid var(--border);
+      color: var(--text);
+    }
+
+    /* Row label cells */
+    .pvt-row-lbl {
+      padding: 5px 10px; border-bottom: 1px solid var(--divider);
+      border-right: 1px solid var(--divider);
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      background: var(--bg); white-space: nowrap;
+    }
+
+    /* Data cells */
+    .pvt-cell {
+      padding: 5px 8px; border-bottom: 1px solid var(--divider);
+      border-right: 1px solid var(--divider);
+      text-align: center; font-weight: 700; font-size: 12px;
+      cursor: default; transition: transform .1s;
+    }
+    .pvt-cell:hover { transform: scale(1.15); z-index: 2; position: relative; }
+
+    /* Totals */
+    .pvt-total-cell {
+      padding: 5px 10px; border-bottom: 1px solid var(--divider);
+      text-align: center; font-weight: 700; font-size: 12px;
+      background: var(--bg);
+    }
+    .pvt-row-total  { border-left: 2px solid var(--border); color: var(--text); }
+    .pvt-col-total  { border-right: 1px solid var(--divider); color: var(--text); }
+    .pvt-grand-total { border-left: 2px solid var(--border); color: var(--primary); font-size: 13px; }
+
+    /* Grand total row */
+    .pvt-grand-row .pvt-grand-lbl {
+      padding: 6px 10px; border-top: 2px solid var(--border);
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--text); background: var(--bg);
+      border-right: 1px solid var(--divider);
+    }
+    .pvt-grand-row .pvt-total-cell {
+      border-top: 2px solid var(--border);
+    }
+
+    /* Misc */
+    .pvt-msg  { font-size: 12px; color: var(--muted); padding: 20px 0; }
+    .pvt-warn { color: var(--warning, #964219); }
+    .pvt-note {
+      font-size: 10px; color: var(--faint); margin-top: 10px;
+    }
+
     @media (max-width: 720px) {
       .reporter-layout { flex-direction: column; }
       .reporter-sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); }
@@ -435,6 +537,7 @@
           <button class="rpt-tab active" data-tab="dashboard">Dashboard</button>
           <button class="rpt-tab" data-tab="trends">Trends</button>
           <button class="rpt-tab" data-tab="heatmap">Heatmap</button>
+          <button class="rpt-tab" data-tab="pivot">Pivot</button>
           <button class="rpt-tab" data-tab="overview">Overview</button>
           <button class="rpt-tab" data-tab="all">All Records</button>
           <button class="rpt-tab" data-tab="ksl4">KSL-4</button>
@@ -489,6 +592,13 @@ function _renderTab(name) {
   var data = window.RPT ? window.RPT.filtered : [];
   var el   = document.getElementById('tab-content');
   if (!el) return;
+
+  if (name === 'pivot') {
+    _currentTabRows = [];
+    el.innerHTML = '<div id="pivot-container"></div>';
+    if (typeof window.renderPivot === 'function') window.renderPivot();
+    return;
+  }
 
   if (name === 'ksl4') {
     var ksl4rows = data.filter(function(r){return r.sla==='KSL-4';});
@@ -1132,168 +1242,91 @@ function _buildTable(title, rows, tabName){
   var uniqCount = window.RPT.countUniqueTickets(rows);
   var start     = (_currentPage - 1) * PAGE_SIZE;
   var page      = rows.slice(start, start + PAGE_SIZE);
-  var colSpan   = isAosTab ? 11 : 10;
+  var totalPages= Math.ceil(total / PAGE_SIZE) || 1;
+
+  var cols = isAosTab
+    ? ['ticket','week','sla','language','tool','queue','reason','excluded','jira']
+    : ['ticket','week','sla','language','tool','queue','reason','excluded','jira'];
+
+  var headers = cols.map(function(c){
+    return '<th>'+c.charAt(0).toUpperCase()+c.slice(1)+'</th>';
+  }).join('');
 
   var trs = page.map(function(r){
-    var aosCell = isAosTab ? '<td style="color:var(--muted);font-size:11px">'+_esc(r.aosIssue)+'</td>' : '';
-    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
-      '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
-      '<td>'+_esc(r.dateClosed)+'</td>'+
-      '<td>'+_esc(r.dateTimeBreach)+'</td>'+
-      '<td>'+_chipSla(r.sla)+'</td>'+
-      '<td>'+_esc(r.tool)+'</td>'+
-      '<td>'+_esc(r.reason)+'</td>'+
-      '<td>'+_esc(r.language)+'</td>'+
-      '<td>'+_esc(r.sheet)+'</td>'+
-      '<td>'+(r.excluded==='Y'?'<span class="chip ch-other">Excl</span>':'')+'</td>'+
-      '<td>'+(r.isAos?'<span class="chip ch-y">Y</span>':'')+'</td>'+
-      aosCell+
-    '</tr>';
+    var cells = cols.map(function(c){
+      if (c==='sla')      return '<td>'+_chipSla(r.sla)+'</td>';
+      if (c==='excluded') return '<td>'+(r.excluded==='Y'?'<span class="chip ch-other">Excl</span>':'')+'</td>';
+      if (c==='jira')     return r.jira
+        ? '<td><a class="jira-link" href="https://jira.example.com/browse/'+_esc(r.jira)+'" target="_blank" rel="noopener noreferrer">'+_esc(r.jira)+'</a></td>'
+        : '<td></td>';
+      return '<td>'+_esc(r[c]||'')+'</td>';
+    }).join('');
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+cells+'</tr>';
   }).join('');
 
-  var aosIssueTh = isAosTab ? '<th>AOS Issue</th>' : '';
-  var badge = uniqCount+' unique ticket'+(uniqCount!==1?'s':'')+
-              (total !== uniqCount ? ' / '+total+' rows' : '');
-  return '<div class="sc"><div class="sc-head"><h2>'+title+'</h2>'+
+  var badge = uniqCount+' unique ticket(s)';
+  var pager = totalPages > 1 ? _buildPager(totalPages) : '';
+
+  return '<div class="sc"><div class="sc-head"><h2>'+_esc(title)+'</h2>'+
     '<span class="badge">'+badge+'</span></div>'+
-    '<div class="sc-body"><table class="dt"><thead><tr>'+
-    '<th>Ticket</th><th>Date Close (EEST)</th><th>Breach Time (EEST)</th>'+
-    '<th>SLA</th><th>Tool</th><th>Reason</th><th>Lang</th><th>Sheet</th><th>Excl</th><th>AOS</th>'+
-    aosIssueTh+
-    '</tr></thead><tbody>'+(trs||'<tr><td colspan="'+colSpan+'" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+
-    '</tbody></table>'+_buildPg(total)+'</div></div>';
-}
-function _chipSla(sla){
-  var map={'KSL-4':'ch-ksl4','KM-1':'ch-km1','KSL-5a':'ch-ksl5a','KM-2':'ch-km2'};
-  return '<span class="chip '+(map[sla]||'ch-other')+'">'+_esc(sla)+'</span>';
-}
-function _buildPg(total){
-  var pages = Math.ceil(total / PAGE_SIZE);
-  if (pages <= 1) return '';
-  var btns = '';
-  var maxBtns = Math.min(pages, 10);
-  for (var i = 1; i <= maxBtns; i++) {
-    btns += '<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
-  }
-  if (pages > 10) {
-    btns += '<span style="padding:0 4px;color:var(--muted)">&#8230;</span>'+
-            '<button class="pg-btn'+(pages===_currentPage?' on':'')+'" onclick="_goPage('+pages+')">'+pages+'</button>';
-  }
-  return '<div class="pg">'+
-    '<button class="pg-btn" onclick="_goPage('+(_currentPage-1)+')" '+(_currentPage===1?'disabled':'')+'>&#8249;</button>'+
-    btns+
-    '<button class="pg-btn" onclick="_goPage('+(_currentPage+1)+')" '+(_currentPage===pages?'disabled':'')+'>&#8250;</button>'+
-    '<span style="margin-left:6px">'+((_currentPage-1)*PAGE_SIZE+1)+'&#8211;'+Math.min(_currentPage*PAGE_SIZE,total)+' of '+total+' rows</span>'+
-  '</div>';
+    '<div class="sc-body"><table class="dt"><thead><tr>'+headers+'</tr></thead>'+
+    '<tbody>'+(trs||'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No records</td></tr>')+'</tbody>'+
+    '</table>'+pager+'</div></div>';
 }
 
-window._goPage = function(n) {
-  var total = _currentTabRows.length;
-  var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  _currentPage = Math.max(1, Math.min(n, pages));
-  var el = document.getElementById('tab-content');
-  if (el) {
-    var labels = {
-      all: 'All Records', ksl4: 'KSL-4', km1: 'KM-1',
-      ksl5a: 'KSL-5a', km2: 'KM-2', aos: 'AOS Records'
-    };
-    el.innerHTML = _buildTable(labels[_currentTab] || _currentTab, _currentTabRows, _currentTab);
+function _buildPager(totalPages){
+  var btns = '';
+  for(var i=1;i<=totalPages;i++){
+    btns+='<button class="pg-btn'+(i===_currentPage?' on':'')+'" onclick="_goPage('+i+')">'+i+'</button>';
   }
-};
+  return '<div class="pg">Page '+_currentPage+' of '+totalPages+'&nbsp;&nbsp;'+btns+'</div>';
+}
+function _goPage(n){
+  _currentPage=n;
+  var data=window.RPT?window.RPT.filtered:[];
+  var el=document.getElementById('tab-content');
+  if(!el)return;
+  var rows=_currentTabRows;
+  var labels={all:'All Records',km1:'KM-1',ksl5a:'KSL-5a',km2:'KM-2',aos:'AOS Records'};
+  el.innerHTML=_buildTable(labels[_currentTab]||_currentTab,rows,_currentTab);
+}
+
+function _chipSla(s){
+  var map={'KSL-4':'ch-ksl4','KM-1':'ch-km1','KSL-5a':'ch-ksl5a','KM-2':'ch-km2'};
+  return '<span class="chip '+(map[s]||'ch-other')+'">'+_esc(s)+'</span>';
+}
 
 /* ---- Jira Tracker ---- */
-function _buildJiraTracker(data) {
-  var jiraMap = {};
-  data.forEach(function(r) {
-    if (!r.jira) return;
-    if (!jiraMap[r.jira]) {
-      jiraMap[r.jira] = {
-        jira: r.jira, ticket: r.ticket, sla: r.sla,
-        tool: r.tool, reason: r.reason, comment: r.comment, week: r.week
-      };
-    }
-  });
-
-  var entries = Object.keys(jiraMap).sort().map(function(k){ return jiraMap[k]; });
-  var count   = entries.length;
-
-  if (count === 0) {
-    return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2>'+
-      '<span class="badge">0 tickets</span></div>'+
-      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">'+
-      'No Jira ticket IDs found in the current filter. Jira IDs are only present on excluded rows.</p></div></div>';
+function _buildJiraTracker(data){
+  var jiraRows = data.filter(function(r){ return r.jira && r.jira.trim(); });
+  if (!jiraRows.length) {
+    return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2></div>'+
+      '<div class="sc-body"><p style="color:var(--muted);font-size:12px;padding:20px 0">No Jira tickets found in the current dataset.</p></div></div>';
   }
-
-  var jiraBase = 'https://atc.bmwgroup.net/jira/browse';
-
-  var trs = entries.map(function(e) {
-    var href = jiraBase + '/' + _esc(e.jira);
-    return '<tr>'+
-      '<td><a class="jira-link" href="'+href+'" target="_blank" rel="noopener noreferrer">'+_esc(e.jira)+'</a></td>'+
-      '<td style="font-family:monospace;font-size:11px">'+_esc(e.ticket)+'</td>'+
-      '<td>'+_chipSla(e.sla)+'</td>'+
-      '<td>'+_esc(e.tool)+'</td>'+
-      '<td>'+_esc(e.reason)+'</td>'+
-      '<td style="color:var(--muted);font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+_esc(e.comment)+'">'+_esc(e.comment)+'</td>'+
-      '<td style="text-align:center">'+_esc(e.week)+'</td>'+
+  var seen={}, deduped=[];
+  jiraRows.forEach(function(r){if(!seen[r.ticket]){seen[r.ticket]=true;deduped.push(r);}});
+  var trs=deduped.map(function(r){
+    return '<tr class="'+(r.excluded==='Y'?'excl':'')+'">'+
+      '<td><a class="jira-link" href="https://jira.example.com/browse/'+_esc(r.jira)+'" target="_blank" rel="noopener noreferrer">'+_esc(r.jira)+'</a></td>'+
+      '<td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'+
+      '<td>'+_chipSla(r.sla)+'</td>'+
+      '<td>'+_esc(r.week)+'</td>'+
+      '<td>'+_esc(r.language)+'</td>'+
+      '<td>'+_esc(r.tool)+'</td>'+
+      '<td>'+(r.isAos?'<span class="chip ch-y">AOS</span>':'')+'</td>'+
     '</tr>';
   }).join('');
-
   return '<div class="sc"><div class="sc-head"><h2>Jira Tracker</h2>'+
-    '<span class="badge">'+count+' unique Jira ticket'+(count!==1?'s':'')+'</span></div>'+
+    '<span class="badge">'+deduped.length+' linked ticket(s)</span></div>'+
     '<div class="sc-body"><table class="dt"><thead><tr>'+
-    '<th>Jira ID</th><th>INC Ticket</th><th>SLA</th><th>Tool</th><th>Reason</th><th>Comment</th><th>Week</th>'+
-    '</tr></thead><tbody>'+trs+
-    '</tbody></table></div></div>';
+    '<th>Jira</th><th>Incident</th><th>SLA</th><th>Week</th><th>Language</th><th>Tool</th><th>AOS</th>'+
+    '</tr></thead><tbody>'+trs+'</tbody></table></div></div>';
 }
 </script>
 
 <script src="reporter-processor.js"></script>
+<script src="reporter-pivot.js"></script>
+<script src="reporter-uploader.js"></script>
 <script src="reporter-exporter.js"></script>
-
-<script>
-(function(){
-  var fi  = document.getElementById('rpt-file-input');
-  var btn = document.getElementById('import-btn');
-  var dz  = document.getElementById('drop-zone');
-  var cb  = document.getElementById('rpt-clear-btn');
-
-  function loadFiles(fileList) {
-    var files = Array.from(fileList).filter(function(f){ return /\.xlsx$/i.test(f.name); });
-    var rejected = Array.from(fileList).length - files.length;
-    if (!files.length) { setStatus('Only .xlsx files are accepted.', true); return; }
-    var msg = 'Loading ' + files.length + ' file(s)\u2026';
-    if (rejected > 0) msg += ' (' + rejected + ' non-xlsx skipped)';
-    setStatus(msg, false);
-    window.RPT.loadFiles(files);
-  }
-
-  function setStatus(msg, err) {
-    var el = document.getElementById('upload-status');
-    el.textContent = msg;
-    el.className = err ? 'err' : 'ok';
-  }
-
-  btn.addEventListener('click', function(){ fi.click(); });
-  fi.addEventListener('change', function(e){ loadFiles(e.target.files); fi.value=''; });
-
-  cb.addEventListener('click', function(){
-    if (confirm('Clear all loaded data and start fresh?')) {
-      window.RPT.clearData();
-      setStatus('', false);
-    }
-  });
-
-  dz.addEventListener('click', function(){ fi.click(); });
-  dz.addEventListener('dragover',  function(e){ e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', function(){ dz.classList.remove('drag-over'); });
-  dz.addEventListener('drop', function(e){
-    e.preventDefault();
-    dz.classList.remove('drag-over');
-    loadFiles(e.dataTransfer.files);
-  });
-})();
-</script>
-
 </body>
 </html>
