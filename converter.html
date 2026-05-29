@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>3093 → V2 Converter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root,[data-theme="light"]{
+      --bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fbfbf9;
+      --border:#d4d1ca;--divider:#dcd9d5;
+      --text:#28251d;--muted:#7a7974;--faint:#bab9b4;
+      --primary:#01696f;--primary-hover:#0c4e54;
+      --success:#437a22;--warning:#964219;--error:#a12c7b;
+      --shadow:0 4px 12px oklch(0.2 0.01 80/0.08);
+      --radius:0.75rem;--radius-sm:0.375rem;
+      --font:'Inter',sans-serif;
+    }
+    [data-theme="dark"]{
+      --bg:#171614;--surface:#1c1b19;--surface-2:#201f1d;
+      --border:#393836;--divider:#262523;
+      --text:#cdccca;--muted:#797876;--faint:#5a5957;
+      --primary:#4f98a3;--primary-hover:#227f8b;
+      --success:#6daa45;--warning:#bb653b;--error:#d163a7;
+      --shadow:0 4px 12px oklch(0 0 0/0.3);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+    body{font-family:var(--font);font-size:15px;color:var(--text);background:var(--bg);min-height:100dvh}
+    a{color:var(--primary);text-decoration:none}
+    a:hover{text-decoration:underline}
+    button{cursor:pointer;font:inherit;color:inherit;background:none;border:none}
+    img,svg{display:block}
+
+    /* ── Layout ────────────────────────────────────────────────── */
+    .app-header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:10;gap:12px;flex-wrap:wrap;
+    }
+    .header-left{display:flex;align-items:center;gap:16px}
+    .back-link{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:4px;transition:color .15s}
+    .back-link:hover{color:var(--primary);text-decoration:none}
+    .eyebrow{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+    h1{font-size:17px;font-weight:700;line-height:1.2}
+    main{max-width:960px;margin:0 auto;padding:28px 24px;display:flex;flex-direction:column;gap:20px}
+
+    /* ── Panels ────────────────────────────────────────────────── */
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px}
+    .panel h2{font-size:15px;font-weight:600;margin-bottom:4px}
+    .panel p.sub{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.55}
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:background .15s,color .15s,border-color .15s}
+    .btn-primary{background:var(--primary);color:#fff;border:1px solid transparent}
+    .btn-primary:hover:not(:disabled){background:var(--primary-hover)}
+    .btn-primary:disabled{opacity:.45;cursor:not-allowed}
+    .btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .btn-secondary:hover{background:var(--surface-2,var(--bg))}
+
+    /* ── Drop zone ─────────────────────────────────────────────── */
+    .drop-zone{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+      border:2px dashed var(--border);border-radius:var(--radius);padding:36px 20px;
+      cursor:pointer;transition:border-color .2s,background .2s;text-align:center;
+    }
+    .drop-zone:hover,.drop-zone.drag{border-color:var(--primary);background:color-mix(in oklab,var(--primary) 5%,var(--bg))}
+    .drop-zone input{display:none}
+    .drop-zone span{font-size:13px;color:var(--muted)}
+    .drop-zone strong{font-size:14px;color:var(--text)}
+
+    /* ── Status tags ───────────────────────────────────────────── */
+    .status-row{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px}
+    .tag-idle{background:var(--divider);color:var(--muted)}
+    .tag-ok{background:color-mix(in oklab,var(--success) 12%,transparent);color:var(--success)}
+    .tag-warn{background:color-mix(in oklab,var(--warning) 12%,transparent);color:var(--warning)}
+    .tag-error{background:color-mix(in oklab,var(--error) 12%,transparent);color:var(--error)}
+
+    /* ── Mapping preview table ─────────────────────────────────── */
+    .table-scroll{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border);margin-top:14px}
+    table{border-collapse:collapse;width:100%;font-size:13px}
+    thead tr{background:var(--surface-2,var(--bg))}
+    th{padding:9px 14px;text-align:left;font-weight:600;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:8px 14px;border-bottom:1px solid var(--divider);color:var(--text);vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .mono{font-family:'Courier New',monospace;font-size:12px;background:var(--surface-2,var(--bg));padding:2px 6px;border-radius:4px}
+    .mapped{color:var(--success);font-weight:600}
+    .derived{color:var(--primary);font-weight:600}
+    .empty-col{color:var(--faint)}
+
+    /* ── Validation summary ────────────────────────────────────── */
+    .val-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:14px}
+    .val-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
+    .val-num{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+    .val-label{font-size:12px;color:var(--muted)}
+    .num-ok{color:var(--success)}
+    .num-warn{color:var(--warning)}
+    .num-err{color:var(--error)}
+
+    /* ── Skip log ──────────────────────────────────────────────── */
+    .skip-log{font-size:12px;color:var(--muted);margin-top:12px;max-height:120px;overflow-y:auto;border-top:1px solid var(--divider);padding-top:10px;line-height:1.8}
+    .skip-log span.reason{color:var(--warning)}
+
+    /* ── Sheet breakdown ───────────────────────────────────────── */
+    .sheet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:14px}
+    .sheet-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+    .sheet-code{font-size:13px;font-weight:700;margin-bottom:2px}
+    .sheet-rows{font-size:12px;color:var(--muted)}
+
+    /* ── Download row ──────────────────────────────────────────── */
+    .download-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
+    /* ── Theme toggle ──────────────────────────────────────────── */
+    .theme-btn{padding:7px;border-radius:var(--radius-sm);color:var(--muted);border:1px solid var(--border)}
+    .theme-btn:hover{color:var(--text);background:var(--surface-2,var(--bg))}
+
+    @media(max-width:600px){
+      main{padding:16px 14px}
+      .app-header{padding:12px 16px}
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-left">
+    <a href="./index.html" class="back-link">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Breaches Tracker
+    </a>
+    <div>
+      <p class="eyebrow">Data Tools</p>
+      <h1>3093 &#x2192; V2 Converter</h1>
+    </div>
+  </div>
+  <button class="theme-btn btn" data-theme-toggle aria-label="Toggle theme">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  </button>
+</header>
+
+<main>
+
+  <!-- HOW IT WORKS -->
+  <div class="panel">
+    <h2>How it works</h2>
+    <p class="sub">Upload one or more 3093 SLA detail CSV exports. The converter reads the German column headers, applies the <strong>Compare_Dir breach rule</strong> (dir=1: breach when numerator &lt; denominator&#x3B; dir=&#x2212;1: breach when numerator &gt; 0), and outputs a <strong>V2-structured .xlsx</strong> file with one sheet per SLA code &#x2014; identical to the format expected by Breaches Tracker and Combined Analyzer.</p>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:4px">
+      <span>&#x2705; Incident Ticket, Queue, ISO_Language, TOPIC mapped directly</span>
+      <span>&#x2705; DATE_CLOSE, Priority, Status, Tool mapped directly</span>
+      <span>&#x2705; One sheet per SLA code (KSL-2a, KSL-3a, KM-1, KSL-4 &hellip;)</span>
+      <span>&#x2705; Manual columns (Agent, BMS ID, Comment &hellip;) left blank &#x2014; ready to fill</span>
+      <span>&#x26A0;&#xFE0F; Only rows from March, April, May are included</span>
+    </div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="panel">
+    <h2>Upload 3093 CSV files</h2>
+    <p class="sub">Drop one or more monthly exports. Month is auto-detected from the close date (Element geschlossen am).</p>
+    <label class="drop-zone" id="dropZone">
+      <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" color="var(--muted)">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <strong>Drop .csv files here or click to browse</strong>
+      <span>Supports 3093 SLA detail exports (comma-separated, UTF-8)</span>
+      <input id="csvInput" type="file" accept=".csv" multiple/>
+    </label>
+    <div class="status-row">
+      <span id="uploadTag" class="tag tag-idle">No files loaded</span>
+    </div>
+  </div>
+
+  <!-- COLUMN MAPPING PREVIEW -->
+  <div class="panel" id="mappingPanel" hidden>
+    <h2>Column mapping preview</h2>
+    <p class="sub">How each V2 output column is populated from the 3093 source. Verify before converting.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>V2 Output Column</th>
+            <th>Source (3093 German header)</th>
+            <th>Method</th>
+            <th>Sample value</th>
+          </tr>
+        </thead>
+        <tbody id="mappingBody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" id="convertBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+        Convert to V2 Excel
+      </button>
+      <span id="convertStatus" style="font-size:13px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="panel" id="resultsPanel" hidden>
+    <h2>Conversion results</h2>
+    <p class="sub">Rows successfully converted, skipped (outside Mar&#x2013;May or missing ticket), and the sheet breakdown.</p>
+
+    <div class="val-grid" id="valGrid"></div>
+
+    <div style="margin-top:20px">
+      <p style="font-size:13px;font-weight:600;margin-bottom:10px">Sheets in output file</p>
+      <div class="sheet-grid" id="sheetGrid"></div>
+    </div>
+
+    <div id="skipLogWrap" hidden style="margin-top:16px">
+      <p style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--warning)">&#x26A0;&#xFE0F; Skipped rows (first 50)</p>
+      <div class="skip-log" id="skipLog"></div>
+    </div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--divider)">
+      <div class="download-row">
+        <button class="btn btn-primary" id="downloadBtn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download V2 Excel
+        </button>
+        <span id="downloadName" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">The downloaded file has the same structure as your native V2 breach files and can be loaded directly into <a href="./index.html">Breaches Tracker</a>.</p>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Constants ───────────────────────────────────────────────────────────────
+const MONTHS_VALID = ['March','April','May'];
+
+const OUT_COLS = [
+  'Incident Ticket','DATE_CLOSE','Status','Queue','Priority',
+  'ISO_Language','Tool','TOPIC','SLA_Code','SLA_N',
+  'Breach_Description','DATE_TIME_Breach','COMPASS ID',
+  'Reason','AOS','Agent','BMS ID','Comment','AOS Issue',
+  'Excluded','Jira','Week','Unique'
+];
+
+const SLA_N_MAP = {
+  'KSL-2a':'2a','KSL-2b':'2b','KSL-2c':'2c','KSL-2d':'2d',
+  'KSL-3a':'3a','KSL-4':'4','KSL-5a':'5a','KSL-5b':'5b',
+  'KSL-6':'6','KM-1':'-','KM-2':'-','KSL-1':'1'
+};
+
+const COL_MAP = [
+  { v2:'Incident Ticket',    src:'Incident Ticket',                      method:'Direct map' },
+  { v2:'DATE_CLOSE',         src:'Element geschlossen am',               method:'Direct map' },
+  { v2:'Status',             src:'Element Status',                       method:'Direct map' },
+  { v2:'Queue',              src:'Ticket Gruppe',                        method:'Direct map' },
+  { v2:'Priority',           src:'Ticket Priorit\u00e4t',               method:'Direct map' },
+  { v2:'ISO_Language',       src:'Incident Element Supportsprache',      method:'Direct map' },
+  { v2:'Tool',               src:'Incident Element Supportsystem',       method:'Direct map' },
+  { v2:'TOPIC',              src:'KM Anwendung',                         method:'Direct map' },
+  { v2:'SLA_Code',           src:'SLA Kennzahl',                         method:'Direct map' },
+  { v2:'SLA_N',              src:'SLA Kennzahl',                         method:'Derived (code lookup)' },
+  { v2:'Breach_Description', src:'SLA Kennzahl Name',                   method:'Direct map' },
+  { v2:'DATE_TIME_Breach',   src:'\u2014 (computed)',                    method:'Derived (close date when breach=true)' },
+  { v2:'COMPASS ID',         src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'Reason',             src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'AOS',                src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'Agent',              src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'BMS ID',             src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'Comment',            src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'AOS Issue',          src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'Excluded',           src:'\u2014',                               method:'Empty (0 = not excluded)' },
+  { v2:'Jira',               src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'Week',               src:'\u2014',                               method:'Empty (fill manually)' },
+  { v2:'Unique',             src:'\u2014',                               method:'Empty (fill manually)' },
+];
+
+// ── State ───────────────────────────────────────────────────────────────────
+let parsedRows  = [];
+let convertedWB = null;
+let sampleRow   = null;
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function monthFromDateStr(s) {
+  if (!s) return null;
+  const clean = String(s).replace(/\//g,'-');
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return null;
+  return ['January','February','March','April','May','June',
+          'July','August','September','October','November','December'][d.getMonth()];
+}
+
+function isBreach(row) {
+  const dir = parseInt(row['SLA Kennzahl Vergleichsart']);
+  const num = parseFloat(row['Anzahl SLAs Kennzahl Z\u00e4hler vor SR']);
+  const den = parseFloat(row['Anzahl SLAs Kennzahl Nenner vor SR']);
+  if (isNaN(dir)||isNaN(num)||isNaN(den)) return false;
+  if (dir===1)  return num < den;
+  if (dir===-1) return num > 0;
+  return false;
+}
+
+function toExcelSerial(dateStr) {
+  if (!dateStr) return null;
+  const clean = String(dateStr).replace(/\//g,'-');
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return null;
+  const EPOCH = new Date(Date.UTC(1899,11,30)).getTime();
+  return (d.getTime()-EPOCH)/86400000;
+}
+
+function setTag(id,text,type){
+  const el=document.getElementById(id);
+  el.textContent=text;
+  el.className='tag tag-'+type;
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function colLetter(idx){
+  let s='',n=idx+1;
+  while(n>0){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}
+  return s;
+}
+
+// ── File parsing ─────────────────────────────────────────────────────────────
+async function loadFiles(files){
+  parsedRows=[];
+  let totalRaw=0;
+  for(const file of files){
+    const text=await file.text();
+    const result=Papa.parse(text,{header:true,skipEmptyLines:true,dynamicTyping:false});
+    totalRaw+=result.data.length;
+    parsedRows.push(...result.data);
+  }
+  sampleRow=parsedRows.find(r=>r['Incident Ticket']&&String(r['Incident Ticket']).startsWith('INC'))||parsedRows[0];
+  setTag('uploadTag',`${files.length} file(s) \u2014 ${totalRaw.toLocaleString()} raw rows`,'ok');
+  buildMappingPreview();
+  document.getElementById('mappingPanel').hidden=false;
+  document.getElementById('resultsPanel').hidden=true;
+  convertedWB=null;
+}
+
+// ── Mapping preview ──────────────────────────────────────────────────────────
+function buildMappingPreview(){
+  const tbody=document.getElementById('mappingBody');
+  tbody.innerHTML=COL_MAP.map(m=>{
+    const sample=sampleRow?(sampleRow[m.src]||''):'';
+    const isDirect =m.method==='Direct map';
+    const isDerived=m.method.startsWith('Derived');
+    const isEmpty  =m.method.startsWith('Empty');
+    const cls=isDirect?'mapped':isDerived?'derived':'empty-col';
+    const sampleTxt=isEmpty?'<span class="empty-col">\u2014</span>'
+      :sample?'<span class="mono">'+escHtml(String(sample).slice(0,40))+'</span>':'<span style="color:var(--faint)">\u2014</span>';
+    return`<tr><td><strong>${escHtml(m.v2)}</strong></td><td><span class="mono">${escHtml(m.src)}</span></td><td><span class="${cls}">${escHtml(m.method)}</span></td><td>${sampleTxt}</td></tr>`;
+  }).join('');
+}
+
+// ── Conversion ───────────────────────────────────────────────────────────────
+function convert(){
+  const statusEl=document.getElementById('convertStatus');
+  statusEl.textContent='Converting\u2026';
+  setTimeout(()=>{
+    const sheets={};
+    let converted=0,skipped=0;
+    const skipLog=[];
+
+    parsedRows.forEach(row=>{
+      const ticket=String(row['Incident Ticket']||'').trim();
+      const sla   =String(row['SLA Kennzahl']   ||'').trim();
+      const closed=String(row['Element geschlossen am']||'').trim();
+
+      if(ticket==='Incident Ticket'||sla==='SLA Kennzahl') return;
+
+      if(!ticket||!ticket.startsWith('INC')){
+        skipped++;
+        if(skipLog.length<50) skipLog.push({ticket:ticket||'(blank)',reason:'No valid INC ticket'});
+        return;
+      }
+      if(!sla){
+        skipped++;
+        if(skipLog.length<50) skipLog.push({ticket,reason:'Missing SLA code'});
+        return;
+      }
+      const month=monthFromDateStr(closed);
+      if(!MONTHS_VALID.includes(month)){
+        skipped++;
+        if(skipLog.length<50) skipLog.push({ticket,reason:`Close date outside Mar\u2013May (${month||'unknown'}: ${closed.slice(0,10)})`});
+        return;
+      }
+
+      const breach=isBreach(row);
+      const closedSerial=toExcelSerial(closed);
+
+      const outRow={
+        'Incident Ticket':ticket,
+        'DATE_CLOSE':     closedSerial!==null?{v:closedSerial,t:'n',z:'dd.mm.yyyy hh:mm:ss'}:closed,
+        'Status':         String(row['Element Status']||''),
+        'Queue':          String(row['Ticket Gruppe'] ||''),
+        'Priority':       String(row['Ticket Priorit\u00e4t']||''),
+        'ISO_Language':   String(row['Incident Element Supportsprache']||''),
+        'Tool':           String(row['Incident Element Supportsystem'] ||''),
+        'TOPIC':          String(row['KM Anwendung']  ||''),
+        'SLA_Code':       sla,
+        'SLA_N':          SLA_N_MAP[sla]||'',
+        'Breach_Description':String(row['SLA Kennzahl Name']||''),
+        'DATE_TIME_Breach':breach&&closedSerial!==null?{v:closedSerial,t:'n',z:'dd.mm.yyyy hh:mm:ss'}:'',
+        'COMPASS ID':'','Reason':'','AOS':'','Agent':'',
+        'BMS ID':'','Comment':'','AOS Issue':'',
+        'Excluded':'0','Jira':'','Week':'','Unique':'',
+      };
+
+      if(!sheets[sla]) sheets[sla]=[];
+      sheets[sla].push(outRow);
+      converted++;
+    });
+
+    const wb=XLSX.utils.book_new();
+
+    // Instructions sheet
+    const instrSheet=XLSX.utils.aoa_to_sheet([
+      ['3093 \u2192 V2 Converted Output'],
+      ['Generated by Breaches Tracker Converter'],
+      ['Date: '+new Date().toISOString().slice(0,10)],
+      [''],
+      ['Each sheet = one SLA code from the 3093 source.'],
+      ['Manual columns (Agent, BMS ID, Comment, AOS Issue, Jira, Week, Unique) are left blank.'],
+      ['Excluded column defaults to 0. Set to 1 to exclude a row from breach counts.'],
+    ]);
+    XLSX.utils.book_append_sheet(wb,instrSheet,'Instructions');
+
+    const sheetSummary={};
+    Object.entries(sheets).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([sla,rows])=>{
+      const aoa=[OUT_COLS.slice()];
+      rows.forEach(r=>{
+        aoa.push(OUT_COLS.map(col=>{
+          const v=r[col];
+          if(v&&typeof v==='object'&&v.t==='n') return v.v;
+          return v!==undefined?v:'';
+        }));
+      });
+      const ws=XLSX.utils.aoa_to_sheet(aoa);
+      const dcIdx=OUT_COLS.indexOf('DATE_CLOSE');
+      const dtIdx=OUT_COLS.indexOf('DATE_TIME_Breach');
+      rows.forEach((r,ri)=>{
+        const exRow=ri+2;
+        const dcVal=r['DATE_CLOSE'];
+        const dtVal=r['DATE_TIME_Breach'];
+        if(dcVal&&typeof dcVal==='object'&&dcVal.t==='n')
+          ws[colLetter(dcIdx)+exRow]={v:dcVal.v,t:'n',z:'dd.mm.yyyy hh:mm:ss'};
+        if(dtVal&&typeof dtVal==='object'&&dtVal.t==='n')
+          ws[colLetter(dtIdx)+exRow]={v:dtVal.v,t:'n',z:'dd.mm.yyyy hh:mm:ss'};
+      });
+      XLSX.utils.book_append_sheet(wb,ws,sla);
+      sheetSummary[sla]=rows.length;
+    });
+
+    convertedWB=wb;
+
+    const valGrid=document.getElementById('valGrid');
+    const totalIn=parsedRows.filter(r=>r['Incident Ticket']&&String(r['Incident Ticket']).startsWith('INC')).length;
+    const sheetCount=Object.keys(sheets).length;
+    const breachCount=Object.values(sheets).flat().filter(r=>r['DATE_TIME_Breach']!=='').length;
+
+    valGrid.innerHTML=[
+      {num:totalIn.toLocaleString(),     label:'Input rows (INC tickets)',  cls:'num-ok'},
+      {num:converted.toLocaleString(),   label:'Rows converted (Mar\u2013May)',cls:'num-ok'},
+      {num:skipped.toLocaleString(),     label:'Rows skipped',              cls:skipped>0?'num-warn':'num-ok'},
+      {num:sheetCount,                   label:'SLA code sheets',           cls:'num-ok'},
+      {num:breachCount.toLocaleString(), label:'Breach rows',               cls:'num-ok'},
+    ].map(c=>`<div class="val-card"><div class="val-num ${c.cls}">${c.num}</div><div class="val-label">${c.label}</div></div>`).join('');
+
+    document.getElementById('sheetGrid').innerHTML=Object.entries(sheetSummary)
+      .map(([sla,n])=>`<div class="sheet-card"><div class="sheet-code">${escHtml(sla)}</div><div class="sheet-rows">${n.toLocaleString()} rows</div></div>`).join('');
+
+    if(skipLog.length>0){
+      document.getElementById('skipLogWrap').hidden=false;
+      document.getElementById('skipLog').innerHTML=skipLog.map(s=>
+        `<div>\uD83D\uDEAB <strong>${escHtml(s.ticket)}</strong> \u2014 <span class="reason">${escHtml(s.reason)}</span></div>`
+      ).join('');
+    } else {
+      document.getElementById('skipLogWrap').hidden=true;
+    }
+
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const fname=`V2-converted-${today}.xlsx`;
+    document.getElementById('downloadName').textContent=fname;
+    document.getElementById('downloadBtn').onclick=()=>XLSX.writeFile(convertedWB,fname);
+    document.getElementById('resultsPanel').hidden=false;
+    document.getElementById('resultsPanel').scrollIntoView({behavior:'smooth',block:'start'});
+    statusEl.textContent=`Done \u2014 ${converted.toLocaleString()} rows in ${sheetCount} sheets.`;
+  },50);
+}
+
+// ── Event wiring ─────────────────────────────────────────────────────────────
+const dropZone=document.getElementById('dropZone');
+const csvInput=document.getElementById('csvInput');
+dropZone.addEventListener('click',()=>csvInput.click());
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag');if(e.dataTransfer.files.length)loadFiles(Array.from(e.dataTransfer.files));});
+csvInput.addEventListener('change',e=>{if(e.target.files.length)loadFiles(Array.from(e.target.files));});
+document.getElementById('convertBtn').addEventListener('click',convert);
+
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+(function(){
+  const t=document.querySelector('[data-theme-toggle]');
+  const r=document.documentElement;
+  let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+  r.setAttribute('data-theme',d);
+  t&&t.addEventListener('click',()=>{d=d==='dark'?'light':'dark';r.setAttribute('data-theme',d);});
+})();
+</script>
+</body>
+</html>
