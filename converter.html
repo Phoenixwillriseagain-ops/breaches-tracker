@@ -245,9 +245,22 @@ let parsedRows  = [];
 let convertedWB = null;
 let sampleRow   = null;
 
+// Deep-normalize a string: remove BOM, non-breaking spaces, zero-width chars, then trim
+function normalize(s) {
+  return String(s === undefined || s === null ? '' : s)
+    .replace(/^\uFEFF/, '')          // UTF-8 BOM
+    .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ')  // NBSP + zero-width
+    .trim();
+}
+
+// Returns a debug string of char codes for the first 6 chars (helps diagnose invisible chars)
+function charCodes(s) {
+  return Array.from(String(s).slice(0,6)).map(c=>'U+'+c.charCodeAt(0).toString(16).toUpperCase().padStart(4,'0')).join(' ');
+}
+
 function monthFromDateStr(s) {
   if (!s) return null;
-  const clean = String(s).replace(/\//g,'-');
+  const clean = normalize(s).replace(/\//g,'-');
   const d = new Date(clean);
   if (isNaN(d.getTime())) return null;
   return ['January','February','March','April','May','June',
@@ -266,7 +279,7 @@ function isBreach(row) {
 
 function toExcelSerial(dateStr) {
   if (!dateStr) return null;
-  const clean = String(dateStr).replace(/\//g,'-');
+  const clean = normalize(dateStr).replace(/\//g,'-');
   const d = new Date(clean);
   if (isNaN(d.getTime())) return null;
   const EPOCH = new Date(Date.UTC(1899,11,30)).getTime();
@@ -298,7 +311,7 @@ async function loadFiles(files){
     totalRaw+=result.data.length;
     parsedRows.push(...result.data);
   }
-  sampleRow=parsedRows.find(r=>r['Incident Ticket']&&String(r['Incident Ticket']).startsWith('INC'))||parsedRows[0];
+  sampleRow=parsedRows.find(r=>normalize(r['Incident Ticket']).startsWith('INC'))||parsedRows[0];
   setTag('uploadTag',`${files.length} file(s) \u2014 ${totalRaw.toLocaleString()} raw rows`,'ok');
   buildMappingPreview();
   document.getElementById('mappingPanel').hidden=false;
@@ -325,23 +338,25 @@ function convert(){
   statusEl.textContent='Converting\u2026';
   setTimeout(()=>{
     const sheets={};
-    const excludedRows=[]; // raw 3093 rows that don't qualify for a V2 sheet
+    const excludedRows=[];
     let converted=0;
 
-    // Collect all original column names for the _Excluded sheet header
     const rawHeaders = parsedRows.length ? Object.keys(parsedRows[0]) : [];
 
     parsedRows.forEach(row=>{
-      const ticket=String(row['Incident Ticket']||'').trim();
-      const sla   =String(row['SLA Kennzahl']   ||'').trim();
-      const closed=String(row['Element geschlossen am']||'').trim();
+      // Use normalize() on all key fields to strip BOM / NBSP / zero-width chars
+      const ticket = normalize(row['Incident Ticket']);
+      const sla    = normalize(row['SLA Kennzahl']);
+      const closed = normalize(row['Element geschlossen am']);
 
-      // Skip pure header-echo rows silently
+      // Silently drop repeated header rows
       if(ticket==='Incident Ticket'||sla==='SLA Kennzahl') return;
 
-      // ── Exclusion checks: collect reason instead of dropping ──
       if(!ticket||!ticket.startsWith('INC')){
-        excludedRows.push({...row, Skip_Reason:'No valid INC ticket'});
+        // Include char codes in reason so the cause is visible in the _Excluded sheet
+        const raw = String(row['Incident Ticket']||'');
+        const hint = raw ? `raw chars: ${charCodes(raw)}` : 'blank';
+        excludedRows.push({...row, Skip_Reason:`No valid INC ticket (${hint})`});
         return;
       }
       if(!sla){
@@ -350,26 +365,25 @@ function convert(){
       }
       const month=monthFromDateStr(closed);
       if(!MONTHS_VALID.includes(month)){
-        excludedRows.push({...row, Skip_Reason:`Close date outside Mar\u2013May (${month||'unknown'}: ${closed.slice(0,10)})` });
+        excludedRows.push({...row, Skip_Reason:`Close date outside Mar\u2013May (${month||'unknown'}: ${closed.slice(0,10)})`});
         return;
       }
 
-      // ── Passes all checks: build V2 output row ──
       const breach=isBreach(row);
       const closedSerial=toExcelSerial(closed);
 
       const outRow={
         'Incident Ticket':ticket,
         'DATE_CLOSE':     closedSerial!==null?{v:closedSerial,t:'n',z:'dd.mm.yyyy hh:mm:ss'}:closed,
-        'Status':         String(row['Element Status']||''),
-        'Queue':          String(row['Ticket Gruppe'] ||''),
-        'Priority':       String(row['Ticket Priorit\u00e4t']||''),
-        'ISO_Language':   String(row['Incident Element Supportsprache']||''),
-        'Tool':           String(row['Incident Element Supportsystem'] ||''),
-        'TOPIC':          String(row['KM Anwendung']  ||''),
+        'Status':         normalize(row['Element Status']),
+        'Queue':          normalize(row['Ticket Gruppe']),
+        'Priority':       normalize(row['Ticket Priorit\u00e4t']),
+        'ISO_Language':   normalize(row['Incident Element Supportsprache']),
+        'Tool':           normalize(row['Incident Element Supportsystem']),
+        'TOPIC':          normalize(row['KM Anwendung']),
         'SLA_Code':       sla,
         'SLA_N':          SLA_N_MAP[sla]||'',
-        'Breach_Description':String(row['SLA Kennzahl Name']||''),
+        'Breach_Description': normalize(row['SLA Kennzahl Name']),
         'DATE_TIME_Breach':breach&&closedSerial!==null?{v:closedSerial,t:'n',z:'dd.mm.yyyy hh:mm:ss'}:'',
         'COMPASS ID':'','Reason':'','AOS':'','Agent':'',
         'BMS ID':'','Comment':'','AOS Issue':'',
@@ -381,10 +395,8 @@ function convert(){
       converted++;
     });
 
-    // ── Build workbook ──────────────────────────────────────────
     const wb=XLSX.utils.book_new();
 
-    // Instructions sheet
     const instrSheet=XLSX.utils.aoa_to_sheet([
       ['3093 \u2192 V2 Converted Output'],
       ['Generated by Breaches Tracker Converter'],
@@ -394,12 +406,12 @@ function convert(){
       ['Manual columns (Agent, BMS ID, Comment, AOS Issue, Jira, Week, Unique) are left blank.'],
       ['Excluded column defaults to 0. Set to 1 to exclude a row from breach counts.'],
       [''],
-      ['The _Excluded sheet contains all rows that were outside Mar\u2013May or had missing data.'],
-      ['Use the Skip_Reason column to understand why each row was not converted.'],
+      ['The _Excluded sheet contains all rows outside Mar\u2013May or with missing/invalid data.'],
+      ['The Skip_Reason column explains why each row was not converted.'],
+      ['For \'No valid INC ticket\' rows the raw char codes of the first 6 chars are shown to help debug encoding issues.'],
     ]);
     XLSX.utils.book_append_sheet(wb,instrSheet,'Instructions');
 
-    // SLA code sheets (sorted)
     const sheetSummary={};
     Object.entries(sheets).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([sla,rows])=>{
       const aoa=[OUT_COLS.slice()];
@@ -426,7 +438,6 @@ function convert(){
       sheetSummary[sla]=rows.length;
     });
 
-    // _Excluded sheet — raw 3093 columns + Skip_Reason appended
     if(excludedRows.length>0){
       const exHeaders=[...rawHeaders,'Skip_Reason'];
       const exAoa=[exHeaders,...excludedRows.map(r=>exHeaders.map(h=>r[h]!==undefined?r[h]:''))];
@@ -436,20 +447,18 @@ function convert(){
 
     convertedWB=wb;
 
-    // ── Results UI ──────────────────────────────────────────────
-    const totalIn=parsedRows.filter(r=>r['Incident Ticket']&&String(r['Incident Ticket']).startsWith('INC')).length;
+    const totalIn=parsedRows.filter(r=>normalize(r['Incident Ticket']).startsWith('INC')).length;
     const sheetCount=Object.keys(sheets).length;
     const breachCount=Object.values(sheets).flat().filter(r=>r['DATE_TIME_Breach']!=='').length;
 
     document.getElementById('valGrid').innerHTML=[
-      {num:totalIn.toLocaleString(),          label:'Input rows (INC tickets)',    cls:'num-ok'},
-      {num:converted.toLocaleString(),        label:'Rows converted (Mar\u2013May)',cls:'num-ok'},
-      {num:excludedRows.length.toLocaleString(), label:'Rows in _Excluded sheet',  cls:excludedRows.length>0?'num-warn':'num-ok'},
-      {num:sheetCount,                        label:'SLA code sheets',             cls:'num-ok'},
-      {num:breachCount.toLocaleString(),      label:'Breach rows',                 cls:'num-ok'},
+      {num:totalIn.toLocaleString(),             label:'Input rows (INC tickets)',     cls:'num-ok'},
+      {num:converted.toLocaleString(),           label:'Rows converted (Mar\u2013May)', cls:'num-ok'},
+      {num:excludedRows.length.toLocaleString(), label:'Rows in _Excluded sheet',      cls:excludedRows.length>0?'num-warn':'num-ok'},
+      {num:sheetCount,                           label:'SLA code sheets',              cls:'num-ok'},
+      {num:breachCount.toLocaleString(),         label:'Breach rows',                  cls:'num-ok'},
     ].map(c=>`<div class="val-card"><div class="val-num ${c.cls}">${c.num}</div><div class="val-label">${c.label}</div></div>`).join('');
 
-    // Sheet cards: SLA sheets first, then _Excluded highlighted
     let sheetHtml=Object.entries(sheetSummary)
       .map(([sla,n])=>`<div class="sheet-card"><div class="sheet-code">${escHtml(sla)}</div><div class="sheet-rows">${n.toLocaleString()} rows</div></div>`).join('');
     if(excludedRows.length>0){
