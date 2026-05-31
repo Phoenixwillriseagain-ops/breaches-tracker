@@ -97,7 +97,6 @@
     .month-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
     .month-chip:hover:not(.active):not(.pending){border-color:var(--primary);color:var(--primary)}
     .month-chip.pending{opacity:.5;cursor:not-allowed}
-    /* heatmap */
     .heatmap-tbl{border-collapse:separate;border-spacing:2px;font-size:11px;white-space:nowrap}
     .heatmap-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:4px 8px;text-align:center;background:none;border:none}
     .heatmap-tbl th.row-h{text-align:left;min-width:50px}
@@ -105,7 +104,6 @@
     .heatmap-tbl td:hover{transform:scale(1.08);z-index:2;position:relative}
     .heatmap-tbl td.lang-lbl{text-align:left;background:none!important;font-weight:600;font-size:11px;color:var(--muted);min-width:50px;padding:0 8px 0 0}
     .heatmap-tbl td.lang-lbl:hover{transform:none}
-    /* excluded breakdown table */
     .excl-tbl{width:100%;border-collapse:collapse;font-size:12px}
     .excl-tbl th{background:var(--bg);padding:6px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
     .excl-tbl td{padding:7px 12px;border-bottom:1px solid var(--divider);vertical-align:middle}
@@ -143,7 +141,7 @@
       </div>
       <div class="upload-card">
         <h3>📊 Enriched Breaches Files <span style="color:var(--muted);font-size:11px">optional</span></h3>
-        <p class="desc">V2-breaches…xlsx files with Reason, Agent, AOS, and Excluded (0/1). Multiple months can be combined.</p>
+        <p class="desc">V2-breaches…xlsx files with Reason, Agent, AOS, Excluded (0/1) and Unique (0/1). Multiple months accepted.</p>
         <div class="drop-zone" id="dz-b"><p>Drop V2-breaches .xlsx files here</p><span>Multiple files accepted · optional</span></div>
         <input type="file" id="fi-b" accept=".xlsx" multiple style="display:none">
         <div class="file-list" id="list-b"></div>
@@ -174,36 +172,45 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 /* ============================================================
-   COMBINED ANALYZER
-   Key rule: The Excluded flag (0 / 1) lives in the Breaches file.
-   After both files are parsed, we build an exclusion lookup from
-   the Breaches file (kpi → Set of excluded ticket numbers) and
-   apply it to the SLA rows. A ticket is excluded if ANY row for
-   that ticket in that KPI sheet of the Breaches file has Excluded=1.
-
-   Deduplication: within each KPI sheet of the SLA file, the same
-   INC number is counted only once (first occurrence kept). If the
-   Breaches file marks that ticket excluded, it is treated as
-   excluded regardless of its order in the SLA file.
-
-   KSL target = (total - breaches) / total × 100  (excluded = non-breached)
-   KM  target = breaches / total × 100             (excluded in denominator)
+   COMBINED ANALYZER  v3 — Exclusion source: Breaches file only
+   ─────────────────────────────────────────────────────────────
+   EXCLUSION LOGIC (single source of truth: Breaches file):
+   ─ The Breaches file has TWO relevant flags per row:
+       • Excluded  (0/1)  – ticket manually marked as excluded
+       • Unique    (0/1)  – 1 = this row is the deduplicated
+                            representative breach for this ticket
+   ─ A ticket in the SLA file is marked EXCLUDED if ANY row
+     for that ticket+KPI in the Breaches file has Excluded=1.
+   ─ The Breaches file also deduplicates multi-row tickets
+     (same INC can appear many times for different linked RIs).
+     Only rows with Unique=1 are the "counted breach" rows.
+     Rows with Unique=0 are additional RI rows for the same
+     ticket and must NOT be double-counted as extra breaches.
+   ─ Therefore:
+       breachSet[kpi]    = Set of tickets with Unique=1 in Breaches file
+       excludedSet[kpi]  = Set of tickets with Excluded=1 in Breaches file
+   ─ After parsing SLA file:
+       _applyExclusions() marks SLA rows:
+         isExcluded = true   if ticket in excludedSet[kpi]
+         isBreach   = false  if isExcluded  (excluded = non-breach)
+   ─ KSL formula : (total - breaches) / total × 100
+   ─ KM  formula : breaches / total × 100
+   ─ "total" always includes excluded tickets in denominator.
 ============================================================ */
 
-// ── KPI metadata ──────────────────────────────────────────
 var KPI_META = {
   'KSL-1':  {color:'#437a22', what:'Time from ticket creation to first agent reply.',          isKM:false},
-  'KSL-2a': {color:'#437a22', what:'Not resolved within SLA window – Normal priority.',         isKM:false},
-  'KSL-2b': {color:'#437a22', what:'Not resolved within SLA window – Low priority.',            isKM:false},
-  'KSL-2c': {color:'#01696f', what:'Not resolved within SLA window – High priority.',           isKM:false},
-  'KSL-2d': {color:'#01696f', what:'Not resolved within SLA window – Critical priority.',       isKM:false},
+  'KSL-2a': {color:'#437a22', what:'Not resolved within SLA window – Normal priority.',        isKM:false},
+  'KSL-2b': {color:'#437a22', what:'Not resolved within SLA window – Low priority.',           isKM:false},
+  'KSL-2c': {color:'#01696f', what:'Not resolved within SLA window – High priority.',          isKM:false},
+  'KSL-2d': {color:'#01696f', what:'Not resolved within SLA window – Critical priority.',      isKM:false},
   'KSL-3a': {color:'#7a39bb', what:'On Hold status used incorrectly (wrong reason/missing info).',isKM:false},
-  'KSL-4':  {color:'#006494', what:'Related Incident must be linked before ticket closure.',     isKM:false},
-  'KSL-5a': {color:'#964219', what:'Required communication steps were not followed.',           isKM:false},
-  'KSL-5b': {color:'#964219', what:'Ticket closed without meeting closure checklist.',          isKM:false},
-  'KSL-6':  {color:'#d19900', what:'Ticket re-opened after resolution.',                        isKM:false},
-  'KM-1':   {color:'#006494', what:'Customer re-opened the ticket — solution did not work.',    isKM:true},
-  'KM-2':   {color:'#7a39bb', what:'Ticket assigned to wrong team and bounced back.',           isKM:true},
+  'KSL-4':  {color:'#006494', what:'Related Incident must be linked before ticket closure.',    isKM:false},
+  'KSL-5a': {color:'#964219', what:'Required communication steps were not followed.',          isKM:false},
+  'KSL-5b': {color:'#964219', what:'Ticket closed without meeting closure checklist.',         isKM:false},
+  'KSL-6':  {color:'#d19900', what:'Ticket re-opened after resolution.',                       isKM:false},
+  'KM-1':   {color:'#006494', what:'Customer re-opened the ticket — solution did not work.',   isKM:true},
+  'KM-2':   {color:'#7a39bb', what:'Ticket assigned to wrong team and bounced back.',          isKM:true},
 };
 var KPI_ORDER = ['KSL-4','KM-1','KSL-5b','KSL-5a','KSL-3a','KSL-6','KSL-2c','KSL-2d','KSL-2a','KSL-2b','KM-2','KSL-1'];
 
@@ -246,22 +253,29 @@ function toMonth(val){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 
-// ── App state ──────────────────────────────────────────────
-var state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
-var wbQueueA=[], wbQueueB=[];
-
-// ── Helper: check if a raw cell value means "excluded = true" ──
-// Breaches file uses 0 / 1 (numeric or string).
+// ── Helpers: interpret flag columns ───────────────────────
+// Excluded: 1 / "1" / "y" / "Y" = excluded
 function _isExcluded(val){
   if(val===1||val==='1') return true;
-  // legacy fallback — some older exports used 'y'
   if(typeof val==='string'&&val.trim().toLowerCase()==='y') return true;
+  return false;
+}
+// Unique: 1 / "1" = this row is the unique/deduplicated breach row
+// 0 / "0" / "" = additional RI row, do NOT count as extra breach
+function _isUnique(val){
+  // Treat blank/missing as 1 (legacy files without this column)
+  if(val===undefined||val===null||val==='') return true;
+  if(val===1||val==='1') return true;
   return false;
 }
 
 // ── Parse Breaches workbook ────────────────────────────────
-// Returns: breachData[kpiCode] = [{ticket, excluded, reason, ...}, ...]
-// Also builds: excludedSet[kpiCode] = Set of ticket strings that are excluded
+// Builds:
+//   outData[kpi]     = [{ticket, excluded, unique, reason, …}]
+//   outExclSet[kpi]  = Set of ticket strings with Excluded=1
+// Note: Unique=0 rows are still stored in outData (for reason/
+// agent analytics) but are NOT added to excludedSet unless also
+// Excluded=1.
 function _parseBreachWb(wb, outData, outExclSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
@@ -273,17 +287,23 @@ function _parseBreachWb(wb, outData, outExclSet){
       var ticket=String(r['Incident Ticket']||'').trim();
       if(!ticket) return;
       var isExcl=_isExcluded(r['Excluded']);
+      var isUniq=_isUnique(r['Unique']);
       if(isExcl) outExclSet[name].add(ticket);
       outData[name].push({
         ticket,
         excluded:isExcl,
-        reason:String(r['Reason']||''),agent:String(r['Agent']||''),
-        aos:String(r['AOS']||''),aosIssue:String(r['AOS Issue']||''),
-        comment:String(r['Comment']||''),jira:String(r['Jira']||''),
+        unique:isUniq,
+        reason:String(r['Reason']||''),
+        agent:String(r['Agent']||''),
+        aos:String(r['AOS']||''),
+        aosIssue:String(r['AOS Issue']||''),
+        comment:String(r['Comment']||''),
+        jira:String(r['Jira']||''),
         queue:String(r['Queue']||''),
         language:isValidLang(r['ISOLanguage'])?String(r['ISOLanguage']).trim()
                 :isValidLang(r['ISO_Language'])?String(r['ISO_Language']).trim():'',
-        tool:String(r['Tool']||''),week:String(r['Week']||''),
+        tool:String(r['Tool']||''),
+        week:String(r['Week']||''),
         breachDesc:String(r['BreachDescription']||r['Breach_Description']||''),
         month:toMonth(r['DATECLOSE']||r['DATE_CLOSE'])
       });
@@ -292,16 +312,14 @@ function _parseBreachWb(wb, outData, outExclSet){
 }
 
 // ── Parse SLA workbook ─────────────────────────────────────
-// Deduplication is per-KPI-sheet: same INC counted once.
-// Excluded flag comes from the Breaches file via excludedSet.
-// At parse time we mark isExcluded=false; applyExclusions() fixes it later.
+// Deduplication within each KPI sheet by Incident Ticket.
+// isExcluded is always false here; set by _applyExclusions().
 function _parseSlaWb(wb, outData, monthSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
     var ws=wb.Sheets[name];
     var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
 
-    // Deduplication within this KPI sheet
     var seen={};
     rows.forEach(function(r){
       var ticket=String(r['Incident Ticket']||'').trim();
@@ -309,7 +327,6 @@ function _parseSlaWb(wb, outData, monthSet){
       if(!seen[ticket]){
         seen[ticket]=r;
       } else {
-        // Prefer the row with Unique=1 as the canonical row
         var uVal=r['Unique'];
         if(uVal===1||uVal==='1') seen[ticket]=r;
       }
@@ -324,8 +341,8 @@ function _parseSlaWb(wb, outData, monthSet){
       var rawLang=r['ISO_Language']||r['ISOLanguage']||r['iso_language']||'';
       outData[name].push({
         ticket, month,
-        isBreach:hasBreach, // may be overridden by applyExclusions()
-        isExcluded:false,   // populated by applyExclusions()
+        isBreach:hasBreach,
+        isExcluded:false,
         queue:String(r['Queue']||''),
         priority:String(r['Priority']||''),
         tool:String(r['Tool']||''),
@@ -340,9 +357,8 @@ function _parseSlaWb(wb, outData, monthSet){
 }
 
 // ── Apply exclusions from Breaches file to SLA rows ────────
-// For each KPI code, any SLA row whose ticket appears in the
-// excludedSet for that KPI is marked isExcluded=true and
-// isBreach=false (excluded tickets are non-breached in formula).
+// For each KPI, any SLA ticket in the excludedSet is flagged
+// isExcluded=true and isBreach=false.
 function _applyExclusions(slaData, excludedSet){
   Object.keys(slaData).forEach(function(code){
     var excl=excludedSet[code];
@@ -350,7 +366,7 @@ function _applyExclusions(slaData, excludedSet){
     slaData[code].forEach(function(row){
       if(excl.has(row.ticket)){
         row.isExcluded=true;
-        row.isBreach=false; // excluded = non-breached for KSL formula
+        row.isBreach=false;
       }
     });
   });
@@ -360,12 +376,15 @@ function buildStateFromQueues(){
   var slaData={},monthSet={},breachData={},excludedSet={};
   wbQueueA.forEach(function(e){if(e.wb&&!e.error)_parseSlaWb(e.wb,slaData,monthSet);});
   wbQueueB.forEach(function(e){if(e.wb&&!e.error)_parseBreachWb(e.wb,breachData,excludedSet);});
-  // Apply the Breaches file exclusions onto SLA rows
   _applyExclusions(slaData, excludedSet);
   Object.values(breachData).forEach(function(arr){arr.forEach(function(r){if(r.month)monthSet[r.month]=1;});});
   state.slaData=slaData; state.breachData=breachData;
   state.months=Object.keys(monthSet).sort();
 }
+
+// ── App state ──────────────────────────────────────────────
+var state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
+var wbQueueA=[], wbQueueB=[];
 
 // ── getSummary ─────────────────────────────────────────────
 function getSummary(month){
@@ -381,7 +400,7 @@ function getSummary(month){
   });
 }
 
-// ── Banner ────────────────────────────────────────────────
+// ── Banner ─────────────────────────────────────────────────
 function buildBanner(summary){
   var gTotal=summary.reduce(function(a,s){return a+s.total;},0);
   var gBreaches=summary.reduce(function(a,s){return a+s.breaches;},0);
@@ -392,28 +411,28 @@ function buildBanner(summary){
   var hasB=Object.keys(state.breachData).length>0;
   document.getElementById('summary-banner').innerHTML=
     _sc('Total Tickets',fmt(gTotal),fmt(gBreaches)+' breaches','none')+
-    _sc('Excluded',fmt(gExcl),exclPct+'% of total · counted as non-breached','excl')+
+    _sc('Excluded',fmt(gExcl),exclPct+'% of total · Excluded=1 in Breaches file','excl')+
     _sc('🔴 Action',reds,'KPIs below target','red')+
     _sc('🟡 Monitor',ambers,'KPIs in amber zone','amber')+
     _sc('🟢 On Target',(summary.length-reds-ambers),'KPIs meeting target','green')+
     _sc('SLA Files',wbQueueA.filter(function(e){return !e.error;}).length,'loaded · merged','none')+
-    _sc('Breach Files',hasB?wbQueueB.filter(function(e){return !e.error;}).length:'—',hasB?'loaded · exclusions applied':'not loaded','none');
+    _sc('Breach Files',hasB?wbQueueB.filter(function(e){return !e.error;}).length:'—',hasB?'loaded · exclusions applied':'not loaded (optional)','none');
 }
 function _sc(lbl,val,sub,r){
   return '<div class="s-card rag-'+r+'"><div class="lbl">'+esc(String(lbl))+'</div><div class="val">'+esc(String(val))+'</div><div class="sub">'+esc(String(sub))+'</div></div>';
 }
 
-// ── Tab bar ───────────────────────────────────────────────
+// ── Tab bar ────────────────────────────────────────────────
 function buildTabBar(summary){
   var tb=document.getElementById('tab-bar');
   var h='';
   ['overview','trend','language'].forEach(function(t){
     var labels={overview:'📊 Overview',trend:'📈 3-Month Trend',language:'🌐 Language Analysis'};
-    h+='<button class="tab-btn'+(state.activeTab===t?' active':'')+'" data-tab="'+t+'">'+labels[t]+'</button>';
+    h+='<button class="tab-btn'+(state.activeTab===t?' active':'')+'\" data-tab="'+t+'">'+labels[t]+'</button>';
   });
   summary.forEach(function(s){
     if(!s.total) return;
-    h+='<button class="tab-btn'+(state.activeTab===s.code?' active':'')+'" data-tab="'+s.code+'">'+
+    h+='<button class="tab-btn'+(state.activeTab===s.code?' active':'')+'\" data-tab="'+s.code+'">'+
       '<span class="tab-dot dot-'+s.target.rag+'"></span>'+esc(s.code)+'</button>';
   });
   tb.innerHTML=h;
@@ -427,14 +446,14 @@ function buildTabBar(summary){
   });
 }
 
-// ── Month chips ───────────────────────────────────────────
+// ── Month chips ────────────────────────────────────────────
 function buildMonthChips(){
   var chips=document.getElementById('month-chips');
   var months=state.months;
   var h='<span style="font-size:11px;color:var(--muted);font-weight:600">Period:</span>';
-  h+='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" data-month="">All ('+(months.length>1?months.length+' months':'1 month')+')</button>';
+  h+='<button class="month-chip'+(state.activeMonth===null?' active':'')+'\" data-month="">All ('+(months.length>1?months.length+' months':'1 month')+')</button>';
   months.forEach(function(m){
-    h+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" data-month="'+m+'">'+monthLabel(m)+'</button>';
+    h+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'\" data-month="'+m+'">'+monthLabel(m)+'</button>';
   });
   if(months.length){
     var last=months[months.length-1].split('-');
@@ -452,7 +471,7 @@ function buildMonthChips(){
   });
 }
 
-// ── Refresh ───────────────────────────────────────────────
+// ── Refresh ────────────────────────────────────────────────
 function refresh(){
   var sum=getSummary(state.activeMonth);
   buildBanner(sum);
@@ -501,7 +520,7 @@ function renderOverview(){
     '</tr>';
   }).join('');
 
-  // Excluded breakdown section
+  // Excluded breakdown
   var exclRows=active.filter(function(s){return s.excluded>0;});
   var maxExcl=exclRows.length?Math.max.apply(null,exclRows.map(function(s){return s.excluded;})):1;
   var exclBreakdown='';
@@ -531,10 +550,10 @@ function renderOverview(){
       '<th>KPI</th><th>Excluded Count</th><th>% of KPI</th><th>KPI Total</th>'+
       '</tr></thead><tbody>'+exclTableRows+'</tbody></table>'+
       '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
-      '⚠️ Excluded tickets are read from the <strong>Breaches file</strong> (Excluded = 1). '+
-      'They are included in the denominator but treated as non-breached. '+
-      'They represent agreed exceptions (e.g. tool errors, data quality issues). '+
-      'A high excluded count can <em>artificially improve</em> the compliance rate.</p>'+
+      '⚠️ Excluded tickets are read from the <strong>Breaches file only</strong> (Excluded = 1). '+
+      'They are counted in the denominator but treated as non-breached. '+
+      'They represent agreed exceptions (e.g. AOS portal errors, data quality issues, escalations). '+
+      'A high excluded count can <em>artificially improve</em> the compliance rate — review with caution.</p>'+
       '</div></div>';
   }
 
@@ -543,11 +562,11 @@ function renderOverview(){
     '<div class="sc-body"><table class="rag-table">'+
     '<thead><tr><th>Code</th><th style="min-width:200px">What it measures</th>'+
     '<th style="text-align:right">Total</th>'+
-    '<th style="text-align:right">Excluded <span style="font-weight:400;font-size:10px">(from Breaches file)</span></th>'+
+    '<th style="text-align:right">Excluded <span style="font-weight:400;font-size:10px">(Breaches file, Excluded=1)</span></th>'+
     '<th style="text-align:right">Breaches</th><th>Target Metric</th><th>Formula</th><th>Status</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table>'+
     '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
-    '<strong>KSL Compliance:</strong> (Total – Breaches) / Total · Excluded = non-breached · Target ≥ 95% · '+
+    '<strong>KSL Compliance:</strong> (Total – Breaches) / Total · Excluded tickets = non-breached · Target ≥ 95% · '+
     '<strong>KM Occurrence:</strong> Breaches / Total · Target ≤ 5%</p>'+
     '</div></div>';
 
@@ -667,7 +686,7 @@ function renderLanguage(){
       return '<tr><td class="lang-lbl"><strong>'+esc(lang)+'</strong></td>'+tds+'<td style="font-weight:700">'+totalBr+'</td><td style="color:var(--muted)">'+totalTk+'</td></tr>';
     }).join('');
     heatHtml='<div style="overflow-x:auto"><table class="heatmap-tbl">'+header+'<tbody>'+tbody+'</tbody></table></div>'+
-      '<p style="font-size:10px;color:var(--muted);margin-top:8px">Darker cell = higher breach rate for that language + KPI combination. Hover a cell to see counts. Breach rate shown is raw (breaches/total).</p>';
+      '<p style="font-size:10px;color:var(--muted);margin-top:8px">Darker cell = higher breach rate for that language + KPI combination. Hover a cell to see counts.</p>';
   }
 
   var langCounts={};
@@ -683,9 +702,9 @@ function renderLanguage(){
 
   var lChips='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'+
     '<span style="font-size:11px;color:var(--muted);font-weight:600">Filter:</span>'+
-    '<button class="month-chip'+(month===null?' active':'')+'" onclick="setLangMonth(null)">All months</button>'+
+    '<button class="month-chip'+(month===null?' active':'')+'\" onclick="setLangMonth(null)">All months</button>'+
     state.months.map(function(m){
-      return '<button class="month-chip'+(month===m?' active':'')+'" onclick="setLangMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
+      return '<button class="month-chip'+(month===m?' active':'')+'\" onclick="setLangMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
     }).join('')+
     '</div>';
 
@@ -718,200 +737,254 @@ function renderKpiTab(code){
   var t=calcTarget(total,breaches,meta.isKM);
   if(!_kpiPage[code]) _kpiPage[code]=1;
 
+  // ── Breach enrichment from Breaches file ──
+  // Only Unique=1 rows are the deduplicated breach rows.
+  // Filter to current month if needed.
+  var uniqueBreachRows=bRows.filter(function(r){
+    return r.unique && !r.excluded;
+  });
+  if(month) uniqueBreachRows=uniqueBreachRows.filter(function(r){return r.month===month;});
+
+  var excludedBreachRows=bRows.filter(function(r){return r.excluded;});
+  if(month) excludedBreachRows=excludedBreachRows.filter(function(r){return r.month===month;});
+
   var header='<div class="sc"><div class="sc-head">'+
     '<h2>'+esc(code)+'</h2>'+
-    '<span class="badge rag-pill rag-'+t.rag+'" style="font-size:12px;padding:4px 14px">'+t.display+' '+esc(t.targetLabel)+'</span>'+
-    '</div><div class="sc-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">'+
-    _mc('Total Tickets',fmt(total),'full scope for this KPI','none')+
-    _mc('Excluded',fmt(excluded),exclPct+'% of total · from Breaches file','excl')+
-    _mc('Breaches',fmt(breaches),pct(breaches,total)+'% raw breach rate',t.rag)+
-    _mc(meta.isKM?'Occurrence Rate':'Compliance Rate',t.display,t.targetLabel,t.rag)+
-    _mc('Status',ragLabel(t.rag,meta.isKM),'',t.rag)+
-    '</div><div class="insight-strip"><b>📖 What this KPI measures:</b> '+esc(meta.what)+'</div></div>';
+    '<span class="badge rag-'+t.rag+'">'+t.display+' · '+ragLabel(t.rag,meta.isKM)+'</span>'+
+    '<span style="font-size:11px;color:var(--muted);margin-left:8px">'+esc(meta.what)+'</span>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)">'+
+    _sc('Total',fmt(total),'tickets in scope','none')+
+    _sc('Breaches',fmt(breaches),'counted breaches','none')+
+    _sc('Excluded',fmt(excluded),exclPct+'% · Excluded=1 in Breaches file','excl')+
+    _sc(meta.isKM?'Occurrence':'Compliance',t.display,meta.isKM?'Target ≤ 5%':'Target ≥ 95%','rag-'+t.rag)+
+    '</div></div>';
 
-  var enr=bRows.filter(function(r){return !r.excluded;});
-  if(month) enr=enr.filter(function(r){return r.month===month;});
-
-  var breakHtml='';
-  if(enr.length){
-    var rMap={},aMap={},bdMap={},qMap={},lMap={};
-    enr.forEach(function(r){
-      if(r.reason)  rMap[r.reason]=(rMap[r.reason]||0)+1;
-      if(r.aos&&r.aos.trim()) aMap[r.aos]=(aMap[r.aos]||0)+1;
-      if(r.breachDesc) bdMap[r.breachDesc]=(bdMap[r.breachDesc]||0)+1;
-      if(r.queue)  qMap[r.queue]=(qMap[r.queue]||0)+1;
-      if(isValidLang(r.language)) lMap[r.language]=(lMap[r.language]||0)+1;
-    });
-    breakHtml='<div class="two-col">'+
-      '<div class="sc"><div class="sc-head"><h2>🔍 Root Cause – Reason</h2><span class="badge">'+enr.length+' enriched</span></div><div class="sc-body">'+_bars(rMap,10,meta.color||'#006494')+'</div></div>'+
-      '<div class="sc"><div class="sc-head"><h2>🛠 Breach Sub-Type</h2></div><div class="sc-body">'+_bars(bdMap,8,'#7a39bb')+'</div></div>'+
-      '<div class="sc"><div class="sc-head"><h2>⚙️ AOS Distribution</h2></div><div class="sc-body">'+(Object.keys(aMap).length?_bars(aMap,6,'#01696f'):'<p style="font-size:12px;color:var(--muted)">No AOS data</p>')+'</div></div>'+
-      '<div class="sc"><div class="sc-head"><h2>🗂 By Queue</h2></div><div class="sc-body">'+_bars(qMap,8,'#964219')+'</div></div>'+
-      (Object.keys(lMap).length?'<div class="sc"><div class="sc-head"><h2>🌐 By Language</h2></div><div class="sc-body">'+_bars(lMap,12,'#a12c4b')+'</div></div>':'')+
-    '</div>';
-    var PAGE=50,page=_kpiPage[code]||1,start=(page-1)*PAGE,sl=enr.slice(start,start+PAGE),totalP=Math.ceil(enr.length/PAGE)||1;
-    var tbody=sl.map(function(r){
-      return '<tr><td style="font-family:monospace;font-size:11px">'+esc(r.ticket)+'</td>'+
-        '<td>'+esc(r.week)+'</td><td>'+esc(r.language)+'</td><td>'+esc(r.queue)+'</td>'+
-        '<td>'+esc(r.reason)+'</td>'+
-        '<td>'+(r.aos?'<span class="chip ch-green">'+esc(r.aos)+'</span>':'')+'</td>'+
-        '<td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.aosIssue||r.comment||'')+'</td></tr>';
+  // ── Reason breakdown (Unique=1 rows only) ──
+  var reasonHtml='';
+  if(uniqueBreachRows.length){
+    var reasons={};
+    uniqueBreachRows.forEach(function(r){var k=r.reason||'Unknown';reasons[k]=(reasons[k]||0)+1;});
+    var sortedR=Object.keys(reasons).map(function(k){return[k,reasons[k]];}).sort(function(a,b){return b[1]-a[1];});
+    var maxR=sortedR[0][1];
+    var reasonBars=sortedR.map(function(e){
+      var w=Math.round(e[1]/maxR*100);
+      var pctR=parseFloat(pct(e[1],uniqueBreachRows.length));
+      return '<div class="bar-row">'+
+        '<div class="bar-lbl">'+esc(e[0])+'</div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:'+esc(meta.color)+'"></div></div>'+
+        '<div class="bar-cnt">'+e[1]+'</div>'+
+        '<div style="font-size:10px;color:var(--muted);margin-left:4px;flex-shrink:0">'+pctR+'%</div>'+
+      '</div>';
     }).join('');
-    var dtbl='<div class="sc"><div class="sc-head"><h2>📋 Breach Detail Records</h2><span class="badge">'+enr.length+' records</span></div>'+
-      '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr>'+
-      '<th>Ticket</th><th>Week</th><th>Language</th><th>Queue</th><th>Reason</th><th>AOS</th><th>Notes</th>'+
-      '</tr></thead><tbody>'+tbody+'</tbody></table></div>'+_pg(page,totalP,code)+'</div></div>';
-    return header+breakHtml+dtbl;
-  } else {
-    var bsl=rows.filter(function(r){return r.isBreach;});
-    var qS={},pS={},tS={},bdS={},lS={};
-    bsl.forEach(function(r){
-      if(r.queue)    qS[r.queue]=(qS[r.queue]||0)+1;
-      if(r.priority) pS[r.priority]=(pS[r.priority]||0)+1;
-      if(r.tool)     tS[r.tool]=(tS[r.tool]||0)+1;
-      if(r.breachDesc) bdS[r.breachDesc]=(bdS[r.breachDesc]||0)+1;
-      if(isValidLang(r.language)) lS[r.language]=(lS[r.language]||0)+1;
-    });
-    var note='<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">💡 Load enriched Breaches files (Slot 2) to unlock root-cause breakdown by Reason, Agent, AOS, and Excluded tickets.</p></div></div>';
-    breakHtml='<div class="two-col">'+
-      (Object.keys(qS).length?'<div class="sc"><div class="sc-head"><h2>By Queue</h2></div><div class="sc-body">'+_bars(qS,8,meta.color)+'</div></div>':'')+
-      (Object.keys(pS).length?'<div class="sc"><div class="sc-head"><h2>By Priority</h2></div><div class="sc-body">'+_bars(pS,6,'#7a39bb')+'</div></div>':'')+
-      (Object.keys(tS).length?'<div class="sc"><div class="sc-head"><h2>By Tool</h2></div><div class="sc-body">'+_bars(tS,8,'#964219')+'</div></div>':'')+
-      (Object.keys(bdS).length?'<div class="sc"><div class="sc-head"><h2>Breach Sub-Type</h2></div><div class="sc-body">'+_bars(bdS,8,'#01696f')+'</div></div>':'')+
-      (Object.keys(lS).length?'<div class="sc"><div class="sc-head"><h2>🌐 By Language</h2></div><div class="sc-body">'+_bars(lS,12,'#a12c4b')+'</div></div>':'')+
-    '</div>';
-    return header+note+breakHtml;
+    reasonHtml='<div class="sc"><div class="sc-head"><h2>Breach Reasons</h2>'+
+      '<span class="badge">'+uniqueBreachRows.length+' unique breach rows · source: Breaches file (Unique=1, not excluded)</span></div>'+
+      '<div class="sc-body"><div class="bar-chart">'+reasonBars+'</div></div></div>';
   }
+
+  // ── Queue breakdown ──
+  var queueHtml='';
+  var breachSlaRows=rows.filter(function(r){return r.isBreach;});
+  if(breachSlaRows.length){
+    var queues={};
+    breachSlaRows.forEach(function(r){var k=r.queue||'Unknown';queues[k]=(queues[k]||0)+1;});
+    var sortedQ=Object.keys(queues).map(function(k){return[k,queues[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,15);
+    var maxQ=sortedQ[0][1];
+    var qBars=sortedQ.map(function(e){
+      var w=Math.round(e[1]/maxQ*100);
+      return '<div class="bar-row">'+
+        '<div class="bar-lbl">'+esc(e[0])+'</div>'+
+        '<div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:#006494"></div></div>'+
+        '<div class="bar-cnt">'+e[1]+'</div>'+
+      '</div>';
+    }).join('');
+    queueHtml='<div class="sc"><div class="sc-head"><h2>Top Queues (Breaches)</h2>'+
+      '<span class="badge">By breach count · SLA file data</span></div>'+
+      '<div class="sc-body"><div class="bar-chart">'+qBars+'</div></div></div>';
+  }
+
+  // ── Excluded tickets detail (from Breaches file) ──
+  var exclDetailHtml='';
+  if(excludedBreachRows.length){
+    var PAGE=15,pg=_kpiPage[code]||1;
+    var totalExclPages=Math.ceil(excludedBreachRows.length/PAGE);
+    var pageRows=excludedBreachRows.slice((pg-1)*PAGE,pg*PAGE);
+    var exclTableRows=pageRows.map(function(r){
+      return '<tr>'+
+        '<td style="font-weight:600;font-size:11px">'+esc(r.ticket)+'</td>'+
+        '<td style="font-size:11px">'+esc(r.reason||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.agent||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.queue||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.comment||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.jira||'—')+'</td>'+
+      '</tr>';
+    }).join('');
+    var pgBtns='';
+    for(var p=1;p<=totalExclPages;p++){
+      pgBtns+='<button class="pg-btn'+(p===pg?' on':'')+'\" onclick="_kpiPage[\''+code+'\']='+p+';renderTab()">'+p+'</button>';
+    }
+    exclDetailHtml='<div class="sc"><div class="sc-head"><h2>🚫 Excluded Tickets Detail</h2>'+
+      '<span class="badge">'+excludedBreachRows.length+' excluded · from Breaches file (Excluded=1)</span></div>'+
+      '<div class="sc-body">'+
+      '<table class="dt"><thead><tr>'+
+      '<th>Ticket</th><th>Reason</th><th>Agent</th><th>Queue</th><th>Comment</th><th>Jira</th>'+
+      '</tr></thead><tbody>'+exclTableRows+'</tbody></table>'+
+      (totalExclPages>1?'<div class="pg">Page '+pg+' of '+totalExclPages+' · '+pgBtns+'</div>':'')+
+      '</div></div>';
+  }
+
+  // ── Breach ticket list (SLA file) ──
+  var PAGE2=20,pg2=_kpiPage[code+'_breach']||1;
+  var totalPg2=Math.ceil(breachSlaRows.length/PAGE2);
+  var pageBreachRows=breachSlaRows.slice((pg2-1)*PAGE2,pg2*PAGE2);
+  var breachTableRows=pageBreachRows.map(function(r){
+    var bInfoRow=uniqueBreachRows.find(function(b){return b.ticket===r.ticket;})||null;
+    return '<tr>'+
+      '<td style="font-weight:600;font-size:11px">'+esc(r.ticket)+'</td>'+
+      '<td style="font-size:11px">'+esc(r.queue||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.priority||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.language||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.month||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.reason:'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.agent:'—')+'</td>'+
+    '</tr>';
+  }).join('');
+  var pgBtns2='';
+  for(var p2=1;p2<=totalPg2;p2++){
+    pgBtns2+='<button class="pg-btn'+(p2===pg2?' on':'')+'\" onclick="_kpiPage[\''+code+'_breach\']='+p2+';renderTab()">'+p2+'</button>';
+  }
+  var breachListHtml='<div class="sc"><div class="sc-head"><h2>Breach Ticket List</h2>'+
+    '<span class="badge">'+breachSlaRows.length+' breaches · SLA file · enriched with Breaches file where available</span></div>'+
+    '<div class="sc-body">'+
+    '<table class="dt"><thead><tr>'+
+    '<th>Ticket</th><th>Queue</th><th>Priority</th><th>Lang</th><th>Month</th><th>Reason</th><th>Agent</th>'+
+    '</tr></thead><tbody>'+breachTableRows+'</tbody></table>'+
+    (totalPg2>1?'<div class="pg">Page '+pg2+' of '+totalPg2+' · '+pgBtns2+'</div>':'')+
+    '</div></div>';
+
+  return header+
+    '<div class="two-col">'+reasonHtml+queueHtml+'</div>'+
+    exclDetailHtml+
+    breachListHtml;
 }
-function _mc(lbl,val,sub,r){return '<div class="s-card rag-'+r+'"><div class="lbl">'+esc(lbl)+'</div><div class="val" style="font-size:18px">'+esc(val)+'</div>'+(sub?'<div class="sub">'+esc(sub)+'</div>':'')+'</div>';}
-function _bars(map,n,col){
-  var ent=Object.keys(map).map(function(k){return[k,map[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n);
-  if(!ent.length) return '<p style="font-size:12px;color:var(--muted)">No data</p>';
-  var mx=ent[0][1];
-  return '<div class="bar-chart">'+ent.map(function(e){
-    return '<div class="bar-row"><div class="bar-lbl" title="'+esc(e[0])+'">'+esc(e[0])+'</div>'+
-      '<div class="bar-track"><div class="bar-fill" style="width:'+Math.round(e[1]/mx*100)+'%;background:'+col+'"></div></div>'+
-      '<div class="bar-cnt">'+e[1]+'</div></div>';
-  }).join('')+'</div>';
-}
-function _pg(page,totalP,code){
-  if(totalP<=1) return '';
-  var s=Math.max(1,page-2),e=Math.min(totalP,s+4),h='<div class="pg">';
-  h+='<button class="pg-btn" '+(page===1?'disabled':'')+' onclick="_kpiNav(\''+code+'\','+(page-1)+')">&#8592;</button>';
-  for(var i=s;i<=e;i++) h+='<button class="pg-btn'+(i===page?' on':'')+'" onclick="_kpiNav(\''+code+'\','+i+')">'+i+'</button>';
-  h+='<button class="pg-btn" '+(page===totalP?'disabled':'')+' onclick="_kpiNav(\''+code+'\','+(page+1)+')">&#8594;</button>';
-  return h+'<span style="margin-left:4px">'+page+'/'+totalP+'</span></div>';
-}
-window._kpiNav=function(code,page){_kpiPage[code]=page;document.getElementById('analyzer-main').innerHTML=renderKpiTab(code);};
 
 // ═══════════════════════════════════════════════════════════
-// FILE UPLOAD
+// FILE UPLOAD HANDLING
 // ═══════════════════════════════════════════════════════════
-function initSlot(dzId,inputId,listId,statusId,addMoreId,queue){
+function setupDropZone(dzId,fiId,queue,listId,statusId,addId){
   var dz=document.getElementById(dzId);
-  var fi=document.getElementById(inputId);
-  var listEl=document.getElementById(listId);
-  var statusEl=document.getElementById(statusId);
-  var addEl=document.getElementById(addMoreId);
-  dz.addEventListener('click',function(){fi.click();});
-  dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
-  dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});
-  dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag-over');addFiles(Array.from(e.dataTransfer.files));});
-  fi.addEventListener('change',function(e){addFiles(Array.from(e.target.files));fi.value='';});
-  function addFiles(files){
-    var valid=files.filter(function(f){return f.name.endsWith('.xlsx');});
-    if(!valid.length){statusEl.textContent='No .xlsx files found';statusEl.style.color='var(--error)';return;}
-    var pending=valid.length;
-    valid.forEach(function(file){
-      if(queue.some(function(entry){return entry.name===file.name;})){pending--;if(!pending)renderList();return;}
+  var fi=document.getElementById(fiId);
+  var list=document.getElementById(listId);
+  var status=document.getElementById(statusId);
+  var addMore=document.getElementById(addId);
+
+  function processFiles(files){
+    Array.from(files).forEach(function(file){
+      if(!file.name.endsWith('.xlsx')) return;
+      var entry={name:file.name,wb:null,error:null};
+      queue.push(entry);
+      renderList();
       var reader=new FileReader();
-      reader.onload=function(ev){
-        try{var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});queue.push({name:file.name,wb:wb});}catch(err){queue.push({name:file.name,wb:null,error:true});}
-        pending--;if(!pending)renderList();
+      reader.onload=function(e){
+        try{
+          entry.wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        }catch(err){entry.error=err.message;}
+        renderList();
+        checkRunBtn();
       };
       reader.readAsArrayBuffer(file);
     });
+    checkRunBtn();
   }
+
   function renderList(){
-    listEl.innerHTML=queue.map(function(entry,idx){
-      var icon=entry.error?'<span class="fi-err">❌</span>':'<span class="fi-ok">✅</span>';
-      return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(entry.name)+'">'+esc(entry.name)+'</span>'+
-        '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+idx+')">&times;</span></div>';
+    var html=queue.map(function(e,i){
+      var icon=e.error?'<span class="fi-err">✗</span>':e.wb?'<span class="fi-ok">✓</span>':'<span style="color:var(--muted)">…</span>';
+      return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(e.name)+'">'+esc(e.name)+'</span>'+
+        '<span class="fi-remove" onclick="removeFile('+JSON.stringify(queue===wbQueueA?\'A\':\'B\')+','+i+')">×</span></div>';
     }).join('');
-    var ok=queue.filter(function(e){return !e.error;}).length;
-    var err=queue.filter(function(e){return e.error;}).length;
-    statusEl.textContent=ok+' file(s) ready'+(err?' · '+err+' error(s)':'');
-    statusEl.style.color=err?'var(--error)':'var(--muted)';
-    addEl.style.display=queue.length?'block':'none';
-    checkRunnable();
+    list.innerHTML=html;
+    var loaded=queue.filter(function(e){return e.wb;}).length;
+    status.textContent=queue.length?loaded+' of '+queue.length+' file'+(queue.length>1?'s':'')+ ' loaded':'(No files loaded)';
+    addMore.style.display=queue.length?'block':'none';
   }
+
+  dz.addEventListener('click',function(){fi.click();});
+  dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});
+  dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag-over');processFiles(e.dataTransfer.files);});
+  fi.addEventListener('change',function(){processFiles(fi.files);fi.value='';});
 }
 
-window.removeFile=function(dzId,idx){
-  var queue=dzId==='dz-a'?wbQueueA:wbQueueB;
-  var listId=dzId==='dz-a'?'list-a':'list-b';
-  var statusId=dzId==='dz-a'?'status-a':'status-b';
-  var addId=dzId==='dz-a'?'add-a':'add-b';
-  queue.splice(idx,1);
-  var listEl=document.getElementById(listId);
-  var statusEl=document.getElementById(statusId);
-  listEl.innerHTML=queue.map(function(entry,i){
-    var icon=entry.error?'<span class="fi-err">❌</span>':'<span class="fi-ok">✅</span>';
-    return '<div class="file-item">'+icon+'<span class="fi-name">'+esc(entry.name)+'</span>'+
-      '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+i+')">&times;</span></div>';
+window.removeFile=function(qId,idx){
+  var q=qId==='A'?wbQueueA:wbQueueB;
+  q.splice(idx,1);
+  document.getElementById(qId==='A'?'list-a':'list-b').innerHTML='';
+  var statusId=qId==='A'?'status-a':'status-b';
+  var addId=qId==='A'?'add-a':'add-b';
+  var listId=qId==='A'?'list-a':'list-b';
+  var queue=q;
+  var html=queue.map(function(e,i){
+    var icon=e.error?'<span class="fi-err">✗</span>':e.wb?'<span class="fi-ok">✓</span>':'<span style="color:var(--muted)">…</span>';
+    return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(e.name)+'">'+esc(e.name)+'</span>'+
+      '<span class="fi-remove" onclick="removeFile(\''+qId+'\','+i+')">×</span></div>';
   }).join('');
-  var ok=queue.filter(function(e){return !e.error;}).length;
-  statusEl.textContent=queue.length?ok+' file(s) ready':'No files loaded'+(dzId==='dz-b'?' (optional)':'');
-  statusEl.style.color='var(--muted)';
+  document.getElementById(listId).innerHTML=html;
+  var loaded=queue.filter(function(e){return e.wb;}).length;
+  document.getElementById(statusId).textContent=queue.length?loaded+' of '+queue.length+' file'+(queue.length>1?'s':'')+ ' loaded':'No files loaded'+(qId==='B'?' (optional)':'');
   document.getElementById(addId).style.display=queue.length?'block':'none';
-  checkRunnable();
+  checkRunBtn();
 };
 
-function checkRunnable(){
-  var ok=wbQueueA.filter(function(e){return e.wb&&!e.error;}).length;
-  document.getElementById('run-btn').disabled=!ok;
-  document.getElementById('run-btn').style.opacity=ok?'1':'.5';
+function checkRunBtn(){
+  var btn=document.getElementById('run-btn');
+  var ready=wbQueueA.some(function(e){return e.wb&&!e.error;});
+  btn.disabled=!ready;
+  btn.style.opacity=ready?'1':'0.5';
 }
 
-function runAnalysis(){
-  if(!wbQueueA.filter(function(e){return e.wb&&!e.error;}).length){
-    var err=document.getElementById('run-error');
-    err.textContent='Please load at least one valid SLA export file.';
+document.getElementById('run-btn').addEventListener('click',function(){
+  var err=document.getElementById('run-error');
+  err.style.display='none';
+  try{
+    buildStateFromQueues();
+    if(!state.months.length){
+      err.textContent='No valid date data found. Check your files.';
+      err.style.display='block';
+      return;
+    }
+    state.activeMonth=null;
+    state.activeTab='overview';
+    state.activeLangMonth=null;
+    _kpiPage={};
+    document.getElementById('upload-page').style.display='none';
+    var dp=document.getElementById('dashboard-page');
+    dp.classList.add('visible');
+    buildMonthChips();
+    refresh();
+  }catch(e){
+    err.textContent='Error processing files: '+e.message;
     err.style.display='block';
-    return;
+    console.error(e);
   }
-  document.getElementById('run-error').style.display='none';
-  buildStateFromQueues();
-  state.activeMonth=state.months.length?state.months[state.months.length-1]:null;
-  state.activeLangMonth=state.activeMonth;
-  state.activeTab='overview';
-  _kpiPage={};
-  document.getElementById('upload-page').style.display='none';
-  document.getElementById('dashboard-page').classList.add('visible');
-  buildMonthChips();
-  refresh();
-}
+});
 
-function resetApp(){
+window.resetApp=function(){
   wbQueueA=[];wbQueueB=[];
-  state.slaData={};state.breachData={};state.months=[];state.activeMonth=null;state.activeLangMonth=null;state.activeTab=null;
+  state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
+  _kpiPage={};
+  document.getElementById('upload-page').style.display='flex';
+  document.getElementById('dashboard-page').classList.remove('visible');
   ['list-a','list-b'].forEach(function(id){document.getElementById(id).innerHTML='';});
   document.getElementById('status-a').textContent='No files loaded';
   document.getElementById('status-b').textContent='No files loaded (optional)';
-  ['status-a','status-b'].forEach(function(id){document.getElementById(id).style.color='var(--muted)';});
   ['add-a','add-b'].forEach(function(id){document.getElementById(id).style.display='none';});
-  ['fi-a','fi-b'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('run-btn').disabled=true;
-  document.getElementById('run-btn').style.opacity='.5';
-  document.getElementById('upload-page').style.display='';
-  document.getElementById('dashboard-page').classList.remove('visible');
-}
+  document.getElementById('run-btn').style.opacity='0.5';
+};
 
-document.addEventListener('DOMContentLoaded',function(){
-  initSlot('dz-a','fi-a','list-a','status-a','add-a',wbQueueA);
-  initSlot('dz-b','fi-b','list-b','status-b','add-b',wbQueueB);
-  document.getElementById('run-btn').addEventListener('click',runAnalysis);
-});
+setupDropZone('dz-a','fi-a',wbQueueA,'list-a','status-a','add-a');
+setupDropZone('dz-b','fi-b',wbQueueB,'list-b','status-b','add-b');
 </script>
 </body>
 </html>
