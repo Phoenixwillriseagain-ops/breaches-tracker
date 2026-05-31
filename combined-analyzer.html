@@ -39,6 +39,18 @@
     .s-card.rag-red  {border-left:4px solid #cc2222}.s-card.rag-red   .val{color:#cc2222}
     .s-card.rag-excl{border-left:4px solid #6b7280}.s-card.rag-excl .val{color:#6b7280}
     .s-card.rag-none .val{color:var(--text)}
+    /* Split compliance card */
+    .s-card-compliance{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;grid-column:span 2}
+    @media(max-width:680px){.s-card-compliance{grid-column:span 1}}
+    .s-card-compliance .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+    .compliance-row{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+    .compliance-row .c-label{font-size:11px;color:var(--muted);width:80px;flex-shrink:0}
+    .compliance-row .c-val{font-size:22px;font-weight:700;line-height:1}
+    .compliance-row .c-delta{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;margin-left:4px}
+    .c-delta-pos{background:#d4edda;color:#1a6b1a}
+    .c-delta-neg{background:#ffdcdc;color:#880000}
+    .c-delta-zero{background:#f0eeea;color:#6b7280}
+    .compliance-row .c-sub{font-size:10px;color:var(--muted);margin-left:4px}
     .tab-bar{display:flex;border-bottom:2px solid var(--border);flex-wrap:wrap;background:var(--surface);padding:0 20px}
     .tab-btn{padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
     .tab-btn:hover{color:var(--text)}
@@ -172,12 +184,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 /* ============================================================
-   COMBINED ANALYZER  v3.1 — fix SyntaxError in renderList
-   ─────────────────────────────────────────────────────────────
-   EXCLUSION LOGIC (single source of truth: Breaches file)
-   ─ Excluded=1  → ticket marked as manual exception
-   ─ Unique=1    → deduplicated breach row (count this one)
-   ─ Unique=0    → extra RI row for same ticket (skip)
+   COMBINED ANALYZER  v3.2 — compliance card shows raw + adjusted
 ============================================================ */
 
 var KPI_META = {
@@ -216,8 +223,8 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function fmt(n){return typeof n==='number'?n.toLocaleString():n;}
 function pct(n,d){return d?(n/d*100).toFixed(1):'0.0';}
 function ragLabel(r,isKM){
-  if(isKM) return r==='red'?'🔴 Action Required':r==='amber'?'🟡 Monitor':'🟢 On Target';
-  return r==='red'?'🔴 Below Target':r==='amber'?'🟡 Monitor':'🟢 On Target';
+  if(isKM) return r==='red'?'&#x1F534; Action Required':r==='amber'?'&#x1F7E1; Monitor':'&#x1F7E2; On Target';
+  return r==='red'?'&#x1F534; Below Target':r==='amber'?'&#x1F7E1; Monitor':'&#x1F7E2; On Target';
 }
 function monthLabel(m){
   if(!m) return 'All Months';
@@ -235,7 +242,6 @@ function toMonth(val){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 
-// ── Helpers: interpret flag columns ───────────────────────
 function _isExcluded(val){
   if(val===1||val==='1') return true;
   if(typeof val==='string'&&val.trim().toLowerCase()==='y') return true;
@@ -247,7 +253,6 @@ function _isUnique(val){
   return false;
 }
 
-// ── Parse Breaches workbook ────────────────────────────────
 function _parseBreachWb(wb, outData, outExclSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
@@ -283,13 +288,11 @@ function _parseBreachWb(wb, outData, outExclSet){
   });
 }
 
-// ── Parse SLA workbook ─────────────────────────────────────
 function _parseSlaWb(wb, outData, monthSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
     var ws=wb.Sheets[name];
     var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-
     var seen={};
     rows.forEach(function(r){
       var ticket=String(r['Incident Ticket']||'').trim();
@@ -301,7 +304,6 @@ function _parseSlaWb(wb, outData, monthSet){
         if(uVal===1||uVal==='1') seen[ticket]=r;
       }
     });
-
     if(!outData[name]) outData[name]=[];
     Object.keys(seen).forEach(function(ticket){
       var r=seen[ticket];
@@ -326,7 +328,6 @@ function _parseSlaWb(wb, outData, monthSet){
   });
 }
 
-// ── Apply exclusions from Breaches file to SLA rows ────────
 function _applyExclusions(slaData, excludedSet){
   Object.keys(slaData).forEach(function(code){
     var excl=excludedSet[code];
@@ -350,11 +351,9 @@ function buildStateFromQueues(){
   state.months=Object.keys(monthSet).sort();
 }
 
-// ── App state ──────────────────────────────────────────────
 var state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
 var wbQueueA=[], wbQueueB=[];
 
-// ── getSummary ─────────────────────────────────────────────
 function getSummary(month){
   return KPI_ORDER.map(function(code){
     var rows=state.slaData[code]||[];
@@ -362,40 +361,87 @@ function getSummary(month){
     var total=rows.length;
     var excluded=rows.filter(function(r){return r.isExcluded;}).length;
     var breaches=rows.filter(function(r){return r.isBreach;}).length;
+    /* raw = before exclusions: excluded tickets treated as breaches */
+    var rawBreaches=breaches+excluded;
     var meta=KPI_META[code]||{isKM:false};
     var t=calcTarget(total,breaches,meta.isKM);
-    return {code,total,excluded,breaches,target:t};
+    var tRaw=calcTarget(total,rawBreaches,meta.isKM);
+    return {code,total,excluded,breaches,rawBreaches,target:t,targetRaw:tRaw};
   });
 }
 
-// ── Banner ─────────────────────────────────────────────────
+/* ── Banner ────────────────────────────────────────────── */
 function buildBanner(summary){
   var gTotal=summary.reduce(function(a,s){return a+s.total;},0);
   var gBreaches=summary.reduce(function(a,s){return a+s.breaches;},0);
+  var gRawBreaches=summary.reduce(function(a,s){return a+s.rawBreaches;},0);
   var gExcl=summary.reduce(function(a,s){return a+s.excluded;},0);
   var exclPct=gTotal?parseFloat((gExcl/gTotal*100).toFixed(1)):0;
   var reds=summary.filter(function(s){return s.target.rag==='red';}).length;
   var ambers=summary.filter(function(s){return s.target.rag==='amber';}).length;
   var hasB=Object.keys(state.breachData).length>0;
+
+  /* Overall compliance (KSL only — KM uses occurrence, invert for summary) */
+  var kslSummary=summary.filter(function(s){return !( KPI_META[s.code]&&KPI_META[s.code].isKM );});
+  var kslTotal=kslSummary.reduce(function(a,s){return a+s.total;},0);
+  var kslBreaches=kslSummary.reduce(function(a,s){return a+s.breaches;},0);
+  var kslRawBreaches=kslSummary.reduce(function(a,s){return a+s.rawBreaches;},0);
+
+  var adjCompliance=kslTotal?parseFloat(((kslTotal-kslBreaches)/kslTotal*100).toFixed(1)):null;
+  var rawCompliance=kslTotal?parseFloat(((kslTotal-kslRawBreaches)/kslTotal*100).toFixed(1)):null;
+  var delta=(adjCompliance!==null&&rawCompliance!==null)?parseFloat((adjCompliance-rawCompliance).toFixed(1)):null;
+
+  function ragColor(v){return v===null?'#888':v<85?'#cc2222':v<95?'#d19900':'#437a22';}
+
+  var complianceCard='';
+  if(adjCompliance!==null){
+    var deltaHtml='';
+    if(delta!==null&&hasB&&gExcl>0){
+      var deltaClass=delta>0?'c-delta-pos':delta<0?'c-delta-neg':'c-delta-zero';
+      deltaHtml='<span class="c-delta '+deltaClass+'">'+(delta>0?'+':'')+delta+'pp after excl.</span>';
+    }
+    var rawRow='<div class="compliance-row">'+
+      '<span class="c-label">Raw</span>'+
+      '<span class="c-val" style="color:'+ragColor(rawCompliance)+'">'+
+        (rawCompliance!==null?rawCompliance+'%':'—')+
+      '</span>'+
+      '<span class="c-sub">Before exclusions</span>'+
+    '</div>';
+    var adjRow='<div class="compliance-row">'+
+      '<span class="c-label">Adjusted</span>'+
+      '<span class="c-val" style="color:'+ragColor(adjCompliance)+'">'+adjCompliance+'%</span>'+
+      deltaHtml+
+      '<span class="c-sub">After excl. &middot; Target &ge; 95%</span>'+
+    '</div>';
+    complianceCard='<div class="s-card-compliance">'+
+      '<div class="lbl">Overall KSL Compliance</div>'+
+      rawRow+adjRow+
+      (hasB&&gExcl>0?'':'<div style="font-size:10px;color:var(--muted);margin-top:6px">Load Breaches file to see adjusted compliance.</div>')+
+    '</div>';
+  }
+
   document.getElementById('summary-banner').innerHTML=
-    _sc('Total Tickets',fmt(gTotal),fmt(gBreaches)+' breaches','none')+
-    _sc('Excluded',fmt(gExcl),exclPct+'% of total · Excluded=1 in Breaches file','excl')+
-    _sc('🔴 Action',reds,'KPIs below target','red')+
-    _sc('🟡 Monitor',ambers,'KPIs in amber zone','amber')+
-    _sc('🟢 On Target',(summary.length-reds-ambers),'KPIs meeting target','green')+
-    _sc('SLA Files',wbQueueA.filter(function(e){return !e.error;}).length,'loaded · merged','none')+
-    _sc('Breach Files',hasB?wbQueueB.filter(function(e){return !e.error;}).length:'—',hasB?'loaded · exclusions applied':'not loaded (optional)','none');
-}
-function _sc(lbl,val,sub,r){
-  return '<div class="s-card rag-'+r+'"><div class="lbl">'+esc(String(lbl))+'</div><div class="val">'+esc(String(val))+'</div><div class="sub">'+esc(String(sub))+'</div></div>';
+    _sc('Total Tickets',fmt(gTotal),fmt(gRawBreaches)+' raw breaches','none')+
+    _sc('Excluded',fmt(gExcl),exclPct+'% of total &middot; Excluded=1 in Breaches file','excl')+
+    _sc('Net Breaches',fmt(gBreaches),'after exclusions','none')+
+    _sc('&#x1F534; Action',reds,'KPIs below target','red')+
+    _sc('&#x1F7E1; Monitor',ambers,'KPIs in amber zone','amber')+
+    _sc('&#x1F7E2; On Target',(summary.length-reds-ambers),'KPIs meeting target','green')+
+    complianceCard+
+    _sc('SLA Files',wbQueueA.filter(function(e){return !e.error;}).length,'loaded &middot; merged','none')+
+    _sc('Breach Files',hasB?wbQueueB.filter(function(e){return !e.error;}).length:'&#x2014;',hasB?'loaded &middot; exclusions applied':'not loaded (optional)','none');
 }
 
-// ── Tab bar ────────────────────────────────────────────────
+function _sc(lbl,val,sub,r){
+  return '<div class="s-card rag-'+r+'"><div class="lbl">'+String(lbl)+'</div><div class="val">'+esc(String(val))+'</div><div class="sub">'+String(sub)+'</div></div>';
+}
+
+/* ── Tab bar ──────────────────────────────────────────── */
 function buildTabBar(summary){
   var tb=document.getElementById('tab-bar');
   var h='';
   ['overview','trend','language'].forEach(function(t){
-    var labels={overview:'📊 Overview',trend:'📈 3-Month Trend',language:'🌐 Language Analysis'};
+    var labels={overview:'&#x1F4CA; Overview',trend:'&#x1F4C8; 3-Month Trend',language:'&#x1F310; Language Analysis'};
     h+='<button class="tab-btn'+(state.activeTab===t?' active':'')+'" data-tab="'+t+'">'+labels[t]+'</button>';
   });
   summary.forEach(function(s){
@@ -414,7 +460,7 @@ function buildTabBar(summary){
   });
 }
 
-// ── Month chips ────────────────────────────────────────────
+/* ── Month chips ──────────────────────────────────────── */
 function buildMonthChips(){
   var chips=document.getElementById('month-chips');
   var months=state.months;
@@ -425,7 +471,7 @@ function buildMonthChips(){
   });
   if(months.length){
     var last=months[months.length-1].split('-');
-    for(var i=1;i<=2;i++){var nm=parseInt(last[1],10)+i,ny=parseInt(last[0],10);if(nm>12){nm-=12;ny++;}var fut=ny+'-'+String(nm).padStart(2,'0');if(months.indexOf(fut)===-1)h+='<button class="month-chip pending">'+monthLabel(fut)+' ⏳</button>';}
+    for(var i=1;i<=2;i++){var nm=parseInt(last[1],10)+i,ny=parseInt(last[0],10);if(nm>12){nm-=12;ny++;}var fut=ny+'-'+String(nm).padStart(2,'0');if(months.indexOf(fut)===-1)h+='<button class="month-chip pending">'+monthLabel(fut)+' &#x23F3;</button>';}
   }
   chips.innerHTML=h;
   chips.querySelectorAll('.month-chip:not(.pending)').forEach(function(btn){
@@ -439,7 +485,7 @@ function buildMonthChips(){
   });
 }
 
-// ── Refresh ────────────────────────────────────────────────
+/* ── Refresh ──────────────────────────────────────────── */
 function refresh(){
   var sum=getSummary(state.activeMonth);
   buildBanner(sum);
@@ -447,7 +493,7 @@ function refresh(){
   renderTab();
   var total=sum.reduce(function(a,s){return a+s.total;},0);
   var label=state.activeMonth?monthLabel(state.activeMonth):'All months ('+state.months.length+' periods)';
-  document.getElementById('data-meta').textContent=fmt(total)+' tickets · '+label;
+  document.getElementById('data-meta').textContent=fmt(total)+' tickets &middot; '+label;
 }
 
 function renderTab(){
@@ -459,9 +505,9 @@ function renderTab(){
   el.innerHTML=renderKpiTab(tab);
 }
 
-// ═══════════════════════════════════════════════════════════
-// OVERVIEW TAB
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
+   OVERVIEW TAB
+═══════════════════════════════════════════════════════ */
 function renderOverview(){
   var sum=getSummary(state.activeMonth);
   var active=sum.filter(function(s){return s.total>0;});
@@ -470,19 +516,32 @@ function renderOverview(){
   var rows=active.map(function(s){
     var meta=KPI_META[s.code]||{what:'',isKM:false,color:'#888'};
     var t=s.target;
+    var tRaw=s.targetRaw;
     var metricLabel=meta.isKM?'Occurrence Rate':'Compliance Rate';
     var exclPct=s.total?parseFloat((s.excluded/s.total*100).toFixed(1)):0;
     var exclCell=s.excluded>0
       ? '<span style="font-weight:700;color:#6b7280">'+fmt(s.excluded)+'</span>'
         +'<span style="font-size:10px;color:var(--muted);margin-left:4px">('+exclPct+'%)</span>'
-      : '<span style="color:var(--faint)">—</span>';
+      : '<span style="color:var(--faint)">&#x2014;</span>';
+    /* compliance: show raw → adjusted */
+    var metricCell;
+    if(!meta.isKM&&s.excluded>0){
+      var delta=parseFloat((t.value-tRaw.value).toFixed(1));
+      var dClass=delta>0?'c-delta-pos':delta<0?'c-delta-neg':'c-delta-zero';
+      metricCell='<span style="font-size:12px;font-weight:700;color:#6b7280" title="Before exclusions">'+tRaw.display+'</span>'+
+        ' <span style="font-size:11px;color:var(--muted)">&#x2192;</span> '+
+        '<span style="font-size:14px;font-weight:700" class="rate-'+t.rag+'" title="After exclusions">'+t.display+'</span>'+
+        ' <span class="c-delta '+dClass+'" style="vertical-align:middle">'+(delta>0?'+':'')+delta+'pp</span>';
+    } else {
+      metricCell='<span style="font-size:14px;font-weight:700" class="rate-'+t.rag+'">'+t.display+'</span>';
+    }
     return '<tr>'+
       '<td style="font-weight:700">'+esc(s.code)+'</td>'+
       '<td style="font-size:11px;color:var(--muted);line-height:1.5">'+esc(meta.what)+'</td>'+
       '<td style="text-align:right">'+fmt(s.total)+'</td>'+
       '<td style="text-align:right">'+exclCell+'</td>'+
       '<td style="text-align:right">'+fmt(s.breaches)+'</td>'+
-      '<td style="font-size:12px;font-weight:700" class="rate-'+t.rag+'">'+t.display+'</td>'+
+      '<td>'+metricCell+'</td>'+
       '<td style="font-size:10px;color:var(--muted)">'+esc(metricLabel)+'</td>'+
       '<td><span class="rag-pill rag-'+t.rag+'">'+ragLabel(t.rag,meta.isKM)+'</span></td>'+
     '</tr>';
@@ -510,31 +569,32 @@ function renderOverview(){
     var gExcl=exclRows.reduce(function(a,s){return a+s.excluded;},0);
     var gTotal=active.reduce(function(a,s){return a+s.total;},0);
     exclBreakdown='<div class="sc"><div class="sc-head">'+
-      '<h2>🚫 Excluded Tickets — Breakdown by KPI</h2>'+
-      '<span class="badge">'+fmt(gExcl)+' total excluded · '+parseFloat((gExcl/gTotal*100).toFixed(1))+'% of all tickets · source: Breaches file Excluded=1</span>'+
+      '<h2>&#x1F6AB; Excluded Tickets &#x2014; Breakdown by KPI</h2>'+
+      '<span class="badge">'+fmt(gExcl)+' total excluded &middot; '+parseFloat((gExcl/gTotal*100).toFixed(1))+'% of all tickets &middot; source: Breaches file Excluded=1</span>'+
       '</div><div class="sc-body">'+
       '<table class="excl-tbl"><thead><tr>'+
       '<th>KPI</th><th>Excluded Count</th><th>% of KPI</th><th>KPI Total</th>'+
       '</tr></thead><tbody>'+exclTableRows+'</tbody></table>'+
       '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
-      '⚠️ Excluded tickets are read from the <strong>Breaches file only</strong> (Excluded = 1). '+
+      '&#x26A0;&#xFE0F; Excluded tickets are read from the <strong>Breaches file only</strong> (Excluded = 1). '+
       'They are counted in the denominator but treated as non-breached. '+
-      'They represent agreed exceptions (e.g. AOS portal errors, data quality issues, escalations). '+
-      'A high excluded count can <em>artificially improve</em> the compliance rate — review with caution.</p>'+
+      'The <strong>Raw</strong> value shows compliance if no tickets were excluded; '+
+      '<strong>Adjusted</strong> is the official figure after agreed exceptions are applied.</p>'+
       '</div></div>';
   }
 
-  var tbl='<div class="sc"><div class="sc-head"><h2>KPI Performance – '+esc(period)+'</h2>'+
-    '<span class="badge">KSL = Compliance Rate (% not breached) · KM = Occurrence Rate (% breached)</span></div>'+
+  var tbl='<div class="sc"><div class="sc-head"><h2>KPI Performance &#x2013; '+esc(period)+'</h2>'+
+    '<span class="badge">KSL = Compliance Rate (% not breached) &middot; KM = Occurrence Rate (% breached) &middot; Raw &#x2192; Adjusted shows impact of exclusions</span></div>'+
     '<div class="sc-body"><table class="rag-table">'+
     '<thead><tr><th>Code</th><th style="min-width:200px">What it measures</th>'+
     '<th style="text-align:right">Total</th>'+
-    '<th style="text-align:right">Excluded <span style="font-weight:400;font-size:10px">(Breaches file, Excluded=1)</span></th>'+
-    '<th style="text-align:right">Breaches</th><th>Target Metric</th><th>Formula</th><th>Status</th></tr></thead>'+
+    '<th style="text-align:right">Excluded</th>'+
+    '<th style="text-align:right">Net Breaches</th><th>Target Metric</th><th>Formula</th><th>Status</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table>'+
     '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
-    '<strong>KSL Compliance:</strong> (Total – Breaches) / Total · Excluded tickets = non-breached · Target ≥ 95% · '+
-    '<strong>KM Occurrence:</strong> Breaches / Total · Target ≤ 5%</p>'+
+    '<strong>KSL Compliance:</strong> (Total &#x2013; Net Breaches) / Total &middot; Excluded tickets treated as non-breached &middot; Target &#x2265; 95% &middot; '+
+    '<strong>KM Occurrence:</strong> Breaches / Total &middot; Target &#x2264; 5% &middot; '+
+    '<strong>Raw &#x2192; Adjusted</strong> = impact of removing excluded tickets from breach count.</p>'+
     '</div></div>';
 
   var maxV=Math.max.apply(null,active.map(function(s){return s.total>0?parseFloat(s.target.value):0;}));
@@ -552,15 +612,15 @@ function renderOverview(){
   }).join('');
 
   var chart='<div class="sc"><div class="sc-head"><h2>Target Metric at a Glance</h2>'+
-    '<span class="badge">KSL = compliance% (higher→better) · KM = occurrence% (lower→better)</span></div>'+
+    '<span class="badge">KSL = compliance% (higher&#x2192;better) &middot; KM = occurrence% (lower&#x2192;better) &middot; values after exclusions</span></div>'+
     '<div class="sc-body"><div class="bar-chart">'+bars+'</div></div></div>';
 
   return '<div>'+tbl+'</div>'+exclBreakdown+'<div>'+chart+'</div>';
 }
 
-// ═══════════════════════════════════════════════════════════
-// TREND TAB
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
+   TREND TAB
+═══════════════════════════════════════════════════════ */
 function renderTrend(){
   var months=state.months;
   if(!months.length) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted)">No date data found.</p></div></div>';
@@ -577,20 +637,20 @@ function renderTrend(){
   codes.forEach(function(code){
     var meta=KPI_META[code]||{isKM:false};
     var dataTds=cols.map(function(m,i){
-      if(i>=disp.length) return '<td style="'+cellStyle(null,true)+'">⏳</td>';
+      if(i>=disp.length) return '<td style="'+cellStyle(null,true)+'">&#x23F3;</td>';
       var rs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
-      if(!rs.length) return '<td style="background:#f0eeea;color:var(--faint)">—</td>';
+      if(!rs.length) return '<td style="background:#f0eeea;color:var(--faint)">&#x2014;</td>';
       var tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;
       var excl=rs.filter(function(r){return r.isExcluded;}).length;
       var t=calcTarget(tot,br,meta.isKM);
-      return '<td style="'+cellStyle(t.rag,false)+'" title="'+monthLabel(m)+' · '+br+' breaches / '+tot+' total · '+excl+' excluded">'+t.display+'</td>';
+      return '<td style="'+cellStyle(t.rag,false)+'" title="'+monthLabel(m)+' &middot; '+br+' breaches / '+tot+' total &middot; '+excl+' excluded">'+t.display+'</td>';
     }).join('');
     var deltaTds=cols.map(function(m,i){
       if(i===0||i>=disp.length) return '<td style="background:none;height:18px"></td>';
       var pM=cols[i-1];
       var prs=(state.slaData[code]||[]).filter(function(r){return r.month===pM;});
       var crs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
-      if(!prs.length||!crs.length) return '<td style="background:none;height:18px;font-size:9px;color:var(--faint)">—</td>';
+      if(!prs.length||!crs.length) return '<td style="background:none;height:18px;font-size:9px;color:var(--faint)">&#x2014;</td>';
       var pt=calcTarget(prs.length,prs.filter(function(r){return r.isBreach;}).length,meta.isKM);
       var ct=calcTarget(crs.length,crs.filter(function(r){return r.isBreach;}).length,meta.isKM);
       var d=(ct.value-pt.value).toFixed(1);
@@ -599,26 +659,26 @@ function renderTrend(){
       return '<td style="'+sty+';height:18px;font-size:9px">'+(parseFloat(d)>0?'+':'')+d+'%</td>';
     }).join('');
     finalRows+='<tr><td class="row-lbl">'+esc(code)+'</td>'+dataTds+'</tr>';
-    finalRows+='<tr style="opacity:.75"><td class="row-lbl" style="font-size:9px;color:var(--faint)">MoM Δ</td>'+deltaTds+'</tr>';
+    finalRows+='<tr style="opacity:.75"><td class="row-lbl" style="font-size:9px;color:var(--faint)">MoM &#x394;</td>'+deltaTds+'</tr>';
   });
 
-  var thCols=cols.map(function(m,i){return '<th style="'+(i>=disp.length?'opacity:.45':'')+'">'+(i>=disp.length?'<em>'+monthLabel(m)+'</em>':monthLabel(m))+'</th>';}).join('');
+  var thCols=cols.map(function(m,i){return '<th style="'+(i>=disp.length?'opacity:.45':'')+'">'+( i>=disp.length?'<em>'+monthLabel(m)+'</em>':monthLabel(m))+'</th>';}).join('');
   return '<div class="sc"><div class="sc-head"><h2>3-Month Trend</h2>'+
-    '<span class="badge">KSL = compliance% · KM = occurrence% · hover cell for excluded count</span></div>'+
+    '<span class="badge">KSL = compliance% &middot; KM = occurrence% &middot; hover cell for excluded count</span></div>'+
     '<div class="sc-body"><div style="overflow-x:auto"><table class="trend-tbl">'+
     '<thead><tr><th class="row-lbl">KPI</th>'+thCols+'</tr></thead><tbody>'+finalRows+'</tbody></table></div>'+
     '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:10px">'+
-    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#d4edda"></span>🟢 On Target</span>'+
-    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#fff3cc"></span>🟡 Monitor</span>'+
-    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#ffdcdc"></span>🔴 Action</span>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#d4edda"></span>&#x1F7E2; On Target</span>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#fff3cc"></span>&#x1F7E1; Monitor</span>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#ffdcdc"></span>&#x1F534; Action</span>'+
     '</div>'+
-    '<p style="font-size:10px;color:var(--muted);margin-top:8px">MoM Δ: green = improving, red = worsening. For KSL, higher % = better. For KM, lower % = better.</p>'+
+    '<p style="font-size:10px;color:var(--muted);margin-top:8px">MoM &#x394;: green = improving, red = worsening. For KSL, higher % = better. For KM, lower % = better.</p>'+
     '</div></div>';
 }
 
-// ═══════════════════════════════════════════════════════════
-// LANGUAGE ANALYSIS TAB
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
+   LANGUAGE ANALYSIS TAB
+═══════════════════════════════════════════════════════ */
 function renderLanguage(){
   var month=state.activeLangMonth||state.activeMonth;
   var allRows=[];
@@ -646,7 +706,7 @@ function renderLanguage(){
         var intensity=Math.min(rate/30,1);
         var bg='rgba(161,44,75,'+(intensity*0.75).toFixed(2)+')';
         var fg=intensity>0.5?'#fff':'inherit';
-        return '<td style="background:'+bg+';color:'+fg+'" title="'+lang+' · '+esc(code)+' · '+br+'/'+tot+' ('+rate.toFixed(1)+'%)">'+rate.toFixed(1)+'%</td>';
+        return '<td style="background:'+bg+';color:'+fg+'" title="'+lang+' &middot; '+esc(code)+' &middot; '+br+'/'+tot+' ('+rate.toFixed(1)+'%)">'+rate.toFixed(1)+'%</td>';
       }).join('');
       var totalBr=srcRows.filter(function(r){return r.language===lang&&r.isBreach;}).length;
       var totalTk=srcRows.filter(function(r){return r.language===lang;}).length;
@@ -675,8 +735,8 @@ function renderLanguage(){
     }).join('')+
     '</div>';
 
-  return '<div class="sc"><div class="sc-head"><h2>🌐 Language Breach Heatmap</h2>'+
-    '<span class="badge">Breach rate per language × KPI</span></div>'+
+  return '<div class="sc"><div class="sc-head"><h2>&#x1F310; Language Breach Heatmap</h2>'+
+    '<span class="badge">Breach rate per language &#xD7; KPI</span></div>'+
     '<div class="sc-body">'+lChips+heatHtml+'</div></div>'+
     (sorted.length?'<div class="sc"><div class="sc-head"><h2>Top Languages by Breach Count</h2></div>'+
     '<div class="sc-body"><div class="bar-chart">'+langBars+'</div></div></div>':'');
@@ -687,9 +747,9 @@ window.setLangMonth=function(m){
   if(state.activeTab==='language') document.getElementById('analyzer-main').innerHTML=renderLanguage();
 };
 
-// ═══════════════════════════════════════════════════════════
-// KPI DEEP DIVE TAB
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
+   KPI DEEP DIVE TAB
+═══════════════════════════════════════════════════════ */
 var _kpiPage={};
 function renderKpiTab(code){
   var meta=KPI_META[code]||{color:'#888',what:'',isKM:false};
@@ -700,8 +760,10 @@ function renderKpiTab(code){
   var total=rows.length;
   var excluded=rows.filter(function(r){return r.isExcluded;}).length;
   var breaches=rows.filter(function(r){return r.isBreach;}).length;
+  var rawBreaches=breaches+excluded;
   var exclPct=total?parseFloat((excluded/total*100).toFixed(1)):0;
   var t=calcTarget(total,breaches,meta.isKM);
+  var tRaw=calcTarget(total,rawBreaches,meta.isKM);
   if(!_kpiPage[code]) _kpiPage[code]=1;
 
   var uniqueBreachRows=bRows.filter(function(r){return r.unique && !r.excluded;});
@@ -710,16 +772,25 @@ function renderKpiTab(code){
   var excludedBreachRows=bRows.filter(function(r){return r.excluded;});
   if(month) excludedBreachRows=excludedBreachRows.filter(function(r){return r.month===month;});
 
+  /* compliance delta for KSL */
+  var complianceDeltaHtml='';
+  if(!meta.isKM&&excluded>0){
+    var delta=parseFloat((t.value-tRaw.value).toFixed(1));
+    var dClass=delta>0?'c-delta-pos':delta<0?'c-delta-neg':'c-delta-zero';
+    complianceDeltaHtml=_sc('Raw '+( meta.isKM?'Occurrence':'Compliance'),tRaw.display,'Before exclusions','none')+
+      _sc('Adjusted '+(meta.isKM?'Occurrence':'Compliance'),t.display,(delta>0?'+':'')+delta+'pp after excl.','rag-'+t.rag);
+  }
+
   var header='<div class="sc"><div class="sc-head">'+
     '<h2>'+esc(code)+'</h2>'+
-    '<span class="badge rag-'+t.rag+'">'+t.display+' · '+ragLabel(t.rag,meta.isKM)+'</span>'+
+    '<span class="badge rag-'+t.rag+'">'+t.display+' &middot; '+ragLabel(t.rag,meta.isKM)+'</span>'+
     '<span style="font-size:11px;color:var(--muted);margin-left:8px">'+esc(meta.what)+'</span>'+
     '</div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)">'+
     _sc('Total',fmt(total),'tickets in scope','none')+
-    _sc('Breaches',fmt(breaches),'counted breaches','none')+
-    _sc('Excluded',fmt(excluded),exclPct+'% · Excluded=1 in Breaches file','excl')+
-    _sc(meta.isKM?'Occurrence':'Compliance',t.display,meta.isKM?'Target ≤ 5%':'Target ≥ 95%','rag-'+t.rag)+
+    _sc('Net Breaches',fmt(breaches),'after exclusions','none')+
+    _sc('Excluded',fmt(excluded),exclPct+'% &middot; Excluded=1 in Breaches file','excl')+
+    (complianceDeltaHtml||_sc(meta.isKM?'Occurrence':'Compliance',t.display,meta.isKM?'Target &#x2264; 5%':'Target &#x2265; 95%','rag-'+t.rag))+
     '</div></div>';
 
   var reasonHtml='';
@@ -739,7 +810,7 @@ function renderKpiTab(code){
       '</div>';
     }).join('');
     reasonHtml='<div class="sc"><div class="sc-head"><h2>Breach Reasons</h2>'+
-      '<span class="badge">'+uniqueBreachRows.length+' unique breach rows · source: Breaches file (Unique=1, not excluded)</span></div>'+
+      '<span class="badge">'+uniqueBreachRows.length+' unique breach rows &middot; source: Breaches file (Unique=1, not excluded)</span></div>'+
       '<div class="sc-body"><div class="bar-chart">'+reasonBars+'</div></div></div>';
   }
 
@@ -759,7 +830,7 @@ function renderKpiTab(code){
       '</div>';
     }).join('');
     queueHtml='<div class="sc"><div class="sc-head"><h2>Top Queues (Breaches)</h2>'+
-      '<span class="badge">By breach count · SLA file data</span></div>'+
+      '<span class="badge">By breach count &middot; SLA file data</span></div>'+
       '<div class="sc-body"><div class="bar-chart">'+qBars+'</div></div></div>';
   }
 
@@ -771,24 +842,24 @@ function renderKpiTab(code){
     var exclTableRows=pageRows.map(function(r){
       return '<tr>'+
         '<td style="font-weight:600;font-size:11px">'+esc(r.ticket)+'</td>'+
-        '<td style="font-size:11px">'+esc(r.reason||'—')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.agent||'—')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.queue||'—')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.comment||'—')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.jira||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.reason||'&#x2014;')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.agent||'&#x2014;')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.queue||'&#x2014;')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.comment||'&#x2014;')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.jira||'&#x2014;')+'</td>'+
       '</tr>';
     }).join('');
     var pgBtns='';
     for(var p=1;p<=totalExclPages;p++){
       pgBtns+='<button class="pg-btn'+(p===pg?' on':'')+'" onclick="_kpiPage[\''+code+'\']='+p+';renderTab()">'+p+'</button>';
     }
-    exclDetailHtml='<div class="sc"><div class="sc-head"><h2>🚫 Excluded Tickets Detail</h2>'+
-      '<span class="badge">'+excludedBreachRows.length+' excluded · from Breaches file (Excluded=1)</span></div>'+
+    exclDetailHtml='<div class="sc"><div class="sc-head"><h2>&#x1F6AB; Excluded Tickets Detail</h2>'+
+      '<span class="badge">'+excludedBreachRows.length+' excluded &middot; from Breaches file (Excluded=1)</span></div>'+
       '<div class="sc-body">'+
       '<table class="dt"><thead><tr>'+
       '<th>Ticket</th><th>Reason</th><th>Agent</th><th>Queue</th><th>Comment</th><th>Jira</th>'+
       '</tr></thead><tbody>'+exclTableRows+'</tbody></table>'+
-      (totalExclPages>1?'<div class="pg">Page '+pg+' of '+totalExclPages+' · '+pgBtns+'</div>':'')+
+      (totalExclPages>1?'<div class="pg">Page '+pg+' of '+totalExclPages+' &middot; '+pgBtns+'</div>':'')+
       '</div></div>';
   }
 
@@ -799,12 +870,12 @@ function renderKpiTab(code){
     var bInfoRow=uniqueBreachRows.find(function(b){return b.ticket===r.ticket;})||null;
     return '<tr>'+
       '<td style="font-weight:600;font-size:11px">'+esc(r.ticket)+'</td>'+
-      '<td style="font-size:11px">'+esc(r.queue||'—')+'</td>'+
-      '<td style="font-size:11px">'+esc(r.priority||'—')+'</td>'+
-      '<td style="font-size:11px">'+esc(r.language||'—')+'</td>'+
-      '<td style="font-size:11px">'+esc(r.month||'—')+'</td>'+
-      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.reason:'—')+'</td>'+
-      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.agent:'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.queue||'&#x2014;')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.priority||'&#x2014;')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.language||'&#x2014;')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.month||'&#x2014;')+'</td>'+
+      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.reason:'&#x2014;')+'</td>'+
+      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.agent:'&#x2014;')+'</td>'+
     '</tr>';
   }).join('');
   var pgBtns2='';
@@ -812,12 +883,12 @@ function renderKpiTab(code){
     pgBtns2+='<button class="pg-btn'+(p2===pg2?' on':'')+'" onclick="_kpiPage[\''+code+'_breach\']='+p2+';renderTab()">'+p2+'</button>';
   }
   var breachListHtml='<div class="sc"><div class="sc-head"><h2>Breach Ticket List</h2>'+
-    '<span class="badge">'+breachSlaRows.length+' breaches · SLA file · enriched with Breaches file where available</span></div>'+
+    '<span class="badge">'+breachSlaRows.length+' breaches &middot; SLA file &middot; enriched with Breaches file where available</span></div>'+
     '<div class="sc-body">'+
     '<table class="dt"><thead><tr>'+
     '<th>Ticket</th><th>Queue</th><th>Priority</th><th>Lang</th><th>Month</th><th>Reason</th><th>Agent</th>'+
     '</tr></thead><tbody>'+breachTableRows+'</tbody></table>'+
-    (totalPg2>1?'<div class="pg">Page '+pg2+' of '+totalPg2+' · '+pgBtns2+'</div>':'')+
+    (totalPg2>1?'<div class="pg">Page '+pg2+' of '+totalPg2+' &middot; '+pgBtns2+'</div>':'')+
     '</div></div>';
 
   return header+
@@ -826,9 +897,9 @@ function renderKpiTab(code){
     breachListHtml;
 }
 
-// ═══════════════════════════════════════════════════════════
-// FILE UPLOAD HANDLING
-// ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
+   FILE UPLOAD HANDLING
+═══════════════════════════════════════════════════════ */
 function setupDropZone(dzId,fiId,queue,listId,statusId,addId){
   var dz=document.getElementById(dzId);
   var fi=document.getElementById(fiId);
