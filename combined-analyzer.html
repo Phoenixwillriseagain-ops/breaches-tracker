@@ -9,18 +9,15 @@
   <style>
     html,body{height:100%}
     .app{display:flex;flex-direction:column;min-height:100vh}
-
-    /* ── Upload zone ── */
     .upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto;width:100%}
     @media(max-width:680px){.upload-grid{grid-template-columns:1fr}}
     .upload-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:10px}
     .upload-card h3{font-size:13px;font-weight:700}
     .upload-card p.desc{font-size:12px;color:var(--muted)}
-    .drop-zone{border:2px dashed var(--border);border-radius:8px;padding:26px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;position:relative}
+    .drop-zone{border:2px dashed var(--border);border-radius:8px;padding:26px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
     .drop-zone:hover,.drop-zone.drag-over{border-color:var(--primary);background:var(--primary-hi,#e6f0ef)}
     .drop-zone p{font-size:13px;font-weight:600;margin-bottom:4px}
     .drop-zone span{font-size:11px;color:var(--muted)}
-    /* file list inside card */
     .file-list{display:flex;flex-direction:column;gap:5px;max-height:130px;overflow-y:auto}
     .file-item{display:flex;align-items:center;gap:7px;font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 10px}
     .file-item .fi-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
@@ -31,37 +28,27 @@
     .add-more{font-size:11px;color:var(--primary);cursor:pointer;text-decoration:underline;text-align:center;margin-top:2px}
     .slot-status{font-size:11px;color:var(--muted);padding:2px 0}
     .run-btn-row{display:flex;justify-content:center;padding:12px 0 24px}
-
-    /* ── Page layout ── */
     .analyzer-main{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
-
-    /* ── KPI summary cards ── */
     .summary-banner{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
     .s-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
     .s-card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px}
-    .s-card .val{font-size:24px;font-weight:700;line-height:1}
+    .s-card .val{font-size:22px;font-weight:700;line-height:1}
     .s-card .sub{font-size:10px;color:var(--muted);margin-top:4px}
     .s-card.rag-green{border-left:4px solid #437a22}.s-card.rag-green .val{color:#437a22}
     .s-card.rag-amber{border-left:4px solid #d19900}.s-card.rag-amber .val{color:#d19900}
     .s-card.rag-red  {border-left:4px solid #cc2222}.s-card.rag-red   .val{color:#cc2222}
     .s-card.rag-none .val{color:var(--text)}
-
-    /* ── Tabs ── */
-    .tab-bar{display:flex;border-bottom:2px solid var(--border);flex-wrap:wrap;gap:0;background:var(--surface);padding:0 20px}
+    .tab-bar{display:flex;border-bottom:2px solid var(--border);flex-wrap:wrap;background:var(--surface);padding:0 20px}
     .tab-btn{padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
     .tab-btn:hover{color:var(--text)}
     .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
     .tab-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
     .dot-green{background:#437a22}.dot-amber{background:#d19900}.dot-red{background:#cc2222}.dot-none{background:var(--faint)}
-
-    /* ── Content panels ── */
     .sc{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .sc-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .sc-head h2{font-size:13px;font-weight:700}
     .sc-head .badge{margin-left:auto;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--muted)}
     .sc-body{padding:16px;overflow-x:auto}
-
-    /* ── RAG table ── */
     .rag-table{width:100%;border-collapse:collapse;font-size:12px}
     .rag-table th{background:var(--bg);padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
     .rag-table td{padding:8px 12px;border-bottom:1px solid var(--divider);vertical-align:middle}
@@ -73,16 +60,12 @@
     .rag-red  {background:#ffdcdc;color:#880000}
     .rate-cell{font-size:15px;font-weight:700}
     .rate-green{color:#437a22}.rate-amber{color:#d19900}.rate-red{color:#cc2222}
-
-    /* ── Bar chart ── */
     .bar-chart{display:flex;flex-direction:column;gap:7px}
     .bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
-    .bar-lbl{width:200px;min-width:120px;text-align:right;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;font-size:11px}
+    .bar-lbl{width:180px;min-width:100px;text-align:right;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;font-size:11px}
     .bar-track{flex:1;height:13px;background:var(--divider);border-radius:4px;overflow:hidden;min-width:80px}
     .bar-fill{height:100%;border-radius:4px;transition:width .4s}
-    .bar-cnt{width:36px;font-weight:700;font-size:11px;text-align:right;flex-shrink:0}
-
-    /* ── Trend table ── */
+    .bar-cnt{width:40px;font-weight:700;font-size:11px;text-align:right;flex-shrink:0}
     .trend-tbl{border-collapse:separate;border-spacing:3px;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
     .trend-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:4px 10px;background:none;border:none;text-align:center}
     .trend-tbl th.row-lbl{text-align:left;min-width:80px}
@@ -90,8 +73,6 @@
     .trend-tbl td:hover{transform:scale(1.06);z-index:2;position:relative}
     .trend-tbl td.row-lbl{text-align:left;background:none!important;font-weight:600;font-size:11px;color:var(--muted);padding:0 10px 0 0;min-width:80px}
     .trend-tbl td.row-lbl:hover{transform:none}
-
-    /* ── Detail table ── */
     .dt{width:100%;border-collapse:collapse;font-size:12px}
     .dt th{background:var(--bg);padding:6px 10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
     .dt td{padding:6px 10px;border-bottom:1px solid var(--divider);vertical-align:top}
@@ -99,13 +80,9 @@
     .dt tr:hover td{background:var(--surface-2,#f6f5f2)}
     .chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
     .ch-green{background:#d4edda;color:#1a6b1a}
-
-    /* ── Pagination ── */
     .pg{display:flex;align-items:center;gap:5px;margin-top:10px;justify-content:flex-end;font-size:12px;color:var(--muted);flex-wrap:wrap}
     .pg-btn{padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;font-family:inherit}
     .pg-btn:hover{background:var(--bg)}.pg-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}.pg-btn:disabled{opacity:.4;cursor:not-allowed}
-
-    /* ── Misc ── */
     .insight-strip{display:flex;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--bg);border-top:1px solid var(--divider);font-size:11px;color:var(--muted)}
     .insight-strip b{color:var(--text)}
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -118,6 +95,14 @@
     .month-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
     .month-chip:hover:not(.active):not(.pending){border-color:var(--primary);color:var(--primary)}
     .month-chip.pending{opacity:.5;cursor:not-allowed}
+    /* heatmap */
+    .heatmap-tbl{border-collapse:separate;border-spacing:2px;font-size:11px;white-space:nowrap}
+    .heatmap-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:4px 8px;text-align:center;background:none;border:none}
+    .heatmap-tbl th.row-h{text-align:left;min-width:50px}
+    .heatmap-tbl td{height:28px;min-width:64px;text-align:center;border-radius:4px;font-size:11px;font-weight:700;border:none;padding:0 5px;cursor:default;transition:transform .1s}
+    .heatmap-tbl td:hover{transform:scale(1.08);z-index:2;position:relative}
+    .heatmap-tbl td.lang-lbl{text-align:left;background:none!important;font-weight:600;font-size:11px;color:var(--muted);min-width:50px;padding:0 8px 0 0}
+    .heatmap-tbl td.lang-lbl:hover{transform:none}
   </style>
 </head>
 <body>
@@ -129,63 +114,47 @@
     <a href="combined-analyzer.html" class="active">Combined Analyzer</a>
   </nav>
 
-  <!-- ═════ UPLOAD PAGE ═════ -->
+  <!-- UPLOAD -->
   <div id="upload-page">
-    <div style="text-align:center;max-width:620px">
+    <div style="text-align:center;max-width:640px">
       <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px">Data Tools</p>
       <h1 style="font-size:22px;font-weight:700;margin-bottom:8px">Combined Analyzer</h1>
-      <p style="font-size:13px;color:var(--muted);line-height:1.6">Upload one or more <strong>V2-converted SLA exports</strong> (e.g. Feb, Mar, Apr) and optionally one or more <strong>enriched Breaches files</strong>. All files are merged automatically — giving you a full multi-month picture in one dashboard.</p>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6">Upload one or more <strong>V2-converted SLA exports</strong> and optionally one or more <strong>enriched Breaches files</strong>. All files are merged automatically for a full multi-month view.</p>
     </div>
-
     <div class="upload-grid">
-
-      <!-- Slot A: SLA files -->
       <div class="upload-card">
         <h3>📄 SLA Export Files <span style="color:var(--error);font-size:11px">required</span></h3>
-        <p class="desc">V2-converted…xlsx files — one per month. Each file has one sheet per KPI. All sheets from all files are merged.</p>
-        <div class="drop-zone" id="dz-a">
-          <p>Drop V2-converted .xlsx files here</p>
-          <span>Multiple files accepted · one per month</span>
-        </div>
+        <p class="desc">V2-converted…xlsx files — one per month. Each file has one sheet per KPI. All sheets merged.</p>
+        <div class="drop-zone" id="dz-a"><p>Drop V2-converted .xlsx files here</p><span>Multiple files accepted · one per month</span></div>
         <input type="file" id="fi-a" accept=".xlsx" multiple style="display:none">
         <div class="file-list" id="list-a"></div>
         <div class="add-more" id="add-a" style="display:none" onclick="document.getElementById('fi-a').click()">+ Add more files</div>
         <p class="slot-status" id="status-a">No files loaded</p>
       </div>
-
-      <!-- Slot B: Breaches files -->
       <div class="upload-card">
         <h3>📊 Enriched Breaches Files <span style="color:var(--muted);font-size:11px">optional</span></h3>
-        <p class="desc">V2-breaches…xlsx files with Reason, Agent, AOS columns. Multiple months can be uploaded together.</p>
-        <div class="drop-zone" id="dz-b">
-          <p>Drop V2-breaches .xlsx files here</p>
-          <span>Multiple files accepted · optional</span>
-        </div>
+        <p class="desc">V2-breaches…xlsx files with Reason, Agent, AOS. Multiple months can be combined.</p>
+        <div class="drop-zone" id="dz-b"><p>Drop V2-breaches .xlsx files here</p><span>Multiple files accepted · optional</span></div>
         <input type="file" id="fi-b" accept=".xlsx" multiple style="display:none">
         <div class="file-list" id="list-b"></div>
         <div class="add-more" id="add-b" style="display:none" onclick="document.getElementById('fi-b').click()">+ Add more files</div>
         <p class="slot-status" id="status-b">No files loaded (optional)</p>
       </div>
     </div>
-
     <div class="run-btn-row">
-      <button id="run-btn" style="padding:10px 28px;font-size:14px;font-weight:700;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;opacity:.5" disabled>
-        ▶  Analyse Data
-      </button>
+      <button id="run-btn" style="padding:10px 28px;font-size:14px;font-weight:700;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;opacity:.5" disabled>▶  Analyse Data</button>
     </div>
     <p id="run-error" style="font-size:12px;color:var(--error);display:none"></p>
   </div>
 
-  <!-- ═════ DASHBOARD PAGE ═════ -->
+  <!-- DASHBOARD -->
   <div id="dashboard-page">
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <button onclick="resetApp()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer">&#8592; Load New Files</button>
       <div class="month-chips" id="month-chips"></div>
       <span id="data-meta" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
     </div>
-    <div style="padding:16px 20px 0">
-      <div class="summary-banner" id="summary-banner"></div>
-    </div>
+    <div style="padding:16px 20px 0"><div class="summary-banner" id="summary-banner"></div></div>
     <div class="tab-bar" id="tab-bar" style="margin-top:16px"></div>
     <div class="analyzer-main" id="analyzer-main"></div>
   </div>
@@ -194,42 +163,67 @@
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
-/* ════════════════════════════════════════════════════════
-   COMBINED ANALYZER — core logic
-   Multi-file upload support: both slots accept multiple .xlsx files.
-   All files in each slot are merged into a single dataset before analysis.
-════════════════════════════════════════════════════════ */
+/* ============================================================
+   COMBINED ANALYZER
+   - Multiple file upload (both slots)
+   - KSL target = not-breached / total (incl. excluded as not-breached)
+   - KM  target = breached / total
+   - Language heatmap tab
+   - Excluded ticket count displayed
+============================================================ */
 
+// ── KPI metadata (no names in UI) ──────────────────────────
 var KPI_META = {
-  'KSL-1':  {name:'First Response Time',       color:'#437a22', what:'Time from ticket creation to first agent reply. A breach means the agent took too long to pick up the ticket.'},
-  'KSL-2a': {name:'Resolution Time – Normal',   color:'#437a22', what:'Ticket was not resolved within the SLA window for Normal priority.'},
-  'KSL-2b': {name:'Resolution Time – Low',      color:'#437a22', what:'Ticket was not resolved within the SLA window for Low priority.'},
-  'KSL-2c': {name:'Resolution Time – High',     color:'#01696f', what:'Ticket was not resolved within the SLA window for High priority.'},
-  'KSL-2d': {name:'Resolution Time – Critical', color:'#01696f', what:'Ticket was not resolved within the SLA window for Critical priority.'},
-  'KSL-3a': {name:'On Hold – Proper Usage',     color:'#7a39bb', what:'On Hold status was used incorrectly (e.g. wrong reason, missing info). Shows process discipline.'},
-  'KSL-4':  {name:'Related Incident Linking',   color:'#006494', what:'Every ticket must have a Related Incident linked before it is closed. Missing links create audit gaps.'},
-  'KSL-5a': {name:'Communication Quality',      color:'#964219', what:'Required communication steps (updates to caller, correct wording) were not followed.'},
-  'KSL-5b': {name:'Closure Quality',            color:'#964219', what:'Ticket was closed without meeting all closure checklist conditions.'},
-  'KSL-6':  {name:'Re-open Rate',               color:'#d19900', what:'Caller or team re-opened a ticket after resolution — suggests the issue was not fully fixed.'},
-  'KM-1':   {name:'KM – Caller Reopen',         color:'#006494', what:'Customer re-opened the ticket because the solution did not work. High value indicator of service quality.'},
-  'KM-2':   {name:'KM – Assign Back',           color:'#7a39bb', what:'Ticket was assigned to the wrong team and bounced back. Indicates routing or triage issues.'},
+  'KSL-1':  {color:'#437a22', what:'Time from ticket creation to first agent reply.',          isKM:false},
+  'KSL-2a': {color:'#437a22', what:'Not resolved within SLA window – Normal priority.',         isKM:false},
+  'KSL-2b': {color:'#437a22', what:'Not resolved within SLA window – Low priority.',            isKM:false},
+  'KSL-2c': {color:'#01696f', what:'Not resolved within SLA window – High priority.',           isKM:false},
+  'KSL-2d': {color:'#01696f', what:'Not resolved within SLA window – Critical priority.',       isKM:false},
+  'KSL-3a': {color:'#7a39bb', what:'On Hold status used incorrectly (wrong reason/missing info).',isKM:false},
+  'KSL-4':  {color:'#006494', what:'Related Incident must be linked before ticket closure.',     isKM:false},
+  'KSL-5a': {color:'#964219', what:'Required communication steps were not followed.',           isKM:false},
+  'KSL-5b': {color:'#964219', what:'Ticket closed without meeting closure checklist.',          isKM:false},
+  'KSL-6':  {color:'#d19900', what:'Ticket re-opened after resolution.',                        isKM:false},
+  'KM-1':   {color:'#006494', what:'Customer re-opened the ticket — solution did not work.',    isKM:true},
+  'KM-2':   {color:'#7a39bb', what:'Ticket assigned to wrong team and bounced back.',           isKM:true},
 };
 var KPI_ORDER = ['KSL-4','KM-1','KSL-5b','KSL-5a','KSL-3a','KSL-6','KSL-2c','KSL-2d','KSL-2a','KSL-2b','KM-2','KSL-1'];
-var TARGET = 5, ALERT = 15;
 
-var state = { slaData:{}, breachData:{}, months:[], activeMonth:null, activeTab:null };
+/*
+  TARGET FORMULA:
+    KSL: target metric = (total_tickets - breaches) / total_tickets  × 100   (compliance rate, higher = better)
+         Excluded tickets count as non-breached, so:
+         target = (total_including_excluded - breaches) / total_including_excluded × 100
+    KM:  target metric = breaches / total_tickets × 100  (breach/occurrence rate, lower = better)
+         Excluded tickets also included in denominator.
 
-// Workbook queues  —  arrays of parsed XLSX workbook objects
-var wbQueueA = [];   // SLA files
-var wbQueueB = [];   // Breach files
+  RAG thresholds applied to the TARGET value:
+    KSL: GREEN ≥ 95%, AMBER 85-95%, RED < 85%   (i.e. breach rate ≤ 5% = green)
+    KM:  GREEN ≤ 5%,  AMBER 5-15%, RED > 15%    (same as before — KM target IS the breach rate)
+*/
+function calcTarget(totalWithExcl, breaches, isKM){
+  if(!totalWithExcl) return {value:0, display:'0.0%', rag:'none', targetLabel:''};
+  if(isKM){
+    var rate = parseFloat((breaches / totalWithExcl * 100).toFixed(1));
+    var r = rate > 15 ? 'red' : rate > 5 ? 'amber' : 'green';
+    return {value:rate, display:rate+'%', rag:r, targetLabel:'Occurrence Rate (lower is better)'};
+  } else {
+    var compliance = parseFloat(((totalWithExcl - breaches) / totalWithExcl * 100).toFixed(1));
+    var r2 = compliance < 85 ? 'red' : compliance < 95 ? 'amber' : 'green';
+    return {value:compliance, display:compliance+'%', rag:r2, targetLabel:'Compliance Rate (higher is better)'};
+  }
+}
 
-// ── Helpers ─────────────────────────────────────────────
+var VALID_LANG = /^[a-z]{2,3}$/;
+function isValidLang(v){ if(!v) return false; return VALID_LANG.test(String(v).trim()); }
+
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function rag(r){return r>ALERT?'red':r>TARGET?'amber':'green';}
-function ragClass(r){return 'rag-'+rag(r);}
-function ragLabel(r){return r>ALERT?'🔴 Action Required':r>TARGET?'🟡 Monitor':'🟢 On Target';}
 function fmt(n){return typeof n==='number'?n.toLocaleString():n;}
 function pct(n,d){return d?(n/d*100).toFixed(1):'0.0';}
+function ragLabel(r,isKM){
+  if(isKM) return r==='red'?'🔴 Action Required':r==='amber'?'🟡 Monitor':'🟢 On Target';
+  return r==='red'?'🔴 Below Target':r==='amber'?'🟡 Monitor':'🟢 On Target';
+}
 function monthLabel(m){
   if(!m) return 'All Months';
   var p=m.split('-');
@@ -241,17 +235,16 @@ function toMonth(val){
   if(!val) return null;
   var d;
   if(typeof val==='number'){d=new Date((val-25569)*86400*1000);}
-  else{
-    var s=String(val).trim();
-    var m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-    if(m) d=new Date(parseInt(m[3]),parseInt(m[2])-1,parseInt(m[1]));
-    else  d=new Date(s);
-  }
+  else{var s=String(val).trim();var m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);if(m)d=new Date(parseInt(m[3]),parseInt(m[2])-1,parseInt(m[1]));else d=new Date(s);}
   if(!d||isNaN(d.getTime())) return null;
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 
-// ── Parse helpers (single wb) ──────────────────────────────
+// ── App state ───────────────────────────────────────────────
+var state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
+var wbQueueA=[], wbQueueB=[];
+
+// ── Parse SLA workbook ─────────────────────────────────────
 function _parseSlaWb(wb, outData, monthSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
@@ -262,14 +255,23 @@ function _parseSlaWb(wb, outData, monthSet){
       var ticket=String(r['Incident Ticket']||'').trim();
       if(!ticket||ticket==='Incident Ticket') return;
       var excl=String(r['Excluded']||'').trim();
-      if(excl==='1'||excl==='Y'||excl==='y') return;
+      var isExcluded=(excl==='1'||excl==='Y'||excl==='y');
       var dc=r['DATE_CLOSE'];
       var month=toMonth(dc);
-      var breach=!!(r['DATE_TIME_Breach']&&String(r['DATE_TIME_Breach']).trim()&&String(r['DATE_TIME_Breach']).trim()!=='0');
-      outData[name].push({ticket,month,isBreach:breach,
-        queue:String(r['Queue']||''),priority:String(r['Priority']||''),
-        tool:String(r['Tool']||''),language:String(r['ISO_Language']||''),
-        status:String(r['Status']||''),breachDesc:String(r['Breach_Description']||''),dateClose:dc});
+      // A ticket is a breach only if it has a non-empty, non-zero DATE_TIME_Breach AND is not excluded
+      var hasBreach=!!(r['DATE_TIME_Breach']&&String(r['DATE_TIME_Breach']).trim()&&String(r['DATE_TIME_Breach']).trim()!=='0');
+      var isBreach=hasBreach && !isExcluded;
+      var rawLang=r['ISO_Language']||r['iso_language']||'';
+      outData[name].push({
+        ticket, month, isBreach, isExcluded,
+        queue:String(r['Queue']||''),
+        priority:String(r['Priority']||''),
+        tool:String(r['Tool']||''),
+        language:isValidLang(rawLang)?String(rawLang).trim():'',
+        status:String(r['Status']||''),
+        breachDesc:String(r['Breach_Description']||''),
+        dateClose:dc
+      });
       if(month) monthSet[month]=1;
     });
   });
@@ -285,40 +287,42 @@ function _parseBreachWb(wb, outData){
       var ticket=String(r['Incident Ticket']||'').trim();
       if(!ticket) return;
       var excl=String(r['Excluded']||'').trim();
-      outData[name].push({ticket,
+      outData[name].push({
+        ticket,
         excluded:excl==='1'||excl==='Y'||excl==='y',
         reason:String(r['Reason']||''),agent:String(r['Agent']||''),
         aos:String(r['AOS']||''),aosIssue:String(r['AOS Issue']||''),
         comment:String(r['Comment']||''),jira:String(r['Jira']||''),
-        queue:String(r['Queue']||''),language:String(r['ISO_Language']||''),
+        queue:String(r['Queue']||''),
+        language:isValidLang(r['ISO_Language'])?String(r['ISO_Language']).trim():'',
         tool:String(r['Tool']||''),week:String(r['Week']||''),
-        breachDesc:String(r['Breach_Description']||''),month:toMonth(r['DATE_CLOSE'])});
+        breachDesc:String(r['Breach_Description']||''),
+        month:toMonth(r['DATE_CLOSE'])
+      });
     });
   });
 }
 
-// ── Merge all queued workbooks into state ──────────────────
 function buildStateFromQueues(){
-  var slaData={}, monthSet={}, breachData={};
-  wbQueueA.forEach(function(wb){ _parseSlaWb(wb, slaData, monthSet); });
-  wbQueueB.forEach(function(wb){ _parseBreachWb(wb, breachData); });
-  // collect months from breach data too
-  Object.values(breachData).forEach(function(arr){
-    arr.forEach(function(r){ if(r.month) monthSet[r.month]=1; });
-  });
-  state.slaData    = slaData;
-  state.breachData = breachData;
-  state.months     = Object.keys(monthSet).sort();
+  var slaData={},monthSet={},breachData={};
+  wbQueueA.forEach(function(e){if(e.wb&&!e.error)_parseSlaWb(e.wb,slaData,monthSet);});
+  wbQueueB.forEach(function(e){if(e.wb&&!e.error)_parseBreachWb(e.wb,breachData);});
+  Object.values(breachData).forEach(function(arr){arr.forEach(function(r){if(r.month)monthSet[r.month]=1;});});
+  state.slaData=slaData; state.breachData=breachData;
+  state.months=Object.keys(monthSet).sort();
 }
 
-// ── Summary ───────────────────────────────────────────────
+// ── getSummary — includes excluded in denominator ──────────
 function getSummary(month){
   return KPI_ORDER.map(function(code){
     var rows=state.slaData[code]||[];
     if(month) rows=rows.filter(function(r){return r.month===month;});
-    var total=rows.length, breaches=rows.filter(function(r){return r.isBreach;}).length;
-    var rate=total?parseFloat(pct(breaches,total)):0;
-    return {code,total,breaches,rate,rag:rag(rate)};
+    var total=rows.length;
+    var excluded=rows.filter(function(r){return r.isExcluded;}).length;
+    var breaches=rows.filter(function(r){return r.isBreach;}).length;
+    var meta=KPI_META[code]||{isKM:false};
+    var t=calcTarget(total,breaches,meta.isKM);
+    return {code,total,excluded,breaches,target:t};
   });
 }
 
@@ -326,30 +330,34 @@ function getSummary(month){
 function buildBanner(summary){
   var gTotal=summary.reduce(function(a,s){return a+s.total;},0);
   var gBreaches=summary.reduce(function(a,s){return a+s.breaches;},0);
-  var reds=summary.filter(function(s){return s.rag==='red';}).length;
-  var ambers=summary.filter(function(s){return s.rag==='amber';}).length;
+  var gExcl=summary.reduce(function(a,s){return a+s.excluded;},0);
+  var reds=summary.filter(function(s){return s.target.rag==='red';}).length;
+  var ambers=summary.filter(function(s){return s.target.rag==='amber';}).length;
   var hasB=Object.keys(state.breachData).length>0;
-  var totalSlaFiles=wbQueueA.length, totalBFiles=wbQueueB.length;
   document.getElementById('summary-banner').innerHTML=
-    _sc('Total Tickets',fmt(gTotal),fmt(gBreaches)+' breaches','none')+
-    _sc('🔴 Action',reds,'KPI(s) above '+ALERT+'%','red')+
-    _sc('🟡 Monitor',ambers,'KPI(s) '+TARGET+'-'+ALERT+'%','amber')+
-    _sc('🟢 On Target',(summary.length-reds-ambers),'KPI(s) ≤ '+TARGET+'%','green')+
-    _sc('SLA Files',totalSlaFiles,'loaded · merged','none')+
-    _sc('Breach Files',totalBFiles>0?totalBFiles:'—',totalBFiles>0?'loaded · merged':'not loaded','none');
+    _sc('Total Tickets',fmt(gTotal),fmt(gBreaches)+' breaches · '+fmt(gExcl)+' excluded','none')+
+    _sc('🔴 Action',reds,'KPIs below target','red')+
+    _sc('🟡 Monitor',ambers,'KPIs in amber zone','amber')+
+    _sc('🟢 On Target',(summary.length-reds-ambers),'KPIs meeting target','green')+
+    _sc('SLA Files',wbQueueA.filter(function(e){return !e.error;}).length,'loaded · merged','none')+
+    _sc('Breach Files',hasB?wbQueueB.filter(function(e){return !e.error;}).length:'—',hasB?'loaded':'not loaded','none');
 }
 function _sc(lbl,val,sub,r){
   return '<div class="s-card rag-'+r+'"><div class="lbl">'+esc(String(lbl))+'</div><div class="val">'+esc(String(val))+'</div><div class="sub">'+esc(String(sub))+'</div></div>';
 }
 
-// ── Tab bar ────────────────────────────────────────────────
+// ── Tab bar — codes only, no names ─────────────────────────
 function buildTabBar(summary){
   var tb=document.getElementById('tab-bar');
-  var h='<button class="tab-btn'+(state.activeTab==='overview'?' active':'')+'" data-tab="overview">📊 Overview</button>';
-  h+='<button class="tab-btn'+(state.activeTab==='trend'?' active':'')+'" data-tab="trend">📈 3-Month Trend</button>';
+  var h='';
+  ['overview','trend','language'].forEach(function(t){
+    var labels={overview:'📊 Overview',trend:'📈 3-Month Trend',language:'🌐 Language Analysis'};
+    h+='<button class="tab-btn'+(state.activeTab===t?' active':'')+'" data-tab="'+t+'">'+labels[t]+'</button>';
+  });
   summary.forEach(function(s){
     if(!s.total) return;
-    h+='<button class="tab-btn'+(state.activeTab===s.code?' active':'')+'" data-tab="'+s.code+'"><span class="tab-dot dot-'+s.rag+'"></span>'+esc(s.code)+'</button>';
+    h+='<button class="tab-btn'+(state.activeTab===s.code?' active':'')+'" data-tab="'+s.code+'">'+
+      '<span class="tab-dot dot-'+s.target.rag+'"></span>'+esc(s.code)+'</button>';
   });
   tb.innerHTML=h;
   tb.querySelectorAll('.tab-btn').forEach(function(btn){
@@ -362,7 +370,7 @@ function buildTabBar(summary){
   });
 }
 
-// ── Month chips ──────────────────────────────────────────────
+// ── Month chips ────────────────────────────────────────────
 function buildMonthChips(){
   var chips=document.getElementById('month-chips');
   var months=state.months;
@@ -371,20 +379,15 @@ function buildMonthChips(){
   months.forEach(function(m){
     h+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" data-month="'+m+'">'+monthLabel(m)+'</button>';
   });
-  // show 2 future placeholders
   if(months.length){
     var last=months[months.length-1].split('-');
-    for(var i=1;i<=2;i++){
-      var nm=parseInt(last[1],10)+i, ny=parseInt(last[0],10);
-      if(nm>12){nm-=12;ny++;}
-      var fut=ny+'-'+String(nm).padStart(2,'0');
-      if(months.indexOf(fut)===-1) h+='<button class="month-chip pending" title="No data for this period">'+monthLabel(fut)+' ⏳</button>';
-    }
+    for(var i=1;i<=2;i++){var nm=parseInt(last[1],10)+i,ny=parseInt(last[0],10);if(nm>12){nm-=12;ny++;}var fut=ny+'-'+String(nm).padStart(2,'0');if(months.indexOf(fut)===-1)h+='<button class="month-chip pending">'+monthLabel(fut)+' ⏳</button>';}
   }
   chips.innerHTML=h;
   chips.querySelectorAll('.month-chip:not(.pending)').forEach(function(btn){
     btn.addEventListener('click',function(){
       state.activeMonth=btn.dataset.month||null;
+      state.activeLangMonth=btn.dataset.month||null;
       chips.querySelectorAll('.month-chip').forEach(function(b){b.classList.remove('active');});
       btn.classList.add('active');
       refresh();
@@ -392,7 +395,7 @@ function buildMonthChips(){
   });
 }
 
-// ── Refresh ─────────────────────────────────────────────────
+// ── Refresh ────────────────────────────────────────────────
 function refresh(){
   var sum=getSummary(state.activeMonth);
   buildBanner(sum);
@@ -408,51 +411,70 @@ function renderTab(){
   var tab=state.activeTab;
   if(!tab||tab==='overview'){el.innerHTML=renderOverview();return;}
   if(tab==='trend'){el.innerHTML=renderTrend();return;}
+  if(tab==='language'){el.innerHTML=renderLanguage();return;}
   el.innerHTML=renderKpiTab(tab);
 }
 
-// ───────────────────────────────────────────────────────
-// OVERVIEW
-// ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// OVERVIEW TAB
+// ═══════════════════════════════════════════════════════════
 function renderOverview(){
   var sum=getSummary(state.activeMonth);
   var active=sum.filter(function(s){return s.total>0;});
   var period=state.activeMonth?monthLabel(state.activeMonth):'All loaded months';
+
   var rows=active.map(function(s){
-    var meta=KPI_META[s.code]||{name:s.code,what:''};
-    var bData=state.breachData[s.code];
-    var ec=bData?bData.filter(function(r){return !r.excluded;}).length:null;
+    var meta=KPI_META[s.code]||{what:'',isKM:false,color:'#888'};
+    var t=s.target;
+    var metricLabel=meta.isKM?'Occurrence Rate':'Compliance Rate';
     return '<tr>'+
       '<td style="font-weight:700">'+esc(s.code)+'</td>'+
-      '<td>'+esc(meta.name)+'</td>'+
       '<td style="font-size:11px;color:var(--muted);line-height:1.5">'+esc(meta.what)+'</td>'+
       '<td style="text-align:right">'+fmt(s.total)+'</td>'+
-      '<td style="text-align:right">'+fmt(s.breaches)+(ec!==null?' <span style="font-size:10px;color:var(--muted)">('+ec+' enriched)</span>':'')+'</td>'+
-      '<td class="rate-cell rate-'+rag(s.rate)+'">'+s.rate+'%</td>'+
-      '<td><span class="rag-pill rag-'+rag(s.rate)+'">'+ragLabel(s.rate)+'</span></td>'+
+      '<td style="text-align:right;color:var(--muted);font-size:11px">'+fmt(s.excluded)+'</td>'+
+      '<td style="text-align:right">'+fmt(s.breaches)+'</td>'+
+      '<td style="font-size:12px;font-weight:700" class="rate-'+t.rag+'">'+t.display+'</td>'+
+      '<td style="font-size:10px;color:var(--muted)">'+esc(metricLabel)+'</td>'+
+      '<td><span class="rag-pill rag-'+t.rag+'">'+ragLabel(t.rag,meta.isKM)+'</span></td>'+
     '</tr>';
   }).join('');
-  var tbl='<div class="sc"><div class="sc-head"><h2>KPI Breach Rates – '+esc(period)+'</h2><span class="badge">'+TARGET+'% target · '+ALERT+'% alert</span></div>'+
-    '<div class="sc-body"><table class="rag-table"><thead><tr><th>Code</th><th>KPI Name</th><th style="min-width:220px">What it measures</th><th style="text-align:right">Total Tickets</th><th style="text-align:right">Breaches</th><th>Rate</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-    '<p style="font-size:10px;color:var(--muted);margin-top:10px">🟢 ≤'+TARGET+'% &nbsp;| 🟡 '+TARGET+'-'+ALERT+'% &nbsp;| 🔴 >'+ALERT+'% breach rate target. Click a KPI tab for root-cause detail.</p>'+
+
+  var tbl='<div class="sc"><div class="sc-head"><h2>KPI Performance – '+esc(period)+'</h2>'+
+    '<span class="badge">KSL = Compliance Rate (% not breached) · KM = Occurrence Rate (% breached)</span></div>'+
+    '<div class="sc-body"><table class="rag-table">'+
+    '<thead><tr><th>Code</th><th style="min-width:200px">What it measures</th>'+
+    '<th style="text-align:right">Total</th><th style="text-align:right">Excluded</th>'+
+    '<th style="text-align:right">Breaches</th><th>Target Metric</th><th>Formula</th><th>Status</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>'+
+    '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
+    '<strong>KSL Compliance:</strong> (Total – Breaches) / Total · Excluded counted as non-breached · Target ≥ 95% · '+
+    '<strong>KM Occurrence:</strong> Breaches / Total · Target ≤ 5%</p>'+
     '</div></div>';
-  var maxRate=Math.max.apply(null,active.map(function(s){return s.rate;}));
+
+  var maxV=Math.max.apply(null,active.map(function(s){return s.total>0?parseFloat(s.target.value):0;}));
   var bars=active.map(function(s){
-    var meta=KPI_META[s.code]||{name:s.code};
-    var w=maxRate>0?Math.round(s.rate/maxRate*100):0;
-    var col=rag(s.rate)==='red'?'#cc2222':rag(s.rate)==='amber'?'#d19900':'#437a22';
-    return '<div class="bar-row"><div class="bar-lbl" title="'+esc(meta.name)+'">'+esc(s.code)+' – '+esc(meta.name)+'</div>'+
+    if(!s.total) return '';
+    var meta=KPI_META[s.code]||{isKM:false,color:'#888'};
+    var col=s.target.rag==='red'?'#cc2222':s.target.rag==='amber'?'#d19900':'#437a22';
+    var w=maxV>0?Math.round(parseFloat(s.target.value)/maxV*100):0;
+    return '<div class="bar-row">'+
+      '<div class="bar-lbl">'+esc(s.code)+'</div>'+
       '<div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:'+col+'"></div></div>'+
-      '<div class="bar-cnt">'+s.rate+'%</div></div>';
+      '<div class="bar-cnt">'+s.target.display+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-left:4px;flex-shrink:0">'+(meta.isKM?'KM':'KSL')+'</div>'+
+    '</div>';
   }).join('');
-  var chart='<div class="sc"><div class="sc-head"><h2>Breach Rate at a Glance</h2></div>'+
+
+  var chart='<div class="sc"><div class="sc-head"><h2>Target Metric at a Glance</h2>'+
+    '<span class="badge">KSL = compliance% (higher→better) · KM = occurrence% (lower→better)</span></div>'+
     '<div class="sc-body"><div class="bar-chart">'+bars+'</div></div></div>';
+
   return '<div>'+tbl+'</div><div>'+chart+'</div>';
 }
 
-// ───────────────────────────────────────────────────────
-// TREND
-// ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// TREND TAB
+// ═══════════════════════════════════════════════════════════
 function renderTrend(){
   var months=state.months;
   if(!months.length) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted)">No date data found.</p></div></div>';
@@ -462,66 +484,151 @@ function renderTrend(){
   for(var i=1;i<=2;i++){var nm=parseInt(last[1],10)+i,ny=parseInt(last[0],10);if(nm>12){nm-=12;ny++;}next.push(ny+'-'+String(nm).padStart(2,'0'));}
   var cols=disp.concat(next);
   var codes=KPI_ORDER.filter(function(c){return disp.some(function(m){return (state.slaData[c]||[]).some(function(r){return r.month===m;});});});
-  var thCols=cols.map(function(m,i){return '<th style="'+(i>=disp.length?'opacity:.45':'')+'">'+(i>=disp.length?'<em>'+monthLabel(m)+'</em>':monthLabel(m))+'</th>';}).join('');
-  function cellStyle(rate,isNext){if(isNext) return 'background:#f0eeea;color:#bab9b4;font-style:italic';var r=rag(rate);return r==='red'?'background:#ffdcdc;color:#880000':r==='amber'?'background:#fff3cc;color:#7a4200':'background:#d4edda;color:#1a6b1a';}
+
+  function cellStyle(rag,isNext){if(isNext)return 'background:#f0eeea;color:#bab9b4;font-style:italic';return rag==='red'?'background:#ffdcdc;color:#880000':rag==='amber'?'background:#fff3cc;color:#7a4200':'background:#d4edda;color:#1a6b1a';}
+
   var finalRows='';
   codes.forEach(function(code){
-    var meta=KPI_META[code]||{name:code};
+    var meta=KPI_META[code]||{isKM:false};
     var dataTds=cols.map(function(m,i){
-      if(i>=disp.length) return '<td style="'+cellStyle(null,true)+'" title="'+monthLabel(m)+' – pending">⏳</td>';
+      if(i>=disp.length) return '<td style="'+cellStyle(null,true)+'">⏳</td>';
       var rs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
+      if(!rs.length) return '<td style="background:#f0eeea;color:var(--faint)">—</td>';
       var tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;
-      var rate=tot?parseFloat(pct(br,tot)):null;
-      if(rate===null) return '<td style="background:#f0eeea;color:var(--faint)" title="No data">—</td>';
-      return '<td style="'+cellStyle(rate,false)+'" title="'+monthLabel(m)+' · '+br+'/'+tot+' ('+rate+'%)">'+rate+'%</td>';
+      var t=calcTarget(tot,br,meta.isKM);
+      return '<td style="'+cellStyle(t.rag,false)+'" title="'+monthLabel(m)+' · '+br+' breaches / '+tot+' total">'+t.display+'</td>';
     }).join('');
     var deltaTds=cols.map(function(m,i){
       if(i===0||i>=disp.length) return '<td style="background:none;height:18px"></td>';
       var pM=cols[i-1];
       var prs=(state.slaData[code]||[]).filter(function(r){return r.month===pM;});
       var crs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
-      var pR=prs.length?parseFloat(pct(prs.filter(function(r){return r.isBreach;}).length,prs.length)):null;
-      var cR=crs.length?parseFloat(pct(crs.filter(function(r){return r.isBreach;}).length,crs.length)):null;
-      if(pR===null||cR===null) return '<td style="background:none;height:18px;font-size:9px;color:var(--faint)">—</td>';
-      var d=(cR-pR).toFixed(1);
-      var sty=parseFloat(d)>0?'background:#fce8e8;color:#a12c3a':parseFloat(d)<0?'background:#e3f2e8;color:#2e6b38':'background:#f0eeea;color:#bab9b4';
+      if(!prs.length||!crs.length) return '<td style="background:none;height:18px;font-size:9px;color:var(--faint)">—</td>';
+      var pt=calcTarget(prs.length,prs.filter(function(r){return r.isBreach;}).length,meta.isKM);
+      var ct=calcTarget(crs.length,crs.filter(function(r){return r.isBreach;}).length,meta.isKM);
+      var d=(ct.value-pt.value).toFixed(1);
+      // For KSL: positive delta = improvement; for KM: negative delta = improvement
+      var isGood=meta.isKM?(parseFloat(d)<0):(parseFloat(d)>0);
+      var sty=parseFloat(d)===0?'background:#f0eeea;color:#bab9b4':isGood?'background:#e3f2e8;color:#2e6b38':'background:#fce8e8;color:#a12c3a';
       return '<td style="'+sty+';height:18px;font-size:9px">'+(parseFloat(d)>0?'+':'')+d+'%</td>';
     }).join('');
-    finalRows+='<tr><td class="row-lbl" title="'+esc(meta.name)+'">'+esc(code)+'</td>'+dataTds+'</tr>';
+    finalRows+='<tr><td class="row-lbl">'+esc(code)+'</td>'+dataTds+'</tr>';
     finalRows+='<tr style="opacity:.75"><td class="row-lbl" style="font-size:9px;color:var(--faint)">MoM Δ</td>'+deltaTds+'</tr>';
   });
-  return '<div class="sc"><div class="sc-head"><h2>3-Month Breach Rate Trend</h2><span class="badge">'+disp.length+' month(s) loaded</span></div>'+
-    '<div class="sc-body"><div style="overflow-x:auto"><table class="trend-tbl"><thead><tr><th class="row-lbl">KPI</th>'+thCols+'</tr></thead><tbody>'+finalRows+'</tbody></table></div>'+
+
+  var thCols=cols.map(function(m,i){return '<th style="'+(i>=disp.length?'opacity:.45':'')+'">'+(i>=disp.length?'<em>'+monthLabel(m)+'</em>':monthLabel(m))+'</th>';}).join('');
+  return '<div class="sc"><div class="sc-head"><h2>3-Month Trend</h2>'+
+    '<span class="badge">KSL = compliance% · KM = occurrence%</span></div>'+
+    '<div class="sc-body"><div style="overflow-x:auto"><table class="trend-tbl">'+
+    '<thead><tr><th class="row-lbl">KPI</th>'+thCols+'</tr></thead><tbody>'+finalRows+'</tbody></table></div>'+
     '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:10px">'+
-    '<span><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#d4edda;margin-right:4px"></span>🟢 On Target</span>'+
-    '<span><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#fff3cc;margin-right:4px"></span>🟡 Monitor</span>'+
-    '<span><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#ffdcdc;margin-right:4px"></span>🔴 Action</span>'+
-    '<span><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#f0eeea;margin-right:4px"></span>⏳ Pending</span></div>'+
-    '<p style="font-size:10px;color:var(--muted);margin-top:8px">MoM Δ = month-over-month change in breach rate (pp). Load additional months via ← Load New Files to expand the trend.</p>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#d4edda"></span>🟢 On Target</span>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#fff3cc"></span>🟡 Monitor</span>'+
+    '<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:10px;border-radius:2px;background:#ffdcdc"></span>🔴 Action</span>'+
+    '</div>'+
+    '<p style="font-size:10px;color:var(--muted);margin-top:8px">MoM Δ: green = improving, red = worsening. For KSL, higher % = better. For KM, lower % = better.</p>'+
     '</div></div>';
 }
 
-// ───────────────────────────────────────────────────────
-// KPI DEEP DIVE
-// ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// LANGUAGE ANALYSIS TAB
+// ═══════════════════════════════════════════════════════════
+function renderLanguage(){
+  var month=state.activeLangMonth||state.activeMonth;
+  var allRows=[];
+  KPI_ORDER.forEach(function(code){
+    var rows=state.slaData[code]||[];
+    if(month) rows=rows.filter(function(r){return r.month===month;});
+    rows.forEach(function(r){allRows.push({code:code,language:r.language,isBreach:r.isBreach,isExcluded:r.isExcluded,month:r.month});});
+  });
+
+  var srcRows=allRows.filter(function(r){return isValidLang(r.language);});
+  var langs=[...new Set(srcRows.map(function(r){return r.language;}))].filter(isValidLang).sort();
+  var codes=[...new Set(srcRows.map(function(r){return r.code;}))].sort(function(a,b){return KPI_ORDER.indexOf(a)-KPI_ORDER.indexOf(b);});
+
+  // Heatmap: cell = breach rate per lang × KPI
+  var heatHtml='';
+  if(!langs.length){
+    heatHtml='<p style="font-size:12px;color:var(--muted)">No language data found in the loaded files.</p>';
+  } else {
+    var header='<thead><tr><th class="row-h">Language</th>'+codes.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'<th>Total Breaches</th><th>Total Tickets</th></tr></thead>';
+    var tbody=langs.map(function(lang){
+      var tds=codes.map(function(code){
+        var rs=srcRows.filter(function(r){return r.language===lang&&r.code===code;});
+        var tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;
+        if(!tot) return '<td style="background:var(--divider);color:var(--faint)">-</td>';
+        var rate=br/tot*100;
+        var intensity=Math.min(rate/30,1);
+        var bg='rgba(161,44,75,'+( intensity*0.75).toFixed(2)+')';
+        var fg=intensity>0.5?'#fff':'inherit';
+        return '<td style="background:'+bg+';color:'+fg+'" title="'+lang+' · '+esc(code)+' · '+br+'/'+tot+' ('+rate.toFixed(1)+'%)">'+rate.toFixed(1)+'%</td>';
+      }).join('');
+      var totalBr=srcRows.filter(function(r){return r.language===lang&&r.isBreach;}).length;
+      var totalTk=srcRows.filter(function(r){return r.language===lang;}).length;
+      return '<tr><td class="lang-lbl"><strong>'+esc(lang)+'</strong></td>'+tds+'<td style="font-weight:700">'+totalBr+'</td><td style="color:var(--muted)">'+totalTk+'</td></tr>';
+    }).join('');
+    heatHtml='<div style="overflow-x:auto"><table class="heatmap-tbl">'+header+'<tbody>'+tbody+'</tbody></table></div>'+
+      '<p style="font-size:10px;color:var(--muted);margin-top:8px">Darker cell = higher breach rate for that language + KPI combination. Hover a cell to see counts. Breach rate shown is raw (breaches/total).</p>';
+  }
+
+  // Bar chart: top languages by total breach count
+  var langCounts={};
+  srcRows.filter(function(r){return r.isBreach;}).forEach(function(r){langCounts[r.language]=(langCounts[r.language]||0)+1;});
+  var sorted=Object.keys(langCounts).map(function(l){return[l,langCounts[l]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,15);
+  var maxB=sorted.length?sorted[0][1]:1;
+  var langBars=sorted.map(function(e){
+    var w=Math.round(e[1]/maxB*100);
+    return '<div class="bar-row"><div class="bar-lbl">'+esc(e[0])+'</div>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:#a12c4b"></div></div>'+
+      '<div class="bar-cnt">'+e[1]+'</div></div>';
+  }).join('');
+
+  // Month filter chips for language tab
+  var lChips='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'+
+    '<span style="font-size:11px;color:var(--muted);font-weight:600">Filter:</span>'+
+    '<button class="month-chip'+(month===null?' active':'')+'" onclick="setLangMonth(null)">All months</button>'+
+    state.months.map(function(m){
+      return '<button class="month-chip'+(month===m?' active':'')+'" onclick="setLangMonth(\''+m+'\')">'+ monthLabel(m)+'</button>';
+    }).join('')+
+    '</div>';
+
+  return '<div class="sc"><div class="sc-head"><h2>🌐 Language Breach Heatmap</h2>'+
+    '<span class="badge">Breach rate per language × KPI</span></div>'+
+    '<div class="sc-body">'+lChips+heatHtml+'</div></div>'+
+    (sorted.length?'<div class="sc"><div class="sc-head"><h2>Top Languages by Breach Count</h2></div>'+
+    '<div class="sc-body"><div class="bar-chart">'+langBars+'</div></div></div>':'');
+}
+
+window.setLangMonth=function(m){
+  state.activeLangMonth=m;
+  if(state.activeTab==='language') document.getElementById('analyzer-main').innerHTML=renderLanguage();
+};
+
+// ═══════════════════════════════════════════════════════════
+// KPI DEEP DIVE TAB
+// ═══════════════════════════════════════════════════════════
 var _kpiPage={};
 function renderKpiTab(code){
-  var meta=KPI_META[code]||{name:code,color:'#888',what:''};
+  var meta=KPI_META[code]||{color:'#888',what:'',isKM:false};
   var rows=state.slaData[code]||[];
   var bRows=state.breachData[code]||[];
   var month=state.activeMonth;
   if(month) rows=rows.filter(function(r){return r.month===month;});
-  var total=rows.length,breaches=rows.filter(function(r){return r.isBreach;}).length;
-  var rate=total?parseFloat(pct(breaches,total)):0;
-  var r=rag(rate);
+  var total=rows.length;
+  var excluded=rows.filter(function(r){return r.isExcluded;}).length;
+  var breaches=rows.filter(function(r){return r.isBreach;}).length;
+  var t=calcTarget(total,breaches,meta.isKM);
   if(!_kpiPage[code]) _kpiPage[code]=1;
 
   var header='<div class="sc"><div class="sc-head">'+
-    '<h2>'+esc(code)+' — '+esc(meta.name)+'</h2>'+
-    '<span class="badge rag-pill rag-'+r+'" style="font-size:12px;padding:4px 14px">'+rate+'% breach rate</span>'+
-    '</div><div class="sc-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px">'+
-    _mc('Total Tickets',fmt(total),'','none')+_mc('Breaches',fmt(breaches),pct(breaches,total)+'%',r)+
-    _mc('On Target?',rate<=TARGET?'✅ Yes':'❌ No',TARGET+'% target',r)+_mc('Status',ragLabel(rate),'',r)+
+    '<h2>'+esc(code)+'</h2>'+
+    '<span class="badge rag-pill rag-'+t.rag+'" style="font-size:12px;padding:4px 14px">'+t.display+' '+esc(t.targetLabel)+'</span>'+
+    '</div><div class="sc-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">'+
+    _mc('Total Tickets',fmt(total),'incl. '+excluded+' excluded','none')+
+    _mc('Excluded',fmt(excluded),'counted as non-breached','none')+
+    _mc('Breaches',fmt(breaches),pct(breaches,total)+'% raw breach rate',t.rag)+
+    _mc(meta.isKM?'Occurrence Rate':'Compliance Rate',t.display,t.targetLabel,t.rag)+
+    _mc('Status',ragLabel(t.rag,meta.isKM),'',t.rag)+
     '</div><div class="insight-strip"><b>📖 What this KPI measures:</b> '+esc(meta.what)+'</div></div>';
 
   var enr=bRows.filter(function(r){return !r.excluded;});
@@ -529,36 +636,52 @@ function renderKpiTab(code){
 
   var breakHtml='';
   if(enr.length){
-    var rMap={},aMap={},bdMap={},qMap={};
+    var rMap={},aMap={},bdMap={},qMap={},lMap={};
     enr.forEach(function(r){
       if(r.reason)  rMap[r.reason]=(rMap[r.reason]||0)+1;
       if(r.aos&&r.aos.trim()) aMap[r.aos]=(aMap[r.aos]||0)+1;
       if(r.breachDesc) bdMap[r.breachDesc]=(bdMap[r.breachDesc]||0)+1;
       if(r.queue)  qMap[r.queue]=(qMap[r.queue]||0)+1;
+      if(isValidLang(r.language)) lMap[r.language]=(lMap[r.language]||0)+1;
     });
     breakHtml='<div class="two-col">'+
       '<div class="sc"><div class="sc-head"><h2>🔍 Root Cause – Reason</h2><span class="badge">'+enr.length+' enriched</span></div><div class="sc-body">'+_bars(rMap,10,meta.color||'#006494')+'</div></div>'+
       '<div class="sc"><div class="sc-head"><h2>🛠 Breach Sub-Type</h2></div><div class="sc-body">'+_bars(bdMap,8,'#7a39bb')+'</div></div>'+
       '<div class="sc"><div class="sc-head"><h2>⚙️ AOS Distribution</h2></div><div class="sc-body">'+(Object.keys(aMap).length?_bars(aMap,6,'#01696f'):'<p style="font-size:12px;color:var(--muted)">No AOS data</p>')+'</div></div>'+
       '<div class="sc"><div class="sc-head"><h2>🗂 By Queue</h2></div><div class="sc-body">'+_bars(qMap,8,'#964219')+'</div></div>'+
+      (Object.keys(lMap).length?'<div class="sc"><div class="sc-head"><h2>🌐 By Language</h2></div><div class="sc-body">'+_bars(lMap,12,'#a12c4b')+'</div></div>':'')+
     '</div>';
     var PAGE=50,page=_kpiPage[code]||1,start=(page-1)*PAGE,sl=enr.slice(start,start+PAGE),totalP=Math.ceil(enr.length/PAGE)||1;
     var tbody=sl.map(function(r){
-      return '<tr><td style="font-family:monospace;font-size:11px">'+esc(r.ticket)+'</td><td>'+esc(r.week)+'</td><td>'+esc(r.language)+'</td><td>'+esc(r.queue)+'</td><td>'+esc(r.reason)+'</td><td>'+(r.aos?'<span class="chip ch-green">'+esc(r.aos)+'</span>':'')+'</td><td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.aosIssue||r.comment||'')+'</td></tr>';
+      return '<tr><td style="font-family:monospace;font-size:11px">'+esc(r.ticket)+'</td>'+
+        '<td>'+esc(r.week)+'</td><td>'+esc(r.language)+'</td><td>'+esc(r.queue)+'</td>'+
+        '<td>'+esc(r.reason)+'</td>'+
+        '<td>'+(r.aos?'<span class="chip ch-green">'+esc(r.aos)+'</span>':'')+'</td>'+
+        '<td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.aosIssue||r.comment||'')+'</td></tr>';
     }).join('');
     var dtbl='<div class="sc"><div class="sc-head"><h2>📋 Breach Detail Records</h2><span class="badge">'+enr.length+' records</span></div>'+
-      '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr><th>Ticket</th><th>Week</th><th>Language</th><th>Queue</th><th>Reason</th><th>AOS</th><th>Notes</th></tr></thead><tbody>'+tbody+'</tbody></table></div>'+_pg(page,totalP,code)+'</div></div>';
+      '<div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr>'+
+      '<th>Ticket</th><th>Week</th><th>Language</th><th>Queue</th><th>Reason</th><th>AOS</th><th>Notes</th>'+
+      '</tr></thead><tbody>'+tbody+'</tbody></table></div>'+_pg(page,totalP,code)+'</div></div>';
     return header+breakHtml+dtbl;
   } else {
+    // No enriched: SLA breakdown by queue, priority, language, breach sub-type
     var bsl=rows.filter(function(r){return r.isBreach;});
-    var qS={},pS={},tS={},bdS={};
-    bsl.forEach(function(r){if(r.queue)qS[r.queue]=(qS[r.queue]||0)+1;if(r.priority)pS[r.priority]=(pS[r.priority]||0)+1;if(r.tool)tS[r.tool]=(tS[r.tool]||0)+1;if(r.breachDesc)bdS[r.breachDesc]=(bdS[r.breachDesc]||0)+1;});
-    var note='<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">💡 <strong>Load enriched Breaches files</strong> to unlock root-cause breakdown by Reason, Agent, AOS. Currently showing SLA export data only.</p></div></div>';
+    var qS={},pS={},tS={},bdS={},lS={};
+    bsl.forEach(function(r){
+      if(r.queue)    qS[r.queue]=(qS[r.queue]||0)+1;
+      if(r.priority) pS[r.priority]=(pS[r.priority]||0)+1;
+      if(r.tool)     tS[r.tool]=(tS[r.tool]||0)+1;
+      if(r.breachDesc) bdS[r.breachDesc]=(bdS[r.breachDesc]||0)+1;
+      if(isValidLang(r.language)) lS[r.language]=(lS[r.language]||0)+1;
+    });
+    var note='<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">💡 Load enriched Breaches files (Slot 2) to unlock root-cause breakdown by Reason, Agent, AOS.</p></div></div>';
     breakHtml='<div class="two-col">'+
-      (Object.keys(qS).length?'<div class="sc"><div class="sc-head"><h2>By Queue</h2><span class="badge">breach tickets</span></div><div class="sc-body">'+_bars(qS,8,meta.color)+'</div></div>':'')+
+      (Object.keys(qS).length?'<div class="sc"><div class="sc-head"><h2>By Queue</h2></div><div class="sc-body">'+_bars(qS,8,meta.color)+'</div></div>':'')+
       (Object.keys(pS).length?'<div class="sc"><div class="sc-head"><h2>By Priority</h2></div><div class="sc-body">'+_bars(pS,6,'#7a39bb')+'</div></div>':'')+
       (Object.keys(tS).length?'<div class="sc"><div class="sc-head"><h2>By Tool</h2></div><div class="sc-body">'+_bars(tS,8,'#964219')+'</div></div>':'')+
       (Object.keys(bdS).length?'<div class="sc"><div class="sc-head"><h2>Breach Sub-Type</h2></div><div class="sc-body">'+_bars(bdS,8,'#01696f')+'</div></div>':'')+
+      (Object.keys(lS).length?'<div class="sc"><div class="sc-head"><h2>🌐 By Language</h2></div><div class="sc-body">'+_bars(lS,12,'#a12c4b')+'</div></div>':'')+
     '</div>';
     return header+note+breakHtml;
   }
@@ -584,134 +707,88 @@ function _pg(page,totalP,code){
 }
 window._kpiNav=function(code,page){_kpiPage[code]=page;document.getElementById('analyzer-main').innerHTML=renderKpiTab(code);};
 
-// ───────────────────────────────────────────────────────
-// FILE UPLOAD — multi-file with list UI
-// ───────────────────────────────────────────────────────
-function initSlot(dzId, inputId, listId, statusId, addMoreId, queue){
+// ═══════════════════════════════════════════════════════════
+// FILE UPLOAD
+// ═══════════════════════════════════════════════════════════
+function initSlot(dzId,inputId,listId,statusId,addMoreId,queue){
   var dz=document.getElementById(dzId);
   var fi=document.getElementById(inputId);
   var listEl=document.getElementById(listId);
   var statusEl=document.getElementById(statusId);
   var addEl=document.getElementById(addMoreId);
-
-  // clicking drop zone triggers file picker
   dz.addEventListener('click',function(){fi.click();});
   dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
   dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});
-  dz.addEventListener('drop',function(e){
-    e.preventDefault();dz.classList.remove('drag-over');
-    addFiles(Array.from(e.dataTransfer.files));
-  });
-  fi.addEventListener('change',function(e){
-    addFiles(Array.from(e.target.files));
-    fi.value='';
-  });
-
+  dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag-over');addFiles(Array.from(e.dataTransfer.files));});
+  fi.addEventListener('change',function(e){addFiles(Array.from(e.target.files));fi.value='';});
   function addFiles(files){
-    var validFiles=files.filter(function(f){return f.name.endsWith('.xlsx');});
-    var invalid=files.length-validFiles.length;
-    if(!validFiles.length&&invalid>0){
-      statusEl.textContent=invalid+' file(s) skipped (not .xlsx)';
-      statusEl.style.color='var(--error)';
-      return;
-    }
-    var pending=validFiles.length;
-    validFiles.forEach(function(file){
-      // deduplicate by name
-      var exists=queue.some(function(entry){return entry.name===file.name;});
-      if(exists){pending--;if(!pending) renderList();return;}
+    var valid=files.filter(function(f){return f.name.endsWith('.xlsx');});
+    if(!valid.length){statusEl.textContent='No .xlsx files found';statusEl.style.color='var(--error)';return;}
+    var pending=valid.length;
+    valid.forEach(function(file){
+      if(queue.some(function(entry){return entry.name===file.name;})){pending--;if(!pending)renderList();return;}
       var reader=new FileReader();
       reader.onload=function(ev){
-        try{
-          var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-          queue.push({name:file.name,wb:wb});
-        }catch(err){
-          queue.push({name:file.name,wb:null,error:true});
-        }
-        pending--;
-        if(!pending) renderList();
+        try{var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});queue.push({name:file.name,wb:wb});}catch(err){queue.push({name:file.name,wb:null,error:true});}
+        pending--;if(!pending)renderList();
       };
       reader.readAsArrayBuffer(file);
     });
   }
-
   function renderList(){
-    var items=queue.map(function(entry,idx){
+    listEl.innerHTML=queue.map(function(entry,idx){
       var icon=entry.error?'<span class="fi-err">❌</span>':'<span class="fi-ok">✅</span>';
       return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(entry.name)+'">'+esc(entry.name)+'</span>'+
-        '<span class="fi-remove" title="Remove" onclick="removeFile('+JSON.stringify(dzId)+','+idx+')">&#xD7;</span></div>';
+        '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+idx+')">&#xD7;</span></div>';
     }).join('');
-    listEl.innerHTML=items;
-    var valid=queue.filter(function(e){return !e.error;}).length;
+    var ok=queue.filter(function(e){return !e.error;}).length;
     var err=queue.filter(function(e){return e.error;}).length;
-    statusEl.textContent=valid+' file(s) ready'+(err?' · '+err+' error(s)':'');
+    statusEl.textContent=ok+' file(s) ready'+(err?' · '+err+' error(s)':'');
     statusEl.style.color=err?'var(--error)':'var(--muted)';
-    if(queue.length>0) addEl.style.display='block';
-    else addEl.style.display='none';
+    addEl.style.display=queue.length?'block':'none';
     checkRunnable();
   }
-
-  // expose remove function scoped to this slot
-  window['removeFile']=window['removeFile']||{};
-  // attach per-slot via global dispatcher below
 }
 
-// Global remove dispatcher
-window.removeFile=function(dzId, idx){
+window.removeFile=function(dzId,idx){
   var queue=dzId==='dz-a'?wbQueueA:wbQueueB;
   var listId=dzId==='dz-a'?'list-a':'list-b';
   var statusId=dzId==='dz-a'?'status-a':'status-b';
   var addId=dzId==='dz-a'?'add-a':'add-b';
   queue.splice(idx,1);
-  // re-render list
   var listEl=document.getElementById(listId);
   var statusEl=document.getElementById(statusId);
-  var addEl=document.getElementById(addId);
-  var items=queue.map(function(entry,i){
+  listEl.innerHTML=queue.map(function(entry,i){
     var icon=entry.error?'<span class="fi-err">❌</span>':'<span class="fi-ok">✅</span>';
-    return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(entry.name)+'">'+esc(entry.name)+'</span>'+
-      '<span class="fi-remove" title="Remove" onclick="removeFile('+JSON.stringify(dzId)+','+i+')">&#xD7;</span></div>';
+    return '<div class="file-item">'+icon+'<span class="fi-name">'+esc(entry.name)+'</span>'+
+      '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+i+')">&#xD7;</span></div>';
   }).join('');
-  listEl.innerHTML=items;
-  var valid=queue.filter(function(e){return !e.error;}).length;
-  statusEl.textContent=queue.length?valid+' file(s) ready':'No files loaded'+(dzId==='dz-b'?' (optional)':'');
+  var ok=queue.filter(function(e){return !e.error;}).length;
+  statusEl.textContent=queue.length?ok+' file(s) ready':'No files loaded'+(dzId==='dz-b'?' (optional)':'');
   statusEl.style.color='var(--muted)';
-  addEl.style.display=queue.length?'block':'none';
+  document.getElementById(addId).style.display=queue.length?'block':'none';
   checkRunnable();
 };
 
 function checkRunnable(){
-  var valid=wbQueueA.filter(function(e){return !e.error;}).length;
-  var btn=document.getElementById('run-btn');
-  var enabled=valid>0;
-  btn.disabled=!enabled;
-  btn.style.opacity=enabled?'1':'.5';
+  var ok=wbQueueA.filter(function(e){return e.wb&&!e.error;}).length;
+  document.getElementById('run-btn').disabled=!ok;
+  document.getElementById('run-btn').style.opacity=ok?'1':'.5';
 }
 
 function runAnalysis(){
-  var validA=wbQueueA.filter(function(e){return e.wb&&!e.error;});
-  if(!validA.length){
+  if(!wbQueueA.filter(function(e){return e.wb&&!e.error;}).length){
     var err=document.getElementById('run-error');
-    err.textContent='Please load at least one valid V2 SLA export file (File 1).';
+    err.textContent='Please load at least one valid SLA export file.';
     err.style.display='block';
     return;
   }
   document.getElementById('run-error').style.display='none';
-
-  // Build state from queues
-  var tempA=validA.map(function(e){return e.wb;});
-  var tempB=wbQueueB.filter(function(e){return e.wb&&!e.error;}).map(function(e){return e.wb;});
-
-  // Replace queue arrays with plain wb arrays for parsing
-  var origA=wbQueueA, origB=wbQueueB;
-  wbQueueA=tempA; wbQueueB=tempB;
   buildStateFromQueues();
-  wbQueueA=origA; wbQueueB=origB;
-
   state.activeMonth=state.months.length?state.months[state.months.length-1]:null;
+  state.activeLangMonth=state.activeMonth;
   state.activeTab='overview';
   _kpiPage={};
-
   document.getElementById('upload-page').style.display='none';
   document.getElementById('dashboard-page').classList.add('visible');
   buildMonthChips();
@@ -719,13 +796,12 @@ function runAnalysis(){
 }
 
 function resetApp(){
-  wbQueueA=[]; wbQueueB=[];
-  state.slaData={};state.breachData={};state.months=[];state.activeMonth=null;state.activeTab=null;
+  wbQueueA=[];wbQueueB=[];
+  state.slaData={};state.breachData={};state.months=[];state.activeMonth=null;state.activeLangMonth=null;state.activeTab=null;
   ['list-a','list-b'].forEach(function(id){document.getElementById(id).innerHTML='';});
   document.getElementById('status-a').textContent='No files loaded';
-  document.getElementById('status-a').style.color='var(--muted)';
   document.getElementById('status-b').textContent='No files loaded (optional)';
-  document.getElementById('status-b').style.color='var(--muted)';
+  ['status-a','status-b'].forEach(function(id){document.getElementById(id).style.color='var(--muted)';});
   ['add-a','add-b'].forEach(function(id){document.getElementById(id).style.display='none';});
   ['fi-a','fi-b'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('run-btn').disabled=true;
