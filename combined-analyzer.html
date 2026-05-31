@@ -37,6 +37,7 @@
     .s-card.rag-green{border-left:4px solid #437a22}.s-card.rag-green .val{color:#437a22}
     .s-card.rag-amber{border-left:4px solid #d19900}.s-card.rag-amber .val{color:#d19900}
     .s-card.rag-red  {border-left:4px solid #cc2222}.s-card.rag-red   .val{color:#cc2222}
+    .s-card.rag-excl{border-left:4px solid #6b7280}.s-card.rag-excl .val{color:#6b7280}
     .s-card.rag-none .val{color:var(--text)}
     .tab-bar{display:flex;border-bottom:2px solid var(--border);flex-wrap:wrap;background:var(--surface);padding:0 20px}
     .tab-btn{padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
@@ -80,6 +81,7 @@
     .dt tr:hover td{background:var(--surface-2,#f6f5f2)}
     .chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
     .ch-green{background:#d4edda;color:#1a6b1a}
+    .ch-excl{background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db}
     .pg{display:flex;align-items:center;gap:5px;margin-top:10px;justify-content:flex-end;font-size:12px;color:var(--muted);flex-wrap:wrap}
     .pg-btn{padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;font-family:inherit}
     .pg-btn:hover{background:var(--bg)}.pg-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}.pg-btn:disabled{opacity:.4;cursor:not-allowed}
@@ -103,6 +105,14 @@
     .heatmap-tbl td:hover{transform:scale(1.08);z-index:2;position:relative}
     .heatmap-tbl td.lang-lbl{text-align:left;background:none!important;font-weight:600;font-size:11px;color:var(--muted);min-width:50px;padding:0 8px 0 0}
     .heatmap-tbl td.lang-lbl:hover{transform:none}
+    /* excluded breakdown table */
+    .excl-tbl{width:100%;border-collapse:collapse;font-size:12px}
+    .excl-tbl th{background:var(--bg);padding:6px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+    .excl-tbl td{padding:7px 12px;border-bottom:1px solid var(--divider);vertical-align:middle}
+    .excl-tbl tr:last-child td{border-bottom:none}
+    .excl-tbl tr:hover td{background:var(--surface-2,#f6f5f2)}
+    .excl-bar-track{flex:1;height:10px;background:var(--divider);border-radius:3px;overflow:hidden;min-width:60px;display:inline-block;vertical-align:middle}
+    .excl-bar-fill{height:100%;border-radius:3px;background:#6b7280}
   </style>
 </head>
 <body>
@@ -142,7 +152,7 @@
       </div>
     </div>
     <div class="run-btn-row">
-      <button id="run-btn" style="padding:10px 28px;font-size:14px;font-weight:700;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;opacity:.5" disabled>▶  Analyse Data</button>
+      <button id="run-btn" style="padding:10px 28px;font-size:14px;font-weight:700;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;opacity:.5" disabled>▶  Analyse Data</button>
     </div>
     <p id="run-error" style="font-size:12px;color:var(--error);display:none"></p>
   </div>
@@ -169,10 +179,10 @@
    - KSL target = not-breached / total (incl. excluded as not-breached)
    - KM  target = breached / total
    - Language heatmap tab
-   - Excluded ticket count displayed
+   - Excluded ticket count displayed (dedicated banner card + per-KPI breakdown)
 ============================================================ */
 
-// ── KPI metadata (no names in UI) ──────────────────────────
+// ── KPI metadata ──────────────────────────────────────────
 var KPI_META = {
   'KSL-1':  {color:'#437a22', what:'Time from ticket creation to first agent reply.',          isKM:false},
   'KSL-2a': {color:'#437a22', what:'Not resolved within SLA window – Normal priority.',         isKM:false},
@@ -191,15 +201,14 @@ var KPI_ORDER = ['KSL-4','KM-1','KSL-5b','KSL-5a','KSL-3a','KSL-6','KSL-2c','KSL
 
 /*
   TARGET FORMULA:
-    KSL: target metric = (total_tickets - breaches) / total_tickets  × 100   (compliance rate, higher = better)
-         Excluded tickets count as non-breached, so:
-         target = (total_including_excluded - breaches) / total_including_excluded × 100
-    KM:  target metric = breaches / total_tickets × 100  (breach/occurrence rate, lower = better)
-         Excluded tickets also included in denominator.
+    KSL: compliance = (total - breaches) / total × 100
+         Excluded tickets count as non-breached (in total but not in breaches).
+    KM:  occurrence = breaches / total × 100
+         Excluded tickets are in the denominator, diluting the rate.
 
-  RAG thresholds applied to the TARGET value:
-    KSL: GREEN ≥ 95%, AMBER 85-95%, RED < 85%   (i.e. breach rate ≤ 5% = green)
-    KM:  GREEN ≤ 5%,  AMBER 5-15%, RED > 15%    (same as before — KM target IS the breach rate)
+  RAG thresholds:
+    KSL: GREEN ≥ 95%, AMBER 85–95%, RED < 85%
+    KM:  GREEN ≤ 5%,  AMBER 5–15%,  RED > 15%
 */
 function calcTarget(totalWithExcl, breaches, isKM){
   if(!totalWithExcl) return {value:0, display:'0.0%', rag:'none', targetLabel:''};
@@ -240,11 +249,11 @@ function toMonth(val){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
 
-// ── App state ───────────────────────────────────────────────
+// ── App state ──────────────────────────────────────────────
 var state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
 var wbQueueA=[], wbQueueB=[];
 
-// ── Parse SLA workbook ─────────────────────────────────────
+// ── Parse SLA workbook ────────────────────────────────────
 function _parseSlaWb(wb, outData, monthSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
@@ -258,7 +267,6 @@ function _parseSlaWb(wb, outData, monthSet){
       var isExcluded=(excl==='1'||excl==='Y'||excl==='y');
       var dc=r['DATE_CLOSE'];
       var month=toMonth(dc);
-      // A ticket is a breach only if it has a non-empty, non-zero DATE_TIME_Breach AND is not excluded
       var hasBreach=!!(r['DATE_TIME_Breach']&&String(r['DATE_TIME_Breach']).trim()&&String(r['DATE_TIME_Breach']).trim()!=='0');
       var isBreach=hasBreach && !isExcluded;
       var rawLang=r['ISO_Language']||r['iso_language']||'';
@@ -312,7 +320,7 @@ function buildStateFromQueues(){
   state.months=Object.keys(monthSet).sort();
 }
 
-// ── getSummary — includes excluded in denominator ──────────
+// ── getSummary — includes excluded in denominator ─────────
 function getSummary(month){
   return KPI_ORDER.map(function(code){
     var rows=state.slaData[code]||[];
@@ -326,16 +334,18 @@ function getSummary(month){
   });
 }
 
-// ── Banner ─────────────────────────────────────────────────
+// ── Banner ────────────────────────────────────────────────
 function buildBanner(summary){
   var gTotal=summary.reduce(function(a,s){return a+s.total;},0);
   var gBreaches=summary.reduce(function(a,s){return a+s.breaches;},0);
   var gExcl=summary.reduce(function(a,s){return a+s.excluded;},0);
+  var exclPct=gTotal?parseFloat((gExcl/gTotal*100).toFixed(1)):0;
   var reds=summary.filter(function(s){return s.target.rag==='red';}).length;
   var ambers=summary.filter(function(s){return s.target.rag==='amber';}).length;
   var hasB=Object.keys(state.breachData).length>0;
   document.getElementById('summary-banner').innerHTML=
-    _sc('Total Tickets',fmt(gTotal),fmt(gBreaches)+' breaches · '+fmt(gExcl)+' excluded','none')+
+    _sc('Total Tickets',fmt(gTotal),fmt(gBreaches)+' breaches','none')+
+    _sc('Excluded',fmt(gExcl),exclPct+'% of total · counted as non-breached','excl')+
     _sc('🔴 Action',reds,'KPIs below target','red')+
     _sc('🟡 Monitor',ambers,'KPIs in amber zone','amber')+
     _sc('🟢 On Target',(summary.length-reds-ambers),'KPIs meeting target','green')+
@@ -346,7 +356,7 @@ function _sc(lbl,val,sub,r){
   return '<div class="s-card rag-'+r+'"><div class="lbl">'+esc(String(lbl))+'</div><div class="val">'+esc(String(val))+'</div><div class="sub">'+esc(String(sub))+'</div></div>';
 }
 
-// ── Tab bar — codes only, no names ─────────────────────────
+// ── Tab bar ───────────────────────────────────────────────
 function buildTabBar(summary){
   var tb=document.getElementById('tab-bar');
   var h='';
@@ -370,7 +380,7 @@ function buildTabBar(summary){
   });
 }
 
-// ── Month chips ────────────────────────────────────────────
+// ── Month chips ───────────────────────────────────────────
 function buildMonthChips(){
   var chips=document.getElementById('month-chips');
   var months=state.months;
@@ -395,7 +405,7 @@ function buildMonthChips(){
   });
 }
 
-// ── Refresh ────────────────────────────────────────────────
+// ── Refresh ───────────────────────────────────────────────
 function refresh(){
   var sum=getSummary(state.activeMonth);
   buildBanner(sum);
@@ -423,15 +433,21 @@ function renderOverview(){
   var active=sum.filter(function(s){return s.total>0;});
   var period=state.activeMonth?monthLabel(state.activeMonth):'All loaded months';
 
+  // ── RAG table ──
   var rows=active.map(function(s){
     var meta=KPI_META[s.code]||{what:'',isKM:false,color:'#888'};
     var t=s.target;
     var metricLabel=meta.isKM?'Occurrence Rate':'Compliance Rate';
+    var exclPct=s.total?parseFloat((s.excluded/s.total*100).toFixed(1)):0;
+    var exclCell=s.excluded>0
+      ? '<span style="font-weight:700;color:#6b7280">'+fmt(s.excluded)+'</span>'
+        +'<span style="font-size:10px;color:var(--muted);margin-left:4px">('+exclPct+'%)</span>'
+      : '<span style="color:var(--faint)">—</span>';
     return '<tr>'+
       '<td style="font-weight:700">'+esc(s.code)+'</td>'+
       '<td style="font-size:11px;color:var(--muted);line-height:1.5">'+esc(meta.what)+'</td>'+
       '<td style="text-align:right">'+fmt(s.total)+'</td>'+
-      '<td style="text-align:right;color:var(--muted);font-size:11px">'+fmt(s.excluded)+'</td>'+
+      '<td style="text-align:right">'+exclCell+'</td>'+
       '<td style="text-align:right">'+fmt(s.breaches)+'</td>'+
       '<td style="font-size:12px;font-weight:700" class="rate-'+t.rag+'">'+t.display+'</td>'+
       '<td style="font-size:10px;color:var(--muted)">'+esc(metricLabel)+'</td>'+
@@ -439,11 +455,48 @@ function renderOverview(){
     '</tr>';
   }).join('');
 
+  // ── Excluded breakdown section ──
+  var exclRows=active.filter(function(s){return s.excluded>0;});
+  var maxExcl=exclRows.length?Math.max.apply(null,exclRows.map(function(s){return s.excluded;})):1;
+  var exclBreakdown='';
+  if(exclRows.length){
+    var exclTableRows=exclRows.map(function(s){
+      var barW=Math.round(s.excluded/maxExcl*100);
+      var exclPct=s.total?parseFloat((s.excluded/s.total*100).toFixed(1)):0;
+      return '<tr>'+
+        '<td style="font-weight:700;width:70px">'+esc(s.code)+'</td>'+
+        '<td style="min-width:180px">'+
+          '<div style="display:flex;align-items:center;gap:8px">'+
+          '<div class="excl-bar-track" style="width:120px"><div class="excl-bar-fill" style="width:'+barW+'%"></div></div>'+
+          '<span style="font-weight:700;font-size:13px;color:#6b7280">'+fmt(s.excluded)+'</span>'+
+          '</div>'+
+        '</td>'+
+        '<td style="font-size:11px;color:var(--muted)">'+exclPct+'% of KPI total</td>'+
+        '<td style="font-size:11px;color:var(--muted)">'+fmt(s.total)+' tickets in scope</td>'+
+      '</tr>';
+    }).join('');
+    var gExcl=exclRows.reduce(function(a,s){return a+s.excluded;},0);
+    var gTotal=active.reduce(function(a,s){return a+s.total;},0);
+    exclBreakdown='<div class="sc"><div class="sc-head">'+
+      '<h2>🚫 Excluded Tickets — Breakdown by KPI</h2>'+
+      '<span class="badge">'+fmt(gExcl)+' total excluded · '+parseFloat((gExcl/gTotal*100).toFixed(1))+'% of all tickets · counted as non-breached in target calculation</span>'+
+      '</div><div class="sc-body">'+
+      '<table class="excl-tbl"><thead><tr>'+
+      '<th>KPI</th><th>Excluded Count</th><th>% of KPI</th><th>KPI Total</th>'+
+      '</tr></thead><tbody>'+exclTableRows+'</tbody></table>'+
+      '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
+      '⚠️ Excluded tickets are <strong>included in the denominator</strong> but treated as non-breached. '+
+      'They represent tickets removed from breach evaluation (e.g. data quality issues, system errors, agreed exceptions). '+
+      'A high excluded count can <em>artificially improve</em> the compliance rate.</p>'+
+      '</div></div>';
+  }
+
   var tbl='<div class="sc"><div class="sc-head"><h2>KPI Performance – '+esc(period)+'</h2>'+
     '<span class="badge">KSL = Compliance Rate (% not breached) · KM = Occurrence Rate (% breached)</span></div>'+
     '<div class="sc-body"><table class="rag-table">'+
     '<thead><tr><th>Code</th><th style="min-width:200px">What it measures</th>'+
-    '<th style="text-align:right">Total</th><th style="text-align:right">Excluded</th>'+
+    '<th style="text-align:right">Total</th>'+
+    '<th style="text-align:right">Excluded <span style="font-weight:400;font-size:10px">(counted as non-breached)</span></th>'+
     '<th style="text-align:right">Breaches</th><th>Target Metric</th><th>Formula</th><th>Status</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table>'+
     '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
@@ -469,7 +522,7 @@ function renderOverview(){
     '<span class="badge">KSL = compliance% (higher→better) · KM = occurrence% (lower→better)</span></div>'+
     '<div class="sc-body"><div class="bar-chart">'+bars+'</div></div></div>';
 
-  return '<div>'+tbl+'</div><div>'+chart+'</div>';
+  return '<div>'+tbl+'</div>'+exclBreakdown+'<div>'+chart+'</div>';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -495,8 +548,9 @@ function renderTrend(){
       var rs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
       if(!rs.length) return '<td style="background:#f0eeea;color:var(--faint)">—</td>';
       var tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;
+      var excl=rs.filter(function(r){return r.isExcluded;}).length;
       var t=calcTarget(tot,br,meta.isKM);
-      return '<td style="'+cellStyle(t.rag,false)+'" title="'+monthLabel(m)+' · '+br+' breaches / '+tot+' total">'+t.display+'</td>';
+      return '<td style="'+cellStyle(t.rag,false)+'" title="'+monthLabel(m)+' · '+br+' breaches / '+tot+' total · '+excl+' excluded">'+t.display+'</td>';
     }).join('');
     var deltaTds=cols.map(function(m,i){
       if(i===0||i>=disp.length) return '<td style="background:none;height:18px"></td>';
@@ -507,7 +561,6 @@ function renderTrend(){
       var pt=calcTarget(prs.length,prs.filter(function(r){return r.isBreach;}).length,meta.isKM);
       var ct=calcTarget(crs.length,crs.filter(function(r){return r.isBreach;}).length,meta.isKM);
       var d=(ct.value-pt.value).toFixed(1);
-      // For KSL: positive delta = improvement; for KM: negative delta = improvement
       var isGood=meta.isKM?(parseFloat(d)<0):(parseFloat(d)>0);
       var sty=parseFloat(d)===0?'background:#f0eeea;color:#bab9b4':isGood?'background:#e3f2e8;color:#2e6b38':'background:#fce8e8;color:#a12c3a';
       return '<td style="'+sty+';height:18px;font-size:9px">'+(parseFloat(d)>0?'+':'')+d+'%</td>';
@@ -516,9 +569,9 @@ function renderTrend(){
     finalRows+='<tr style="opacity:.75"><td class="row-lbl" style="font-size:9px;color:var(--faint)">MoM Δ</td>'+deltaTds+'</tr>';
   });
 
-  var thCols=cols.map(function(m,i){return '<th style="'+(i>=disp.length?'opacity:.45':'')+'">'+(i>=disp.length?'<em>'+monthLabel(m)+'</em>':monthLabel(m))+'</th>';}).join('');
+  var thCols=cols.map(function(m,i){return '<th style="'+(i>=disp.length?'opacity:.45':'')+'\">'+(i>=disp.length?'<em>'+monthLabel(m)+'</em>':monthLabel(m))+'</th>';}).join('');
   return '<div class="sc"><div class="sc-head"><h2>3-Month Trend</h2>'+
-    '<span class="badge">KSL = compliance% · KM = occurrence%</span></div>'+
+    '<span class="badge">KSL = compliance% · KM = occurrence% · hover cell for excluded count</span></div>'+
     '<div class="sc-body"><div style="overflow-x:auto"><table class="trend-tbl">'+
     '<thead><tr><th class="row-lbl">KPI</th>'+thCols+'</tr></thead><tbody>'+finalRows+'</tbody></table></div>'+
     '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:10px">'+
@@ -546,7 +599,6 @@ function renderLanguage(){
   var langs=[...new Set(srcRows.map(function(r){return r.language;}))].filter(isValidLang).sort();
   var codes=[...new Set(srcRows.map(function(r){return r.code;}))].sort(function(a,b){return KPI_ORDER.indexOf(a)-KPI_ORDER.indexOf(b);});
 
-  // Heatmap: cell = breach rate per lang × KPI
   var heatHtml='';
   if(!langs.length){
     heatHtml='<p style="font-size:12px;color:var(--muted)">No language data found in the loaded files.</p>';
@@ -559,7 +611,7 @@ function renderLanguage(){
         if(!tot) return '<td style="background:var(--divider);color:var(--faint)">-</td>';
         var rate=br/tot*100;
         var intensity=Math.min(rate/30,1);
-        var bg='rgba(161,44,75,'+( intensity*0.75).toFixed(2)+')';
+        var bg='rgba(161,44,75,'+(intensity*0.75).toFixed(2)+')';
         var fg=intensity>0.5?'#fff':'inherit';
         return '<td style="background:'+bg+';color:'+fg+'" title="'+lang+' · '+esc(code)+' · '+br+'/'+tot+' ('+rate.toFixed(1)+'%)">'+rate.toFixed(1)+'%</td>';
       }).join('');
@@ -571,7 +623,6 @@ function renderLanguage(){
       '<p style="font-size:10px;color:var(--muted);margin-top:8px">Darker cell = higher breach rate for that language + KPI combination. Hover a cell to see counts. Breach rate shown is raw (breaches/total).</p>';
   }
 
-  // Bar chart: top languages by total breach count
   var langCounts={};
   srcRows.filter(function(r){return r.isBreach;}).forEach(function(r){langCounts[r.language]=(langCounts[r.language]||0)+1;});
   var sorted=Object.keys(langCounts).map(function(l){return[l,langCounts[l]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,15);
@@ -583,12 +634,11 @@ function renderLanguage(){
       '<div class="bar-cnt">'+e[1]+'</div></div>';
   }).join('');
 
-  // Month filter chips for language tab
   var lChips='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'+
     '<span style="font-size:11px;color:var(--muted);font-weight:600">Filter:</span>'+
     '<button class="month-chip'+(month===null?' active':'')+'" onclick="setLangMonth(null)">All months</button>'+
     state.months.map(function(m){
-      return '<button class="month-chip'+(month===m?' active':'')+'" onclick="setLangMonth(\''+m+'\')">'+ monthLabel(m)+'</button>';
+      return '<button class="month-chip'+(month===m?' active':'')+'" onclick="setLangMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
     }).join('')+
     '</div>';
 
@@ -617,6 +667,7 @@ function renderKpiTab(code){
   var total=rows.length;
   var excluded=rows.filter(function(r){return r.isExcluded;}).length;
   var breaches=rows.filter(function(r){return r.isBreach;}).length;
+  var exclPct=total?parseFloat((excluded/total*100).toFixed(1)):0;
   var t=calcTarget(total,breaches,meta.isKM);
   if(!_kpiPage[code]) _kpiPage[code]=1;
 
@@ -624,12 +675,12 @@ function renderKpiTab(code){
     '<h2>'+esc(code)+'</h2>'+
     '<span class="badge rag-pill rag-'+t.rag+'" style="font-size:12px;padding:4px 14px">'+t.display+' '+esc(t.targetLabel)+'</span>'+
     '</div><div class="sc-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">'+
-    _mc('Total Tickets',fmt(total),'incl. '+excluded+' excluded','none')+
-    _mc('Excluded',fmt(excluded),'counted as non-breached','none')+
+    _mc('Total Tickets',fmt(total),'full scope for this KPI','none')+
+    _mc('Excluded',fmt(excluded),exclPct+'% of total · non-breached','excl')+
     _mc('Breaches',fmt(breaches),pct(breaches,total)+'% raw breach rate',t.rag)+
     _mc(meta.isKM?'Occurrence Rate':'Compliance Rate',t.display,t.targetLabel,t.rag)+
     _mc('Status',ragLabel(t.rag,meta.isKM),'',t.rag)+
-    '</div><div class="insight-strip"><b>📖 What this KPI measures:</b> '+esc(meta.what)+'</div></div>';
+    '</div><div class="insight-strip"><b>📖 What this KPI measures:</b> '+esc(meta.what)+'</div></div>';
 
   var enr=bRows.filter(function(r){return !r.excluded;});
   if(month) enr=enr.filter(function(r){return r.month===month;});
@@ -665,7 +716,6 @@ function renderKpiTab(code){
       '</tr></thead><tbody>'+tbody+'</tbody></table></div>'+_pg(page,totalP,code)+'</div></div>';
     return header+breakHtml+dtbl;
   } else {
-    // No enriched: SLA breakdown by queue, priority, language, breach sub-type
     var bsl=rows.filter(function(r){return r.isBreach;});
     var qS={},pS={},tS={},bdS={},lS={};
     bsl.forEach(function(r){
