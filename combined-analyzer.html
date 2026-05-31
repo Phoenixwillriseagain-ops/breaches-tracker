@@ -180,6 +180,8 @@
    - KM  target = breached / total
    - Language heatmap tab
    - Excluded ticket count displayed (dedicated banner card + per-KPI breakdown)
+   - Deduplication: within each KPI sheet, same INC number counted only once
+     (keeps first occurrence; if any duplicate has Excluded=1 the row is excluded)
 ============================================================ */
 
 // ── KPI metadata ──────────────────────────────────────────
@@ -253,23 +255,48 @@ function toMonth(val){
 var state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
 var wbQueueA=[], wbQueueB=[];
 
-// ── Parse SLA workbook ────────────────────────────────────
+// ── Parse SLA workbook ─────────────────────────────────────
+// Deduplication: within a single KPI sheet, if the same INC ticket number
+// appears more than once, only the FIRST occurrence is kept.
+// Exception: if ANY occurrence of that INC has Excluded=1, the kept row is
+// marked as excluded (so exclusions are never silently dropped).
 function _parseSlaWb(wb, outData, monthSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
     var ws=wb.Sheets[name];
     var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-    if(!outData[name]) outData[name]=[];
+
+    // --- deduplication pass ---
+    // Build a map: ticket → {row, isExcluded}
+    // For tickets with Unique column, rows with Unique=1 are the primary occurrence.
+    var seen={};
     rows.forEach(function(r){
       var ticket=String(r['Incident Ticket']||'').trim();
       if(!ticket||ticket==='Incident Ticket') return;
-      var excl=String(r['Excluded']||'').trim();
-      var isExcluded=(excl==='1'||excl==='Y'||excl==='y');
-      var dc=r['DATE_CLOSE'];
+      var exclVal=r['Excluded'];
+      var isExcl=(exclVal===1||exclVal==='1'||String(exclVal).trim().toLowerCase()==='y');
+      if(!seen[ticket]){
+        seen[ticket]={row:r, isExcluded:isExcl};
+      } else {
+        // If any duplicate marks it excluded, honour that
+        if(isExcl) seen[ticket].isExcluded=true;
+        // If this row has Unique=1 (primary occurrence), prefer it as the base row
+        var uVal=r['Unique'];
+        if(uVal===1||uVal==='1') seen[ticket].row=r;
+      }
+    });
+    // --- end deduplication ---
+
+    if(!outData[name]) outData[name]=[];
+    Object.keys(seen).forEach(function(ticket){
+      var entry=seen[ticket];
+      var r=entry.row;
+      var isExcluded=entry.isExcluded;
+      var dc=r['DATE_CLOSE']||r['DATECLOSE'];
       var month=toMonth(dc);
       var hasBreach=!!(r['DATE_TIME_Breach']&&String(r['DATE_TIME_Breach']).trim()&&String(r['DATE_TIME_Breach']).trim()!=='0');
       var isBreach=hasBreach && !isExcluded;
-      var rawLang=r['ISO_Language']||r['iso_language']||'';
+      var rawLang=r['ISO_Language']||r['ISOLanguage']||r['iso_language']||'';
       outData[name].push({
         ticket, month, isBreach, isExcluded,
         queue:String(r['Queue']||''),
@@ -277,7 +304,7 @@ function _parseSlaWb(wb, outData, monthSet){
         tool:String(r['Tool']||''),
         language:isValidLang(rawLang)?String(rawLang).trim():'',
         status:String(r['Status']||''),
-        breachDesc:String(r['Breach_Description']||''),
+        breachDesc:String(r['Breach_Description']||r['BreachDescription']||''),
         dateClose:dc
       });
       if(month) monthSet[month]=1;
@@ -294,10 +321,11 @@ function _parseBreachWb(wb, outData){
     rows.forEach(function(r){
       var ticket=String(r['Incident Ticket']||'').trim();
       if(!ticket) return;
-      var excl=String(r['Excluded']||'').trim();
+      var exclVal=r['Excluded'];
+      var isExcl=(exclVal===1||exclVal==='1'||String(exclVal).trim().toLowerCase()==='y');
       outData[name].push({
         ticket,
-        excluded:excl==='1'||excl==='Y'||excl==='y',
+        excluded:isExcl,
         reason:String(r['Reason']||''),agent:String(r['Agent']||''),
         aos:String(r['AOS']||''),aosIssue:String(r['AOS Issue']||''),
         comment:String(r['Comment']||''),jira:String(r['Jira']||''),
