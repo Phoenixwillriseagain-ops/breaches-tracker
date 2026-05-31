@@ -143,7 +143,7 @@
       </div>
       <div class="upload-card">
         <h3>📊 Enriched Breaches Files <span style="color:var(--muted);font-size:11px">optional</span></h3>
-        <p class="desc">V2-breaches…xlsx files with Reason, Agent, AOS. Multiple months can be combined.</p>
+        <p class="desc">V2-breaches…xlsx files with Reason, Agent, AOS, and Excluded (0/1). Multiple months can be combined.</p>
         <div class="drop-zone" id="dz-b"><p>Drop V2-breaches .xlsx files here</p><span>Multiple files accepted · optional</span></div>
         <input type="file" id="fi-b" accept=".xlsx" multiple style="display:none">
         <div class="file-list" id="list-b"></div>
@@ -175,13 +175,19 @@
 <script>
 /* ============================================================
    COMBINED ANALYZER
-   - Multiple file upload (both slots)
-   - KSL target = not-breached / total (incl. excluded as not-breached)
-   - KM  target = breached / total
-   - Language heatmap tab
-   - Excluded ticket count displayed (dedicated banner card + per-KPI breakdown)
-   - Deduplication: within each KPI sheet, same INC number counted only once
-     (keeps first occurrence; if any duplicate has Excluded=1 the row is excluded)
+   Key rule: The Excluded flag (0 / 1) lives in the Breaches file.
+   After both files are parsed, we build an exclusion lookup from
+   the Breaches file (kpi → Set of excluded ticket numbers) and
+   apply it to the SLA rows. A ticket is excluded if ANY row for
+   that ticket in that KPI sheet of the Breaches file has Excluded=1.
+
+   Deduplication: within each KPI sheet of the SLA file, the same
+   INC number is counted only once (first occurrence kept). If the
+   Breaches file marks that ticket excluded, it is treated as
+   excluded regardless of its order in the SLA file.
+
+   KSL target = (total - breaches) / total × 100  (excluded = non-breached)
+   KM  target = breaches / total × 100             (excluded in denominator)
 ============================================================ */
 
 // ── KPI metadata ──────────────────────────────────────────
@@ -201,17 +207,6 @@ var KPI_META = {
 };
 var KPI_ORDER = ['KSL-4','KM-1','KSL-5b','KSL-5a','KSL-3a','KSL-6','KSL-2c','KSL-2d','KSL-2a','KSL-2b','KM-2','KSL-1'];
 
-/*
-  TARGET FORMULA:
-    KSL: compliance = (total - breaches) / total × 100
-         Excluded tickets count as non-breached (in total but not in breaches).
-    KM:  occurrence = breaches / total × 100
-         Excluded tickets are in the denominator, diluting the rate.
-
-  RAG thresholds:
-    KSL: GREEN ≥ 95%, AMBER 85–95%, RED < 85%
-    KM:  GREEN ≤ 5%,  AMBER 5–15%,  RED > 15%
-*/
 function calcTarget(totalWithExcl, breaches, isKM){
   if(!totalWithExcl) return {value:0, display:'0.0%', rag:'none', targetLabel:''};
   if(isKM){
@@ -255,50 +250,82 @@ function toMonth(val){
 var state={slaData:{},breachData:{},months:[],activeMonth:null,activeTab:null,activeLangMonth:null};
 var wbQueueA=[], wbQueueB=[];
 
+// ── Helper: check if a raw cell value means "excluded = true" ──
+// Breaches file uses 0 / 1 (numeric or string).
+function _isExcluded(val){
+  if(val===1||val==='1') return true;
+  // legacy fallback — some older exports used 'y'
+  if(typeof val==='string'&&val.trim().toLowerCase()==='y') return true;
+  return false;
+}
+
+// ── Parse Breaches workbook ────────────────────────────────
+// Returns: breachData[kpiCode] = [{ticket, excluded, reason, ...}, ...]
+// Also builds: excludedSet[kpiCode] = Set of ticket strings that are excluded
+function _parseBreachWb(wb, outData, outExclSet){
+  wb.SheetNames.forEach(function(name){
+    if(name==='Instructions'||name==='_Excluded') return;
+    var ws=wb.Sheets[name];
+    var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    if(!outData[name]) outData[name]=[];
+    if(!outExclSet[name]) outExclSet[name]=new Set();
+    rows.forEach(function(r){
+      var ticket=String(r['Incident Ticket']||'').trim();
+      if(!ticket) return;
+      var isExcl=_isExcluded(r['Excluded']);
+      if(isExcl) outExclSet[name].add(ticket);
+      outData[name].push({
+        ticket,
+        excluded:isExcl,
+        reason:String(r['Reason']||''),agent:String(r['Agent']||''),
+        aos:String(r['AOS']||''),aosIssue:String(r['AOS Issue']||''),
+        comment:String(r['Comment']||''),jira:String(r['Jira']||''),
+        queue:String(r['Queue']||''),
+        language:isValidLang(r['ISOLanguage'])?String(r['ISOLanguage']).trim()
+                :isValidLang(r['ISO_Language'])?String(r['ISO_Language']).trim():'',
+        tool:String(r['Tool']||''),week:String(r['Week']||''),
+        breachDesc:String(r['BreachDescription']||r['Breach_Description']||''),
+        month:toMonth(r['DATECLOSE']||r['DATE_CLOSE'])
+      });
+    });
+  });
+}
+
 // ── Parse SLA workbook ─────────────────────────────────────
-// Deduplication: within a single KPI sheet, if the same INC ticket number
-// appears more than once, only the FIRST occurrence is kept.
-// Exception: if ANY occurrence of that INC has Excluded=1, the kept row is
-// marked as excluded (so exclusions are never silently dropped).
+// Deduplication is per-KPI-sheet: same INC counted once.
+// Excluded flag comes from the Breaches file via excludedSet.
+// At parse time we mark isExcluded=false; applyExclusions() fixes it later.
 function _parseSlaWb(wb, outData, monthSet){
   wb.SheetNames.forEach(function(name){
     if(name==='Instructions'||name==='_Excluded') return;
     var ws=wb.Sheets[name];
     var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
 
-    // --- deduplication pass ---
-    // Build a map: ticket → {row, isExcluded}
-    // For tickets with Unique column, rows with Unique=1 are the primary occurrence.
+    // Deduplication within this KPI sheet
     var seen={};
     rows.forEach(function(r){
       var ticket=String(r['Incident Ticket']||'').trim();
       if(!ticket||ticket==='Incident Ticket') return;
-      var exclVal=r['Excluded'];
-      var isExcl=(exclVal===1||exclVal==='1'||String(exclVal).trim().toLowerCase()==='y');
       if(!seen[ticket]){
-        seen[ticket]={row:r, isExcluded:isExcl};
+        seen[ticket]=r;
       } else {
-        // If any duplicate marks it excluded, honour that
-        if(isExcl) seen[ticket].isExcluded=true;
-        // If this row has Unique=1 (primary occurrence), prefer it as the base row
+        // Prefer the row with Unique=1 as the canonical row
         var uVal=r['Unique'];
-        if(uVal===1||uVal==='1') seen[ticket].row=r;
+        if(uVal===1||uVal==='1') seen[ticket]=r;
       }
     });
-    // --- end deduplication ---
 
     if(!outData[name]) outData[name]=[];
     Object.keys(seen).forEach(function(ticket){
-      var entry=seen[ticket];
-      var r=entry.row;
-      var isExcluded=entry.isExcluded;
+      var r=seen[ticket];
       var dc=r['DATE_CLOSE']||r['DATECLOSE'];
       var month=toMonth(dc);
       var hasBreach=!!(r['DATE_TIME_Breach']&&String(r['DATE_TIME_Breach']).trim()&&String(r['DATE_TIME_Breach']).trim()!=='0');
-      var isBreach=hasBreach && !isExcluded;
       var rawLang=r['ISO_Language']||r['ISOLanguage']||r['iso_language']||'';
       outData[name].push({
-        ticket, month, isBreach, isExcluded,
+        ticket, month,
+        isBreach:hasBreach, // may be overridden by applyExclusions()
+        isExcluded:false,   // populated by applyExclusions()
         queue:String(r['Queue']||''),
         priority:String(r['Priority']||''),
         tool:String(r['Tool']||''),
@@ -312,43 +339,35 @@ function _parseSlaWb(wb, outData, monthSet){
   });
 }
 
-function _parseBreachWb(wb, outData){
-  wb.SheetNames.forEach(function(name){
-    if(name==='Instructions'||name==='_Excluded') return;
-    var ws=wb.Sheets[name];
-    var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-    if(!outData[name]) outData[name]=[];
-    rows.forEach(function(r){
-      var ticket=String(r['Incident Ticket']||'').trim();
-      if(!ticket) return;
-      var exclVal=r['Excluded'];
-      var isExcl=(exclVal===1||exclVal==='1'||String(exclVal).trim().toLowerCase()==='y');
-      outData[name].push({
-        ticket,
-        excluded:isExcl,
-        reason:String(r['Reason']||''),agent:String(r['Agent']||''),
-        aos:String(r['AOS']||''),aosIssue:String(r['AOS Issue']||''),
-        comment:String(r['Comment']||''),jira:String(r['Jira']||''),
-        queue:String(r['Queue']||''),
-        language:isValidLang(r['ISO_Language'])?String(r['ISO_Language']).trim():'',
-        tool:String(r['Tool']||''),week:String(r['Week']||''),
-        breachDesc:String(r['Breach_Description']||''),
-        month:toMonth(r['DATE_CLOSE'])
-      });
+// ── Apply exclusions from Breaches file to SLA rows ────────
+// For each KPI code, any SLA row whose ticket appears in the
+// excludedSet for that KPI is marked isExcluded=true and
+// isBreach=false (excluded tickets are non-breached in formula).
+function _applyExclusions(slaData, excludedSet){
+  Object.keys(slaData).forEach(function(code){
+    var excl=excludedSet[code];
+    if(!excl||excl.size===0) return;
+    slaData[code].forEach(function(row){
+      if(excl.has(row.ticket)){
+        row.isExcluded=true;
+        row.isBreach=false; // excluded = non-breached for KSL formula
+      }
     });
   });
 }
 
 function buildStateFromQueues(){
-  var slaData={},monthSet={},breachData={};
+  var slaData={},monthSet={},breachData={},excludedSet={};
   wbQueueA.forEach(function(e){if(e.wb&&!e.error)_parseSlaWb(e.wb,slaData,monthSet);});
-  wbQueueB.forEach(function(e){if(e.wb&&!e.error)_parseBreachWb(e.wb,breachData);});
+  wbQueueB.forEach(function(e){if(e.wb&&!e.error)_parseBreachWb(e.wb,breachData,excludedSet);});
+  // Apply the Breaches file exclusions onto SLA rows
+  _applyExclusions(slaData, excludedSet);
   Object.values(breachData).forEach(function(arr){arr.forEach(function(r){if(r.month)monthSet[r.month]=1;});});
   state.slaData=slaData; state.breachData=breachData;
   state.months=Object.keys(monthSet).sort();
 }
 
-// ── getSummary — includes excluded in denominator ─────────
+// ── getSummary ─────────────────────────────────────────────
 function getSummary(month){
   return KPI_ORDER.map(function(code){
     var rows=state.slaData[code]||[];
@@ -378,7 +397,7 @@ function buildBanner(summary){
     _sc('🟡 Monitor',ambers,'KPIs in amber zone','amber')+
     _sc('🟢 On Target',(summary.length-reds-ambers),'KPIs meeting target','green')+
     _sc('SLA Files',wbQueueA.filter(function(e){return !e.error;}).length,'loaded · merged','none')+
-    _sc('Breach Files',hasB?wbQueueB.filter(function(e){return !e.error;}).length:'—',hasB?'loaded':'not loaded','none');
+    _sc('Breach Files',hasB?wbQueueB.filter(function(e){return !e.error;}).length:'—',hasB?'loaded · exclusions applied':'not loaded','none');
 }
 function _sc(lbl,val,sub,r){
   return '<div class="s-card rag-'+r+'"><div class="lbl">'+esc(String(lbl))+'</div><div class="val">'+esc(String(val))+'</div><div class="sub">'+esc(String(sub))+'</div></div>';
@@ -461,7 +480,6 @@ function renderOverview(){
   var active=sum.filter(function(s){return s.total>0;});
   var period=state.activeMonth?monthLabel(state.activeMonth):'All loaded months';
 
-  // ── RAG table ──
   var rows=active.map(function(s){
     var meta=KPI_META[s.code]||{what:'',isKM:false,color:'#888'};
     var t=s.target;
@@ -483,7 +501,7 @@ function renderOverview(){
     '</tr>';
   }).join('');
 
-  // ── Excluded breakdown section ──
+  // Excluded breakdown section
   var exclRows=active.filter(function(s){return s.excluded>0;});
   var maxExcl=exclRows.length?Math.max.apply(null,exclRows.map(function(s){return s.excluded;})):1;
   var exclBreakdown='';
@@ -507,14 +525,15 @@ function renderOverview(){
     var gTotal=active.reduce(function(a,s){return a+s.total;},0);
     exclBreakdown='<div class="sc"><div class="sc-head">'+
       '<h2>🚫 Excluded Tickets — Breakdown by KPI</h2>'+
-      '<span class="badge">'+fmt(gExcl)+' total excluded · '+parseFloat((gExcl/gTotal*100).toFixed(1))+'% of all tickets · counted as non-breached in target calculation</span>'+
+      '<span class="badge">'+fmt(gExcl)+' total excluded · '+parseFloat((gExcl/gTotal*100).toFixed(1))+'% of all tickets · source: Breaches file Excluded=1</span>'+
       '</div><div class="sc-body">'+
       '<table class="excl-tbl"><thead><tr>'+
       '<th>KPI</th><th>Excluded Count</th><th>% of KPI</th><th>KPI Total</th>'+
       '</tr></thead><tbody>'+exclTableRows+'</tbody></table>'+
       '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
-      '⚠️ Excluded tickets are <strong>included in the denominator</strong> but treated as non-breached. '+
-      'They represent tickets removed from breach evaluation (e.g. data quality issues, system errors, agreed exceptions). '+
+      '⚠️ Excluded tickets are read from the <strong>Breaches file</strong> (Excluded = 1). '+
+      'They are included in the denominator but treated as non-breached. '+
+      'They represent agreed exceptions (e.g. tool errors, data quality issues). '+
       'A high excluded count can <em>artificially improve</em> the compliance rate.</p>'+
       '</div></div>';
   }
@@ -524,11 +543,11 @@ function renderOverview(){
     '<div class="sc-body"><table class="rag-table">'+
     '<thead><tr><th>Code</th><th style="min-width:200px">What it measures</th>'+
     '<th style="text-align:right">Total</th>'+
-    '<th style="text-align:right">Excluded <span style="font-weight:400;font-size:10px">(counted as non-breached)</span></th>'+
+    '<th style="text-align:right">Excluded <span style="font-weight:400;font-size:10px">(from Breaches file)</span></th>'+
     '<th style="text-align:right">Breaches</th><th>Target Metric</th><th>Formula</th><th>Status</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table>'+
     '<p style="font-size:10px;color:var(--muted);margin-top:10px">'+
-    '<strong>KSL Compliance:</strong> (Total – Breaches) / Total · Excluded counted as non-breached · Target ≥ 95% · '+
+    '<strong>KSL Compliance:</strong> (Total – Breaches) / Total · Excluded = non-breached · Target ≥ 95% · '+
     '<strong>KM Occurrence:</strong> Breaches / Total · Target ≤ 5%</p>'+
     '</div></div>';
 
@@ -704,7 +723,7 @@ function renderKpiTab(code){
     '<span class="badge rag-pill rag-'+t.rag+'" style="font-size:12px;padding:4px 14px">'+t.display+' '+esc(t.targetLabel)+'</span>'+
     '</div><div class="sc-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">'+
     _mc('Total Tickets',fmt(total),'full scope for this KPI','none')+
-    _mc('Excluded',fmt(excluded),exclPct+'% of total · non-breached','excl')+
+    _mc('Excluded',fmt(excluded),exclPct+'% of total · from Breaches file','excl')+
     _mc('Breaches',fmt(breaches),pct(breaches,total)+'% raw breach rate',t.rag)+
     _mc(meta.isKM?'Occurrence Rate':'Compliance Rate',t.display,t.targetLabel,t.rag)+
     _mc('Status',ragLabel(t.rag,meta.isKM),'',t.rag)+
@@ -753,7 +772,7 @@ function renderKpiTab(code){
       if(r.breachDesc) bdS[r.breachDesc]=(bdS[r.breachDesc]||0)+1;
       if(isValidLang(r.language)) lS[r.language]=(lS[r.language]||0)+1;
     });
-    var note='<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">💡 Load enriched Breaches files (Slot 2) to unlock root-cause breakdown by Reason, Agent, AOS.</p></div></div>';
+    var note='<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">💡 Load enriched Breaches files (Slot 2) to unlock root-cause breakdown by Reason, Agent, AOS, and Excluded tickets.</p></div></div>';
     breakHtml='<div class="two-col">'+
       (Object.keys(qS).length?'<div class="sc"><div class="sc-head"><h2>By Queue</h2></div><div class="sc-body">'+_bars(qS,8,meta.color)+'</div></div>':'')+
       (Object.keys(pS).length?'<div class="sc"><div class="sc-head"><h2>By Priority</h2></div><div class="sc-body">'+_bars(pS,6,'#7a39bb')+'</div></div>':'')+
@@ -817,7 +836,7 @@ function initSlot(dzId,inputId,listId,statusId,addMoreId,queue){
     listEl.innerHTML=queue.map(function(entry,idx){
       var icon=entry.error?'<span class="fi-err">❌</span>':'<span class="fi-ok">✅</span>';
       return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(entry.name)+'">'+esc(entry.name)+'</span>'+
-        '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+idx+')">&#xD7;</span></div>';
+        '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+idx+')">&times;</span></div>';
     }).join('');
     var ok=queue.filter(function(e){return !e.error;}).length;
     var err=queue.filter(function(e){return e.error;}).length;
@@ -839,7 +858,7 @@ window.removeFile=function(dzId,idx){
   listEl.innerHTML=queue.map(function(entry,i){
     var icon=entry.error?'<span class="fi-err">❌</span>':'<span class="fi-ok">✅</span>';
     return '<div class="file-item">'+icon+'<span class="fi-name">'+esc(entry.name)+'</span>'+
-      '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+i+')">&#xD7;</span></div>';
+      '<span class="fi-remove" onclick="removeFile('+JSON.stringify(dzId)+','+i+')">&times;</span></div>';
   }).join('');
   var ok=queue.filter(function(e){return !e.error;}).length;
   statusEl.textContent=queue.length?ok+' file(s) ready':'No files loaded'+(dzId==='dz-b'?' (optional)':'');
