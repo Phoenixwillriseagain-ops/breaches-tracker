@@ -10,7 +10,6 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    /* ── Design tokens ─────────────────────────────────────────── */
     :root,[data-theme="light"]{
       --bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fbfbf9;
       --border:#d4d1ca;--divider:#dcd9d5;
@@ -36,8 +35,6 @@
     a:hover{text-decoration:underline}
     button{cursor:pointer;font:inherit;color:inherit;background:none;border:none}
     img,svg{display:block}
-
-    /* ── Layout ────────────────────────────────────────────────── */
     .app-header{
       display:flex;align-items:center;justify-content:space-between;
       padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);
@@ -49,21 +46,15 @@
     .eyebrow{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
     h1{font-size:17px;font-weight:700;line-height:1.2}
     main{max-width:960px;margin:0 auto;padding:28px 24px;display:flex;flex-direction:column;gap:20px}
-
-    /* ── Panels ────────────────────────────────────────────────── */
     .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px}
     .panel h2{font-size:15px;font-weight:600;margin-bottom:4px}
     .panel p.sub{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.55}
-
-    /* ── Buttons ───────────────────────────────────────────────── */
     .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:background .15s,color .15s,border-color .15s}
     .btn-primary{background:var(--primary);color:#fff;border:1px solid transparent}
     .btn-primary:hover:not(:disabled){background:var(--primary-hover)}
     .btn-primary:disabled{opacity:.45;cursor:not-allowed}
     .btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
     .btn-secondary:hover{background:var(--surface-2,var(--bg))}
-
-    /* ── Drop zone ─────────────────────────────────────────────── */
     .drop-zone{
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
       border:2px dashed var(--border);border-radius:var(--radius);padding:36px 20px;
@@ -73,16 +64,12 @@
     .drop-zone input{display:none}
     .drop-zone span{font-size:13px;color:var(--muted)}
     .drop-zone strong{font-size:14px;color:var(--text)}
-
-    /* ── Status tags ───────────────────────────────────────────── */
     .status-row{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
     .tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px}
     .tag-idle{background:var(--divider);color:var(--muted)}
     .tag-ok{background:color-mix(in oklab,var(--success) 12%,transparent);color:var(--success)}
     .tag-warn{background:color-mix(in oklab,var(--warning) 12%,transparent);color:var(--warning)}
     .tag-error{background:color-mix(in oklab,var(--error) 12%,transparent);color:var(--error)}
-
-    /* ── Mapping preview table ─────────────────────────────────── */
     .table-scroll{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border);margin-top:14px}
     table{border-collapse:collapse;width:100%;font-size:13px}
     thead tr{background:var(--surface-2,var(--bg))}
@@ -93,8 +80,6 @@
     .mapped{color:var(--success);font-weight:600}
     .derived{color:var(--primary);font-weight:600}
     .empty-col{color:var(--faint)}
-
-    /* ── Validation summary ────────────────────────────────────── */
     .val-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:14px}
     .val-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
     .val-num{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
@@ -102,28 +87,15 @@
     .num-ok{color:var(--success)}
     .num-warn{color:var(--warning)}
     .num-err{color:var(--error)}
-
-    /* ── Skip log ──────────────────────────────────────────────── */
-    .skip-log{font-size:12px;color:var(--muted);margin-top:12px;max-height:120px;overflow-y:auto;border-top:1px solid var(--divider);padding-top:10px;line-height:1.8}
-    .skip-log span.reason{color:var(--warning)}
-
-    /* ── Sheet breakdown ───────────────────────────────────────── */
     .sheet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:14px}
     .sheet-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+    .sheet-card.excluded-card{border-color:var(--warning);background:color-mix(in oklab,var(--warning) 6%,var(--bg))}
     .sheet-code{font-size:13px;font-weight:700;margin-bottom:2px}
     .sheet-rows{font-size:12px;color:var(--muted)}
-
-    /* ── Download row ──────────────────────────────────────────── */
     .download-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-
-    /* ── Theme toggle ──────────────────────────────────────────── */
     .theme-btn{padding:7px;border-radius:var(--radius-sm);color:var(--muted);border:1px solid var(--border)}
     .theme-btn:hover{color:var(--text);background:var(--surface-2,var(--bg))}
-
-    @media(max-width:600px){
-      main{padding:16px 14px}
-      .app-header{padding:12px 16px}
-    }
+    @media(max-width:600px){main{padding:16px 14px}.app-header{padding:12px 16px}}
   </style>
 </head>
 <body>
@@ -149,7 +121,6 @@
 
 <main>
 
-  <!-- HOW IT WORKS -->
   <div class="panel">
     <h2>How it works</h2>
     <p class="sub">Upload one or more 3093 SLA detail CSV exports. The converter reads the German column headers, applies the <strong>Compare_Dir breach rule</strong> (dir=1: breach when numerator &lt; denominator&#x3B; dir=&#x2212;1: breach when numerator &gt; 0), and outputs a <strong>V2-structured .xlsx</strong> file with one sheet per SLA code &#x2014; identical to the format expected by Breaches Tracker and Combined Analyzer.</p>
@@ -158,11 +129,10 @@
       <span>&#x2705; DATE_CLOSE, Priority, Status, Tool mapped directly</span>
       <span>&#x2705; One sheet per SLA code (KSL-2a, KSL-3a, KM-1, KSL-4 &hellip;)</span>
       <span>&#x2705; Manual columns (Agent, BMS ID, Comment &hellip;) left blank &#x2014; ready to fill</span>
-      <span>&#x26A0;&#xFE0F; Only rows from March, April, May are included</span>
+      <span>&#x2705; Rows outside Mar&ndash;May or with missing data go to a <strong>_Excluded</strong> sheet &mdash; no data is lost</span>
     </div>
   </div>
 
-  <!-- UPLOAD -->
   <div class="panel">
     <h2>Upload 3093 CSV files</h2>
     <p class="sub">Drop one or more monthly exports. Month is auto-detected from the close date (Element geschlossen am).</p>
@@ -181,7 +151,6 @@
     </div>
   </div>
 
-  <!-- COLUMN MAPPING PREVIEW -->
   <div class="panel" id="mappingPanel" hidden>
     <h2>Column mapping preview</h2>
     <p class="sub">How each V2 output column is populated from the 3093 source. Verify before converting.</p>
@@ -207,23 +176,14 @@
     </div>
   </div>
 
-  <!-- RESULTS -->
   <div class="panel" id="resultsPanel" hidden>
     <h2>Conversion results</h2>
-    <p class="sub">Rows successfully converted, skipped (outside Mar&#x2013;May or missing ticket), and the sheet breakdown.</p>
-
+    <p class="sub">Rows successfully converted and the sheet breakdown. Rows outside Mar&ndash;May or with missing data are preserved in the <strong>_Excluded</strong> sheet.</p>
     <div class="val-grid" id="valGrid"></div>
-
     <div style="margin-top:20px">
       <p style="font-size:13px;font-weight:600;margin-bottom:10px">Sheets in output file</p>
       <div class="sheet-grid" id="sheetGrid"></div>
     </div>
-
-    <div id="skipLogWrap" hidden style="margin-top:16px">
-      <p style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--warning)">&#x26A0;&#xFE0F; Skipped rows (first 50)</p>
-      <div class="skip-log" id="skipLog"></div>
-    </div>
-
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--divider)">
       <div class="download-row">
         <button class="btn btn-primary" id="downloadBtn">
@@ -232,14 +192,13 @@
         </button>
         <span id="downloadName" style="font-size:13px;color:var(--muted)"></span>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:10px">The downloaded file has the same structure as your native V2 breach files and can be loaded directly into <a href="./index.html">Breaches Tracker</a>.</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">The downloaded file has the same structure as your native V2 breach files and can be loaded directly into <a href="./index.html">Breaches Tracker</a>. The <strong>_Excluded</strong> sheet contains all rows that fell outside Mar&ndash;May or had missing data, with a <em>Skip_Reason</em> column explaining why.</p>
     </div>
   </div>
 
 </main>
 
 <script>
-// ── Constants ───────────────────────────────────────────────────────────────
 const MONTHS_VALID = ['March','April','May'];
 
 const OUT_COLS = [
@@ -267,7 +226,7 @@ const COL_MAP = [
   { v2:'TOPIC',              src:'KM Anwendung',                         method:'Direct map' },
   { v2:'SLA_Code',           src:'SLA Kennzahl',                         method:'Direct map' },
   { v2:'SLA_N',              src:'SLA Kennzahl',                         method:'Derived (code lookup)' },
-  { v2:'Breach_Description', src:'SLA Kennzahl Name',                   method:'Direct map' },
+  { v2:'Breach_Description', src:'SLA Kennzahl Name',                    method:'Direct map' },
   { v2:'DATE_TIME_Breach',   src:'\u2014 (computed)',                    method:'Derived (close date when breach=true)' },
   { v2:'COMPASS ID',         src:'\u2014',                               method:'Empty (fill manually)' },
   { v2:'Reason',             src:'\u2014',                               method:'Empty (fill manually)' },
@@ -282,12 +241,10 @@ const COL_MAP = [
   { v2:'Unique',             src:'\u2014',                               method:'Empty (fill manually)' },
 ];
 
-// ── State ───────────────────────────────────────────────────────────────────
 let parsedRows  = [];
 let convertedWB = null;
 let sampleRow   = null;
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
 function monthFromDateStr(s) {
   if (!s) return null;
   const clean = String(s).replace(/\//g,'-');
@@ -332,7 +289,6 @@ function colLetter(idx){
   return s;
 }
 
-// ── File parsing ─────────────────────────────────────────────────────────────
 async function loadFiles(files){
   parsedRows=[];
   let totalRaw=0;
@@ -350,7 +306,6 @@ async function loadFiles(files){
   convertedWB=null;
 }
 
-// ── Mapping preview ──────────────────────────────────────────────────────────
 function buildMappingPreview(){
   const tbody=document.getElementById('mappingBody');
   tbody.innerHTML=COL_MAP.map(m=>{
@@ -365,39 +320,41 @@ function buildMappingPreview(){
   }).join('');
 }
 
-// ── Conversion ───────────────────────────────────────────────────────────────
 function convert(){
   const statusEl=document.getElementById('convertStatus');
   statusEl.textContent='Converting\u2026';
   setTimeout(()=>{
     const sheets={};
-    let converted=0,skipped=0;
-    const skipLog=[];
+    const excludedRows=[]; // raw 3093 rows that don't qualify for a V2 sheet
+    let converted=0;
+
+    // Collect all original column names for the _Excluded sheet header
+    const rawHeaders = parsedRows.length ? Object.keys(parsedRows[0]) : [];
 
     parsedRows.forEach(row=>{
       const ticket=String(row['Incident Ticket']||'').trim();
       const sla   =String(row['SLA Kennzahl']   ||'').trim();
       const closed=String(row['Element geschlossen am']||'').trim();
 
+      // Skip pure header-echo rows silently
       if(ticket==='Incident Ticket'||sla==='SLA Kennzahl') return;
 
+      // ── Exclusion checks: collect reason instead of dropping ──
       if(!ticket||!ticket.startsWith('INC')){
-        skipped++;
-        if(skipLog.length<50) skipLog.push({ticket:ticket||'(blank)',reason:'No valid INC ticket'});
+        excludedRows.push({...row, Skip_Reason:'No valid INC ticket'});
         return;
       }
       if(!sla){
-        skipped++;
-        if(skipLog.length<50) skipLog.push({ticket,reason:'Missing SLA code'});
+        excludedRows.push({...row, Skip_Reason:'Missing SLA code'});
         return;
       }
       const month=monthFromDateStr(closed);
       if(!MONTHS_VALID.includes(month)){
-        skipped++;
-        if(skipLog.length<50) skipLog.push({ticket,reason:`Close date outside Mar\u2013May (${month||'unknown'}: ${closed.slice(0,10)})`});
+        excludedRows.push({...row, Skip_Reason:`Close date outside Mar\u2013May (${month||'unknown'}: ${closed.slice(0,10)})` });
         return;
       }
 
+      // ── Passes all checks: build V2 output row ──
       const breach=isBreach(row);
       const closedSerial=toExcelSerial(closed);
 
@@ -424,6 +381,7 @@ function convert(){
       converted++;
     });
 
+    // ── Build workbook ──────────────────────────────────────────
     const wb=XLSX.utils.book_new();
 
     // Instructions sheet
@@ -435,9 +393,13 @@ function convert(){
       ['Each sheet = one SLA code from the 3093 source.'],
       ['Manual columns (Agent, BMS ID, Comment, AOS Issue, Jira, Week, Unique) are left blank.'],
       ['Excluded column defaults to 0. Set to 1 to exclude a row from breach counts.'],
+      [''],
+      ['The _Excluded sheet contains all rows that were outside Mar\u2013May or had missing data.'],
+      ['Use the Skip_Reason column to understand why each row was not converted.'],
     ]);
     XLSX.utils.book_append_sheet(wb,instrSheet,'Instructions');
 
+    // SLA code sheets (sorted)
     const sheetSummary={};
     Object.entries(sheets).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([sla,rows])=>{
       const aoa=[OUT_COLS.slice()];
@@ -464,32 +426,36 @@ function convert(){
       sheetSummary[sla]=rows.length;
     });
 
+    // _Excluded sheet — raw 3093 columns + Skip_Reason appended
+    if(excludedRows.length>0){
+      const exHeaders=[...rawHeaders,'Skip_Reason'];
+      const exAoa=[exHeaders,...excludedRows.map(r=>exHeaders.map(h=>r[h]!==undefined?r[h]:''))];
+      const exWs=XLSX.utils.aoa_to_sheet(exAoa);
+      XLSX.utils.book_append_sheet(wb,exWs,'_Excluded');
+    }
+
     convertedWB=wb;
 
-    const valGrid=document.getElementById('valGrid');
+    // ── Results UI ──────────────────────────────────────────────
     const totalIn=parsedRows.filter(r=>r['Incident Ticket']&&String(r['Incident Ticket']).startsWith('INC')).length;
     const sheetCount=Object.keys(sheets).length;
     const breachCount=Object.values(sheets).flat().filter(r=>r['DATE_TIME_Breach']!=='').length;
 
-    valGrid.innerHTML=[
-      {num:totalIn.toLocaleString(),     label:'Input rows (INC tickets)',  cls:'num-ok'},
-      {num:converted.toLocaleString(),   label:'Rows converted (Mar\u2013May)',cls:'num-ok'},
-      {num:skipped.toLocaleString(),     label:'Rows skipped',              cls:skipped>0?'num-warn':'num-ok'},
-      {num:sheetCount,                   label:'SLA code sheets',           cls:'num-ok'},
-      {num:breachCount.toLocaleString(), label:'Breach rows',               cls:'num-ok'},
+    document.getElementById('valGrid').innerHTML=[
+      {num:totalIn.toLocaleString(),          label:'Input rows (INC tickets)',    cls:'num-ok'},
+      {num:converted.toLocaleString(),        label:'Rows converted (Mar\u2013May)',cls:'num-ok'},
+      {num:excludedRows.length.toLocaleString(), label:'Rows in _Excluded sheet',  cls:excludedRows.length>0?'num-warn':'num-ok'},
+      {num:sheetCount,                        label:'SLA code sheets',             cls:'num-ok'},
+      {num:breachCount.toLocaleString(),      label:'Breach rows',                 cls:'num-ok'},
     ].map(c=>`<div class="val-card"><div class="val-num ${c.cls}">${c.num}</div><div class="val-label">${c.label}</div></div>`).join('');
 
-    document.getElementById('sheetGrid').innerHTML=Object.entries(sheetSummary)
+    // Sheet cards: SLA sheets first, then _Excluded highlighted
+    let sheetHtml=Object.entries(sheetSummary)
       .map(([sla,n])=>`<div class="sheet-card"><div class="sheet-code">${escHtml(sla)}</div><div class="sheet-rows">${n.toLocaleString()} rows</div></div>`).join('');
-
-    if(skipLog.length>0){
-      document.getElementById('skipLogWrap').hidden=false;
-      document.getElementById('skipLog').innerHTML=skipLog.map(s=>
-        `<div>\uD83D\uDEAB <strong>${escHtml(s.ticket)}</strong> \u2014 <span class="reason">${escHtml(s.reason)}</span></div>`
-      ).join('');
-    } else {
-      document.getElementById('skipLogWrap').hidden=true;
+    if(excludedRows.length>0){
+      sheetHtml+=`<div class="sheet-card excluded-card"><div class="sheet-code">_Excluded</div><div class="sheet-rows">${excludedRows.length.toLocaleString()} rows &mdash; see Skip_Reason</div></div>`;
     }
+    document.getElementById('sheetGrid').innerHTML=sheetHtml;
 
     const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
     const fname=`V2-converted-${today}.xlsx`;
@@ -497,11 +463,10 @@ function convert(){
     document.getElementById('downloadBtn').onclick=()=>XLSX.writeFile(convertedWB,fname);
     document.getElementById('resultsPanel').hidden=false;
     document.getElementById('resultsPanel').scrollIntoView({behavior:'smooth',block:'start'});
-    statusEl.textContent=`Done \u2014 ${converted.toLocaleString()} rows in ${sheetCount} sheets.`;
+    statusEl.textContent=`Done \u2014 ${converted.toLocaleString()} rows in ${sheetCount} sheets${excludedRows.length>0?' (+'+excludedRows.length+' in _Excluded)':''}.`;
   },50);
 }
 
-// ── Event wiring ─────────────────────────────────────────────────────────────
 const dropZone=document.getElementById('dropZone');
 const csvInput=document.getElementById('csvInput');
 dropZone.addEventListener('click',()=>csvInput.click());
@@ -511,7 +476,6 @@ dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remov
 csvInput.addEventListener('change',e=>{if(e.target.files.length)loadFiles(Array.from(e.target.files));});
 document.getElementById('convertBtn').addEventListener('click',convert);
 
-// ── Theme toggle ──────────────────────────────────────────────────────────────
 (function(){
   const t=document.querySelector('[data-theme-toggle]');
   const r=document.documentElement;
