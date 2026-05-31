@@ -129,14 +129,14 @@
       <span>&#x2705; DATE_CLOSE, Priority, Status, Tool mapped directly</span>
       <span>&#x2705; One sheet per SLA code (KSL-2a, KSL-3a, KM-1, KSL-4 &hellip;)</span>
       <span>&#x2705; Manual columns (Agent, BMS ID, Comment &hellip;) left blank &#x2014; ready to fill</span>
-      <span>&#x2705; All tickets from the official export accepted &mdash; no ticket format filtering</span>
-      <span>&#x2705; Rows outside Mar&ndash;May or missing SLA code go to a <strong>_Excluded</strong> sheet &mdash; no data is lost</span>
+      <span>&#x2705; All rows from the official export accepted regardless of close date</span>
+      <span>&#x2705; Only blank ticket numbers or missing SLA code go to a <strong>_Excluded</strong> sheet &mdash; no data is lost</span>
     </div>
   </div>
 
   <div class="panel">
     <h2>Upload 3093 CSV files</h2>
-    <p class="sub">Drop one or more monthly exports. Month is auto-detected from the close date (Element geschlossen am).</p>
+    <p class="sub">Drop one or more monthly exports. All close dates are accepted.</p>
     <label class="drop-zone" id="dropZone">
       <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" color="var(--muted)">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -179,7 +179,7 @@
 
   <div class="panel" id="resultsPanel" hidden>
     <h2>Conversion results</h2>
-    <p class="sub">Rows successfully converted and the sheet breakdown. Rows outside Mar&ndash;May or with a missing SLA code are preserved in the <strong>_Excluded</strong> sheet.</p>
+    <p class="sub">Rows successfully converted and the sheet breakdown. Only rows with a blank ticket number or missing SLA code are preserved in the <strong>_Excluded</strong> sheet.</p>
     <div class="val-grid" id="valGrid"></div>
     <div style="margin-top:20px">
       <p style="font-size:13px;font-weight:600;margin-bottom:10px">Sheets in output file</p>
@@ -193,15 +193,13 @@
         </button>
         <span id="downloadName" style="font-size:13px;color:var(--muted)"></span>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:10px">The downloaded file has the same structure as your native V2 breach files and can be loaded directly into <a href="./index.html">Breaches Tracker</a>. The <strong>_Excluded</strong> sheet contains rows outside Mar&ndash;May or with a missing SLA code, with a <em>Skip_Reason</em> column.</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">The downloaded file has the same structure as your native V2 breach files and can be loaded directly into <a href="./index.html">Breaches Tracker</a>. The <strong>_Excluded</strong> sheet now only contains rows with a blank ticket number or missing SLA code, with a <em>Skip_Reason</em> column.</p>
     </div>
   </div>
 
 </main>
 
 <script>
-const MONTHS_VALID = ['March','April','May'];
-
 const OUT_COLS = [
   'Incident Ticket','DATE_CLOSE','Status','Queue','Priority',
   'ISO_Language','Tool','TOPIC','SLA_Code','SLA_N',
@@ -246,21 +244,11 @@ let parsedRows  = [];
 let convertedWB = null;
 let sampleRow   = null;
 
-// Strip BOM, non-breaking spaces and zero-width chars, then trim
 function normalize(s) {
   return String(s === undefined || s === null ? '' : s)
     .replace(/^\uFEFF/, '')
     .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, ' ')
     .trim();
-}
-
-function monthFromDateStr(s) {
-  if (!s) return null;
-  const clean = normalize(s).replace(/\//g,'-');
-  const d = new Date(clean);
-  if (isNaN(d.getTime())) return null;
-  return ['January','February','March','April','May','June',
-          'July','August','September','October','November','December'][d.getMonth()];
 }
 
 function isBreach(row) {
@@ -344,24 +332,14 @@ function convert(){
       const sla    = normalize(row['SLA Kennzahl']);
       const closed = normalize(row['Element geschlossen am']);
 
-      // Silently drop repeated header rows only
       if(ticket==='Incident Ticket'||sla==='SLA Kennzahl') return;
 
-      // Only two exclusion conditions remain:
-      // 1. Blank ticket number (truly empty row)
       if(!ticket){
         excludedRows.push({...row, Skip_Reason:'Blank ticket number'});
         return;
       }
-      // 2. Missing SLA code
       if(!sla){
         excludedRows.push({...row, Skip_Reason:'Missing SLA code'});
-        return;
-      }
-      // 3. Close date outside March–May
-      const month=monthFromDateStr(closed);
-      if(!MONTHS_VALID.includes(month)){
-        excludedRows.push({...row, Skip_Reason:`Close date outside Mar\u2013May (${month||'unknown'}: ${closed.slice(0,10)})`});
         return;
       }
 
@@ -402,7 +380,8 @@ function convert(){
       ['Manual columns (Agent, BMS ID, Comment, AOS Issue, Jira, Week, Unique) are left blank.'],
       ['Excluded column defaults to 0. Set to 1 to exclude a row from breach counts.'],
       [''],
-      ['The _Excluded sheet contains rows outside Mar\u2013May or with a missing/blank SLA code or ticket.'],
+      ['All close dates are accepted.'],
+      ['The _Excluded sheet contains only rows with a blank ticket number or missing SLA code.'],
       ['Use the Skip_Reason column to understand why each row was not converted.'],
     ]);
     XLSX.utils.book_append_sheet(wb,instrSheet,'Instructions');
@@ -447,11 +426,11 @@ function convert(){
     const breachCount=Object.values(sheets).flat().filter(r=>r['DATE_TIME_Breach']!=='').length;
 
     document.getElementById('valGrid').innerHTML=[
-      {num:totalIn.toLocaleString(),             label:'Input rows (with ticket)',     cls:'num-ok'},
-      {num:converted.toLocaleString(),           label:'Rows converted (Mar\u2013May)', cls:'num-ok'},
-      {num:excludedRows.length.toLocaleString(), label:'Rows in _Excluded sheet',      cls:excludedRows.length>0?'num-warn':'num-ok'},
-      {num:sheetCount,                           label:'SLA code sheets',              cls:'num-ok'},
-      {num:breachCount.toLocaleString(),         label:'Breach rows',                  cls:'num-ok'},
+      {num:totalIn.toLocaleString(),             label:'Input rows (with ticket)', cls:'num-ok'},
+      {num:converted.toLocaleString(),           label:'Rows converted',            cls:'num-ok'},
+      {num:excludedRows.length.toLocaleString(), label:'Rows in _Excluded sheet',  cls:excludedRows.length>0?'num-warn':'num-ok'},
+      {num:sheetCount,                           label:'SLA code sheets',          cls:'num-ok'},
+      {num:breachCount.toLocaleString(),         label:'Breach rows',              cls:'num-ok'},
     ].map(c=>`<div class="val-card"><div class="val-num ${c.cls}">${c.num}</div><div class="val-label">${c.label}</div></div>`).join('');
 
     let sheetHtml=Object.entries(sheetSummary)
