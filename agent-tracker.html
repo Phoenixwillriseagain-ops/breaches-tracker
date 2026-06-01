@@ -213,7 +213,7 @@
         <h3>Filters</h3>
         <div class="filter-block">
           <label>Search agent</label>
-          <input type="text" id="filter-agent-name" placeholder="Type name…">
+          <input type="text" id="filter-agent-name" placeholder="Type name&hellip;">
           <label>KPI</label>
           <select id="filter-kpi"><option value="All">All</option></select>
           <label>Reason</label>
@@ -230,9 +230,9 @@
           </select>
           <label>Sort leaderboard by</label>
           <select id="filter-sort">
-            <option value="net">Net breaches ↓</option>
-            <option value="raw">Raw breaches ↓</option>
-            <option value="name">Agent name A→Z</option>
+            <option value="net">Net breaches &darr;</option>
+            <option value="raw">Raw breaches &darr;</option>
+            <option value="name">Agent name A&rarr;Z</option>
           </select>
         </div>
       </div>
@@ -292,15 +292,11 @@ function normAgent(s){ var t=String(s||'').trim(); return NAME_MAP[t]||t; }
 var _raw         = [];
 var _currentTab  = 'leaderboard';
 var _detailAgent = null;
-var _kpiSortCol  = {}; // per-KPI sort state {col, dir}
-var _lbSortCol   = 'net'; // leaderboard sort column override
+var _kpiSortCol  = {};
+var _lbSortCol   = 'net';
 var _lbSortDir   = -1;
 
 /* ─── CSV util ─── */
-function toCSV(headers, rows) {
-  function esc(v){ var s=String(v==null?'':v); return s.includes(',')|| s.includes('"')|| s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s; }
-  return [headers.map(esc).join(',')].concat(rows.map(function(r){return headers.map(function(h){return esc(r[h]!=null?r[h]:(r[headers.indexOf(h)]!=null?r[headers.indexOf(h)]:''));}).join(',')})).join('\n');
-}
 function downloadCSV(filename, content){
   var a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(content);
@@ -414,7 +410,7 @@ function sortAgentsByKey(agents, col, dir){
     if(col==='name') return dir*a.name.localeCompare(b.name);
     if(col==='raw')  return dir*(b.total-a.total);
     if(col==='excl') return dir*(b.excluded-a.excluded);
-    return dir*(b.net-a.net); // default: net
+    return dir*(b.net-a.net);
   });
 }
 
@@ -423,7 +419,6 @@ function render(){
   var filtered=applyFilters(_raw);
   var agentMap=buildAgentMap(filtered);
   var sortKey =getFilters().sort;
-  // Map sidebar sort selector to col/dir
   if(sortKey==='name'){_lbSortCol='name';_lbSortDir=1;}
   else if(sortKey==='raw'){_lbSortCol='raw';_lbSortDir=-1;}
   else {_lbSortCol='net';_lbSortDir=-1;}
@@ -453,10 +448,10 @@ function kpiCard(cls,lbl,val,sub){
 function renderTab(agents,filtered){
   var el=document.getElementById('at-tab-content');
   if(_detailAgent){el.innerHTML=buildDetailPanel(_detailAgent);return;}
-  if(_currentTab==='leaderboard')     el.innerHTML=buildLeaderboard(agents,filtered);
+  if(_currentTab==='leaderboard')        el.innerHTML=buildLeaderboard(agents,filtered);
   else if(_currentTab==='kpi-breakdown') el.innerHTML=buildKpiBreakdown(filtered);
-  else if(_currentTab==='trends')     el.innerHTML=buildTrends(filtered);
-  else if(_currentTab==='tickets')    el.innerHTML=buildAllTickets(filtered);
+  else if(_currentTab==='trends')        el.innerHTML=buildTrends(filtered);
+  else if(_currentTab==='tickets')       el.innerHTML=buildAllTickets(filtered);
 }
 
 /* ══════════════════════════════════════════════
@@ -466,7 +461,6 @@ function buildLeaderboard(agents, filtered){
   if(!agents.length) return '<div class="empty-state">No agent breach data found with current filters.</div>';
   var maxNet=Math.max.apply(null,agents.map(function(a){return a.net;}))||1;
 
-  /* Column headers with sort links */
   var headerRow='<div class="agent-row header">'+
     '<div>#</div>'+
     '<div><button class="sort-hdr" data-col="name" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-family:inherit;padding:0">Agent</button></div>'+
@@ -560,23 +554,17 @@ function buildDetailPanel(agentName){
 }
 
 /* ══════════════════════════════════════════════
-   TAB 2 — KPI BREAKDOWN  (bar chart + sortable table side-by-side)
+   TAB 2 — KPI BREAKDOWN
 ══════════════════════════════════════════════ */
 function buildKpiBreakdown(filtered){
   var KPIs=['KSL-5a','KM-1','KM-2','KSL-4'];
   var kpiColors={'KSL-5a':'#964219','KM-1':'#006494','KM-2':'#7a39bb','KSL-4':'#1a6e3c'};
-  var kpiDesc={
-    'KSL-5a':'Communication Quality',
-    'KM-1':  'Reopen Analysis',
-    'KM-2':  'Assign Back',
-    'KSL-4': 'Related Incident Linking'
-  };
+  var kpiDesc={'KSL-5a':'Communication Quality','KM-1':'Reopen Analysis','KM-2':'Assign Back','KSL-4':'Related Incident Linking'};
   var cards=KPIs.map(function(kpi){
     var kpiRows=filtered.filter(function(r){return r.kpi===kpi&&!r.excluded;});
     if(!kpiRows.length) return '<div class="sc"><div class="sc-head"><h2>'+_esc(kpi)+'</h2><span class="badge">0 active breaches</span></div><div class="sc-body"><p style="color:var(--muted);font-size:12px">No active breaches with current filters.</p></div></div>';
     var aMap={};
     kpiRows.forEach(function(r){if(r.agent)aMap[r.agent]=(aMap[r.agent]||0)+1;});
-    /* Get sort state for this KPI */
     var ss=_kpiSortCol[kpi]||{col:'count',dir:-1};
     var tableRows=Object.entries(aMap).map(function(e,i){
       return {rank:i+1,agent:e[0],count:e[1],pct:kpiRows.length?Math.round(e[1]/kpiRows.length*100):0};
@@ -589,7 +577,6 @@ function buildKpiBreakdown(filtered){
     tableRows.forEach(function(r,i){r.rank=i+1;});
     var maxV=tableRows.length?tableRows[0].count:1;
     var color=kpiColors[kpi]||'var(--primary)';
-    /* Bar chart (sorted by count desc always for visual) */
     var barsSorted=tableRows.slice().sort(function(a,b){return b.count-a.count;});
     var bars=barsSorted.map(function(e){
       return '<div class="bar-row">'+
@@ -597,7 +584,6 @@ function buildKpiBreakdown(filtered){
         '<div class="bar-track"><div class="bar-fill2" style="width:'+Math.round(e.count/maxV*100)+'%;background:'+color+'"></div></div>'+
         '<div class="bar-cnt">'+e.count+'</div></div>';
     }).join('');
-    /* Table */
     function thSort(col,label){
       var active=ss.col===col;
       var arrow=active?(ss.dir===-1?' ↓':' ↑'):'';
@@ -611,12 +597,9 @@ function buildKpiBreakdown(filtered){
         '<td style="text-align:center;color:var(--muted)">'+r.pct+'%</td>'+
       '</tr>';
     }).join('');
-    var tableHtml=
-      '<table class="dt" style="width:100%"><thead><tr>'+
-        '<th style="text-align:center;width:28px">#</th>'+
-        thSort('agent','Agent')+
-        thSort('count','Breaches')+
-        thSort('pct','% of KPI')+
+    var tableHtml='<table class="dt" style="width:100%"><thead><tr>'+
+      '<th style="text-align:center;width:28px">#</th>'+
+      thSort('agent','Agent')+thSort('count','Breaches')+thSort('pct','% of KPI')+
       '</tr></thead><tbody>'+tRows+'</tbody></table>';
     return '<div class="sc">'+
       '<div class="sc-head">'+
@@ -627,7 +610,7 @@ function buildKpiBreakdown(filtered){
       '</div>'+
       '<div class="kpi-split">'+
         '<div class="kpi-split-left"><div class="bar-chart">'+bars+'</div></div>'+
-        '<div class="kpi-split-right">'+tableHtml+'<p style="font-size:10px;color:var(--faint);margin-top:6px">Click agent name to view full detail. Click column header to sort.</p></div>'+
+        '<div class="kpi-split-right">'+tableHtml+'<p style="font-size:10px;color:var(--faint);margin-top:6px">Click agent name for full detail. Click column to sort.</p></div>'+
       '</div></div>';
   }).join('');
   return '<div style="display:flex;flex-direction:column;gap:20px">'+cards+'</div>';
@@ -779,8 +762,7 @@ function exportTrends(){
     var cols=weeks.map(function(w){var v=matrix[a][w];total+=v;return v;});
     return [a].concat(cols).concat([total]);
   });
-  var lines=[header].concat(rows);
-  downloadCSV('agent-weekly-trends.csv',lines.map(function(r){return r.map(function(v){return csvEsc(v);}).join(',');}).join('\n'));
+  downloadCSV('agent-weekly-trends.csv',[header].concat(rows).map(function(r){return r.map(function(v){return csvEsc(v);}).join(',');}).join('\n'));
 }
 function exportAllTickets(){
   var filtered=applyFilters(_raw);
@@ -806,7 +788,12 @@ function csvEsc(v){var s=String(v==null?'':v);return s.includes(',')||s.includes
    PUBLIC API
 ══════════════════════════════════════════════ */
 window.AT={
-  openDetail:function(name){_detailAgent=name;_currentTab='leaderboard';document.querySelectorAll('#at-tab-bar .rpt-tab').forEach(function(b){b.classList.remove('active');});document.querySelector('.rpt-tab[data-tab="leaderboard"]').classList.add('active');render();},
+  openDetail:function(name){
+    _detailAgent=name;_currentTab='leaderboard';
+    document.querySelectorAll('#at-tab-bar .rpt-tab').forEach(function(b){b.classList.remove('active');});
+    document.querySelector('.rpt-tab[data-tab="leaderboard"]').classList.add('active');
+    render();
+  },
   closeDetail:function(){_detailAgent=null;render();},
   resetFilters:function(){
     document.getElementById('filter-agent-name').value='';
@@ -817,4 +804,94 @@ window.AT={
   },
   sortKpiTable:function(kpi,col){
     var ss=_kpiSortCol[kpi]||{col:'count',dir:-1};
-    if(ss.col===col) ss.dir=ss.
+    if(ss.col===col) ss.dir=ss.dir*-1;
+    else ss={col:col,dir:-1};
+    _kpiSortCol[kpi]=ss;
+    render();
+  },
+  exportCurrentTab:function(){
+    if(_currentTab==='leaderboard'||_detailAgent) exportLeaderboard();
+    else if(_currentTab==='kpi-breakdown') exportKpiTable('KSL-5a');
+    else if(_currentTab==='trends') exportTrends();
+    else if(_currentTab==='tickets') exportAllTickets();
+  },
+  exportLeaderboard: exportLeaderboard,
+  exportKpiTable:    exportKpiTable,
+  exportTrends:      exportTrends,
+  exportAllTickets:  exportAllTickets,
+  exportAgentDetail: exportAgentDetail
+};
+
+/* ══════════════════════════════════════════════
+   INIT — wire up all events on DOMContentLoaded
+══════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function(){
+
+  /* Upload button → trigger file input */
+  var importBtn = document.getElementById('at-import-btn');
+  var fileInput = document.getElementById('at-file-input');
+  importBtn.addEventListener('click', function(){ fileInput.value=''; fileInput.click(); });
+
+  /* File input change */
+  fileInput.addEventListener('change', function(){
+    if(fileInput.files&&fileInput.files[0]) parseFile(fileInput.files[0]);
+  });
+
+  /* Drop zone click */
+  var dropZone = document.getElementById('at-drop-zone');
+  dropZone.addEventListener('click', function(){ fileInput.value=''; fileInput.click(); });
+
+  /* Drag-and-drop */
+  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', function(e){
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+    if(f) parseFile(f);
+  });
+
+  /* Clear button */
+  document.getElementById('at-clear-btn').addEventListener('click', function(){
+    _raw=[];_detailAgent=null;_kpiSortCol={};_lbSortCol='net';_lbSortDir=-1;
+    document.getElementById('at-upload-section').style.display='';
+    var ds=document.getElementById('at-data-section'); ds.style.display='none'; ds.classList.remove('visible');
+    document.getElementById('at-sidebar').style.display='none';
+    document.getElementById('at-clear-btn').style.display='none';
+    document.getElementById('at-export-btn').style.display='none';
+    document.getElementById('at-record-count').textContent='';
+    setStatus('','');
+  });
+
+  /* Tab switching */
+  document.getElementById('at-tab-bar').addEventListener('click', function(e){
+    var btn=e.target.closest('.rpt-tab');
+    if(!btn) return;
+    _currentTab=btn.dataset.tab;
+    _detailAgent=null;
+    document.querySelectorAll('#at-tab-bar .rpt-tab').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    if(_raw.length) render();
+  });
+
+  /* Leaderboard column sort (header buttons) */
+  document.addEventListener('click', function(e){
+    var btn=e.target.closest('.sort-hdr');
+    if(!btn) return;
+    var col=btn.dataset.col;
+    if(_lbSortCol===col) _lbSortDir=_lbSortDir*-1;
+    else { _lbSortCol=col; _lbSortDir=(col==='name'?1:-1); }
+    if(_raw.length) render();
+  });
+
+  /* Sidebar filter changes */
+  ['filter-agent-name','filter-kpi','filter-reason','filter-week','filter-queue','filter-excl','filter-sort'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.addEventListener(el.tagName==='INPUT'?'input':'change', function(){ if(_raw.length) render(); });
+  });
+
+});
+
+})();
+</script>
+</body>
+</html>
