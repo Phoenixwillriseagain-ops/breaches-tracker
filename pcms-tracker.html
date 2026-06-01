@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PCms Quality Tracker</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* PCms-specific overrides — inherits everything from styles.css */
+    .pcms-tabs { display:flex; gap:6px; padding:0 20px 0; border-bottom:1px solid var(--border); background:var(--surface); position:sticky; top:56px; z-index:90; }
+    .pcms-tab-btn { background:transparent; border:none; border-bottom:2px solid transparent; padding:12px 18px; cursor:pointer; font-size:13px; font-weight:500; color:var(--muted,#666); transition:all .2s; }
+    .pcms-tab-btn.active { color:var(--accent,#5b6ef5); border-bottom-color:var(--accent,#5b6ef5); }
+    .pcms-tab-btn:hover:not(.active) { color:var(--text); }
+    .pcms-section { max-width:1400px; margin:0 auto; padding:24px 20px; }
+    .pcms-hidden { display:none !important; }
+
+    /* Upload card */
+    .pcms-upload-card { max-width:520px; margin:50px auto; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:40px; text-align:center; }
+    .pcms-upload-card h2 { margin-bottom:10px; font-size:20px; }
+    .pcms-upload-sub { color:var(--muted); margin-bottom:26px; font-size:13px; line-height:1.6; }
+    .pcms-drop { display:block; cursor:pointer; border:2px dashed var(--border); border-radius:12px; padding:36px 20px; transition:all .2s; }
+    .pcms-drop:hover, .pcms-drop.drag-over { border-color:var(--accent,#5b6ef5); background:rgba(91,110,245,.05); }
+    .pcms-drop-icon { font-size:38px; margin-bottom:10px; }
+    .pcms-drop-text { color:var(--muted); line-height:1.8; font-size:13px; }
+    .pcms-drop-text span { color:var(--accent,#5b6ef5); text-decoration:underline; }
+    .pcms-status { margin-top:16px; padding:11px 14px; border-radius:8px; font-weight:500; font-size:13px; }
+    .pcms-status.ok  { background:rgba(76,175,125,.1); border:1px solid #4caf7d; color:#4caf7d; }
+    .pcms-status.err { background:rgba(224,92,92,.1);  border:1px solid #e05c5c; color:#e05c5c; }
+
+    /* Stats row */
+    .pcms-stats { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
+    .pcms-stat { flex:1; min-width:140px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+    .pcms-stat .lbl { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:4px; }
+    .pcms-stat .val { font-size:26px; font-weight:700; }
+    .pcms-stat.red  .val { color:#e05c5c; }
+    .pcms-stat.blue .val { color:var(--accent,#5b6ef5); }
+    .pcms-stat.grn  .val { color:#4caf7d; }
+    .pcms-stat.orn  .val { color:#f5a623; }
+
+    /* Filter toolbar */
+    .pcms-toolbar { display:flex; flex-wrap:wrap; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; margin-bottom:18px; align-items:flex-end; }
+    .pcms-fg { display:flex; flex-direction:column; gap:3px; }
+    .pcms-fg label { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+    .pcms-fg select, .pcms-fg input { background:var(--bg); border:1px solid var(--border); color:var(--text); padding:6px 10px; border-radius:7px; font-size:13px; min-width:130px; outline:none; }
+    .pcms-fg select:focus, .pcms-fg input:focus { border-color:var(--accent,#5b6ef5); }
+
+    /* Charts grid */
+    .pcms-charts { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+    .pcms-chart-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; }
+    .pcms-chart-card.wide { grid-column:span 2; }
+    .pcms-chart-card h3 { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:12px; }
+    .pcms-chart-card canvas { max-height:260px; }
+    .pcms-chart-card.wide canvas { max-height:190px; }
+
+    /* KO table */
+    .pcms-export-bar { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .pcms-count { color:var(--muted); font-size:13px; flex:1; }
+    .pcms-btn-exp { background:var(--accent,#5b6ef5); color:#fff; border:none; padding:7px 15px; border-radius:7px; cursor:pointer; font-size:13px; font-weight:600; transition:opacity .2s; }
+    .pcms-btn-exp:hover { opacity:.85; }
+    .pcms-btn-exp.grn { background:#4caf7d; }
+    .pcms-table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:auto; max-height:calc(100vh - 300px); }
+    .pcms-table-wrap table { width:100%; border-collapse:collapse; }
+    .pcms-table-wrap thead th { position:sticky; top:0; background:var(--surface); padding:10px 13px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; }
+    .pcms-table-wrap tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+    .pcms-table-wrap tbody tr:hover { background:var(--hover,rgba(0,0,0,.04)); }
+    .pcms-table-wrap tbody td { padding:9px 13px; font-size:13px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
+    .b-multi { background:rgba(245,166,35,.15); color:#f5a623; }
+    .b-single { background:rgba(76,175,125,.12); color:#4caf7d; }
+    .b-cat { background:rgba(91,110,245,.12); color:var(--accent,#5b6ef5); border-radius:6px; }
+
+    @media(max-width:768px) { .pcms-charts { grid-template-columns:1fr; } .pcms-chart-card.wide { grid-column:span 1; } }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SHARED NAV -->
+  <nav class="app-nav">
+    <a href="index.html">Breaches Tracker</a>
+    <a href="reporter.html">Reporter</a>
+    <a href="combined-analyzer.html">Combined Analyzer</a>
+    <a href="agent-tracker.html">Agent Tracker</a>
+    <a href="pcms-tracker.html" class="active">📋 PCms Tracker</a>
+  </nav>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="2"/>
+        <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/>
+      </svg>
+      PCms Quality Tracker
+    </div>
+    <div class="header-right">
+      <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- PCMS SUB-TABS -->
+  <div class="pcms-tabs">
+    <button class="pcms-tab-btn active" data-ptab="upload">📂 Upload</button>
+    <button class="pcms-tab-btn" data-ptab="overview">📊 Overview</button>
+    <button class="pcms-tab-btn" data-ptab="ko">🚨 KO Breaches</button>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="pcms-section" id="pt-upload">
+    <div class="pcms-upload-card">
+      <h2>Upload PCms Excel File</h2>
+      <p class="pcms-upload-sub">Upload the Excel file with the horizontal Summary sheet. The app converts it into a vertical breach tracker automatically.</p>
+      <label class="pcms-drop" id="pcmsDrop">
+        <div class="pcms-drop-icon">📁</div>
+        <div class="pcms-drop-text">Drop your .xlsx file here<br/><span>or click to browse</span></div>
+        <input type="file" id="pcmsFileInput" accept=".xlsx,.xls" hidden />
+      </label>
+      <div id="pcmsStatus" class="pcms-status pcms-hidden"></div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="pcms-section pcms-hidden" id="pt-overview">
+    <div class="pcms-toolbar">
+      <div class="pcms-fg"><label>Month</label><select id="pFMonth"><option value="">All Months</option></select></div>
+      <div class="pcms-fg"><label>Week</label><select id="pFWeek"><option value="">All Weeks</option></select></div>
+      <div class="pcms-fg"><label>Agent</label><select id="pFAgent"><option value="">All Agents</option></select></div>
+    </div>
+    <div class="pcms-stats" id="pcmsStats"></div>
+    <div class="pcms-charts">
+      <div class="pcms-chart-card"><h3>KO Breaches by Month</h3><canvas id="pcChartMonth"></canvas></div>
+      <div class="pcms-chart-card"><h3>Top KO Agents</h3><canvas id="pcChartAgent"></canvas></div>
+      <div class="pcms-chart-card wide"><h3>KO by Category</h3><canvas id="pcChartCat"></canvas></div>
+      <div class="pcms-chart-card wide"><h3>Weekly KO Trend</h3><canvas id="pcChartWeek"></canvas></div>
+    </div>
+  </div>
+
+  <!-- KO BREACHES -->
+  <div class="pcms-section pcms-hidden" id="pt-ko">
+    <div class="pcms-toolbar">
+      <div class="pcms-fg"><label>Month</label><select id="kFMonth"><option value="">All Months</option></select></div>
+      <div class="pcms-fg"><label>Week</label><select id="kFWeek"><option value="">All Weeks</option></select></div>
+      <div class="pcms-fg"><label>Agent</label><select id="kFAgent"><option value="">All Agents</option></select></div>
+      <div class="pcms-fg"><label>Category</label><select id="kFCat"><option value="">All Categories</option></select></div>
+      <div class="pcms-fg"><label>Search INC</label><input type="text" id="kFSearch" placeholder="INC000..." /></div>
+    </div>
+    <div class="pcms-export-bar">
+      <span class="pcms-count" id="pcmsKOCount">0 breaches</span>
+      <button class="pcms-btn-exp" id="pcmsExportCSV">⬇ Export CSV</button>
+      <button class="pcms-btn-exp grn" id="pcmsExportXLSX">⬇ Export Excel</button>
+    </div>
+    <div class="pcms-table-wrap">
+      <table>
+        <thead><tr>
+          <th>Month</th><th>Week</th><th>Ticket ID</th>
+          <th>Category</th><th>KO Description</th><th>Agent</th><th>Flag</th>
+        </tr></thead>
+        <tbody id="pcmsKOBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+(function(){
+'use strict';
+
+// ── Theme (reuse breaches-tracker pattern) ─────────────────────────────
+const saved = localStorage.getItem('pcms-theme') || localStorage.getItem('bt-theme') || 'light';
+document.documentElement.setAttribute('data-theme', saved);
+document.querySelector('[data-theme-toggle]').addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('pcms-theme', t);
+});
+
+// ── State ────────────────────────────────────────────────────────────────
+let rawRows = [], koRows = [], charts = {};
+
+const CATEGORY_COLS = [
+  '1. Valid Rejection','2. Communication','3. COMPASS Solution',
+  '4. Solution Linkage','5. Related Incident','6. Translation',
+  '7. State and State Reason','8. Documentation Traceability',
+  '9. Reasonable Ticket Processing','10. Service Efficiency','11. Other Errors'
+];
+
+// ── Sub-tab navigation ───────────────────────────────────────────────────
+document.querySelectorAll('.pcms-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pcms-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.pcms-section').forEach(s => s.classList.add('pcms-hidden'));
+    btn.classList.add('active');
+    document.getElementById('pt-' + btn.dataset.ptab).classList.remove('pcms-hidden');
+  });
+});
+
+// ── File upload ──────────────────────────────────────────────────────────
+const drop = document.getElementById('pcmsDrop');
+const fi   = document.getElementById('pcmsFileInput');
+drop.addEventListener('click', () => fi.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fi.addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try { parseWorkbook(XLSX.read(e.target.result, { type:'array' })); }
+    catch(err) { setStatus('Failed to read file: ' + err.message, true); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Parser ───────────────────────────────────────────────────────────────
+function parseWorkbook(wb) {
+  const sheetName = wb.SheetNames.find(n =>
+    n.toLowerCase().includes('summary') || n.toLowerCase().includes('overall')
+  ) || wb.SheetNames[0];
+  const ws   = wb.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  if (data.length < 2) { setStatus('Sheet appears empty.', true); return; }
+
+  // Find header row
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(10, data.length); i++) {
+    const r = data[i].map(c => String(c).toLowerCase());
+    if (r.some(c => c.includes('ticket') || c.includes('inc') || c.includes('week'))) { headerIdx = i; break; }
+  }
+  const headers = data[headerIdx].map(h => String(h).trim());
+
+  const weekCol   = headers.findIndex(h => h.toLowerCase().includes('week'));
+  const monthCol  = headers.findIndex(h => h.toLowerCase().includes('month'));
+  const ticketCol = headers.findIndex(h => h.toLowerCase().includes('ticket') || h.toLowerCase().includes('inc'));
+  if (ticketCol === -1) { setStatus('Cannot find Ticket ID column.', true); return; }
+
+  const catColMap = detectCategories(headers, ticketCol);
+  rawRows = [];
+
+  for (let i = headerIdx + 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.every(c => c === '')) continue;
+    const week   = weekCol  >= 0 ? String(row[weekCol]  || '').trim() : '';
+    const month  = monthCol >= 0 ? String(row[monthCol] || '').trim() : '';
+    const ticket = String(row[ticketCol] || '').trim();
+    if (!ticket) continue;
+
+    for (const { catNum, catLabel, rIdx, aIdx } of catColMap) {
+      const reason = rIdx >= 0 ? String(row[rIdx] || '').trim() : '';
+      const agentR = aIdx >= 0 ? String(row[aIdx] || '').trim() : '';
+      if (!reason && !agentR) continue;
+      const agents = agentR ? agentR.split(/[,;]/).map(a=>a.trim()).filter(Boolean) : ['Unknown'];
+      for (const agent of agents) {
+        rawRows.push({ week, month, ticket, catNum, catLabel, reason, agent,
+          isKO:  reason.toUpperCase().includes(' KO ') || reason.toUpperCase().startsWith('KO ') || /\.\s*KO\s/.test(reason),
+          isNOK: reason.toUpperCase().includes('NOK')
+        });
+      }
+    }
+  }
+
+  if (!rawRows.length) { setStatus('No breach data found. Check the Summary sheet format.', true); return; }
+  markDuplicates();
+  koRows = rawRows.filter(r => r.isKO);
+  populateFilters();
+  setStatus(`✅ Loaded ${rawRows.length} records (${koRows.length} KOs) from "${sheetName}"`);
+  document.querySelector('[data-ptab="overview"]').click();
+  renderOverview();
+  renderKOTable();
+}
+
+function detectCategories(headers, ticketCol) {
+  const result = [];
+  const pat = /^(\d{1,2})[\.\s]/;
+  for (let i = ticketCol + 1; i < headers.length; i++) {
+    const m = pat.exec(headers[i]);
+    if (m) {
+      const catNum = parseInt(m[1]);
+      const nextH  = (headers[i+1]||'').toLowerCase();
+      const aIdx   = (nextH===''||nextH.includes('agent')||nextH.includes('name')) ? i+1 : -1;
+      result.push({ catNum, catLabel: CATEGORY_COLS[catNum-1]||headers[i], rIdx:i, aIdx });
+      if (aIdx > 0) i++;
+    }
+  }
+  if (!result.length) {
+    let ci = ticketCol + 1;
+    for (let c = 0; c < 11 && ci < headers.length; c++) {
+      result.push({ catNum:c+1, catLabel:CATEGORY_COLS[c], rIdx:ci, aIdx:ci+1<headers.length?ci+1:-1 });
+      ci += 2;
+    }
+  }
+  return result;
+}
+
+function markDuplicates() {
+  rawRows.sort((a,b) => (parseInt(a.week)||0)-(parseInt(b.week)||0) || a.ticket.localeCompare(b.ticket));
+  const seen = new Map();
+  for (const r of rawRows) {
+    const k = `${r.ticket}||${r.agent}||${r.catNum}`;
+    r.isDuplicate = seen.has(k);
+    seen.set(k, true);
+  }
+  const ta = new Map();
+  for (const r of rawRows) if (!r.isDuplicate) {
+    if (!ta.has(r.ticket)) ta.set(r.ticket, new Set());
+    ta.get(r.ticket).add(r.agent);
+  }
+  for (const r of rawRows) r.isMultiAgent = (ta.get(r.ticket)||new Set()).size > 1;
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────
+function populateFilters() {
+  const months = [...new Set(rawRows.map(r=>r.month).filter(Boolean))];
+  const weeks  = [...new Set(rawRows.map(r=>r.week ).filter(Boolean))].sort((a,b)=>parseInt(a)-parseInt(b));
+  const agents = [...new Set(rawRows.map(r=>r.agent).filter(Boolean))].sort();
+  const cats   = [...new Set(rawRows.map(r=>r.catLabel).filter(Boolean))].sort();
+  fill('pFMonth',  sortMonths(months), 'All Months');
+  fill('pFWeek',   weeks,              'All Weeks');
+  fill('pFAgent',  agents,             'All Agents');
+  fill('kFMonth',  sortMonths(months), 'All Months');
+  fill('kFWeek',   weeks,              'All Weeks');
+  fill('kFAgent',  agents,             'All Agents');
+  fill('kFCat',    cats,               'All Categories');
+  ['pFMonth','pFWeek','pFAgent'].forEach(id => document.getElementById(id).onchange = renderOverview);
+  ['kFMonth','kFWeek','kFAgent','kFCat'].forEach(id => document.getElementById(id).onchange = renderKOTable);
+  document.getElementById('kFSearch').oninput = renderKOTable;
+}
+
+function fill(id, vals, ph) {
+  document.getElementById(id).innerHTML = `<option value="">${ph}</option>` + vals.map(v=>`<option value="${v}">${v}</option>`).join('');
+}
+
+function getORows() {
+  const m=gv('pFMonth'), w=gv('pFWeek'), a=gv('pFAgent');
+  return rawRows.filter(r => !r.isDuplicate && (!m||r.month===m) && (!w||r.week===w) && (!a||r.agent===a));
+}
+function getKRows() {
+  const m=gv('kFMonth'), w=gv('kFWeek'), a=gv('kFAgent'), c=gv('kFCat'), s=document.getElementById('kFSearch').value.toLowerCase();
+  return koRows.filter(r => !r.isDuplicate && (!m||r.month===m) && (!w||r.week===w) && (!a||r.agent===a) && (!c||r.catLabel===c) && (!s||r.ticket.toLowerCase().includes(s)));
+}
+const gv = id => document.getElementById(id).value;
+
+// ── Overview ──────────────────────────────────────────────────────────────
+function renderOverview() {
+  const rows = getORows(), ko = rows.filter(r=>r.isKO), nok = rows.filter(r=>r.isNOK);
+  const tickets = new Set(ko.map(r=>r.ticket)).size;
+  document.getElementById('pcmsStats').innerHTML = `
+    <div class="pcms-stat red"><div class="lbl">KO Breaches</div><div class="val">${ko.length}</div></div>
+    <div class="pcms-stat orn"><div class="lbl">NOK Breaches</div><div class="val">${nok.length}</div></div>
+    <div class="pcms-stat blue"><div class="lbl">Unique Tickets (KO)</div><div class="val">${tickets}</div></div>
+    <div class="pcms-stat grn"><div class="lbl">Total Records</div><div class="val">${rows.length}</div></div>
+  `;
+  buildChart('month', 'pcChartMonth', 'bar',  ko, 'month',    '#5b6ef5', false);
+  buildChart('agent', 'pcChartAgent', 'bar',  ko, 'agent',    '#e05c5c', true,  15);
+  buildChart('cat',   'pcChartCat',   'bar',  ko, 'catLabel', null,      false);
+  buildChart('week',  'pcChartWeek',  'line', ko, 'week',     '#4ecdc4', false);
+}
+
+const PALETTE=['#5b6ef5','#e05c5c','#4ecdc4','#f5a623','#a29bfe','#fd79a8','#00b894','#fdcb6e','#74b9ff','#e17055','#55efc4'];
+
+function buildChart(key, canvasId, type, rows, groupKey, color, horizontal, limit) {
+  if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+  let counts = {};
+  for (const r of rows) { const k=r[groupKey]||'?'; counts[k]=(counts[k]||0)+1; }
+  let entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  if (limit) entries = entries.slice(0, limit);
+  let labels = entries.map(e=>e[0]);
+  const values = entries.map(e=>e[1]);
+  if (groupKey==='month') labels = sortMonths(labels);
+  if (groupKey==='week')  labels = labels.sort((a,b)=>parseInt(a)-parseInt(b));
+  const reordered = labels.map(l => counts[l]||0);
+  const colors = color ? labels.map(()=>color) : PALETTE.slice(0,labels.length);
+  const cleanLabels = labels.map(l=>l.replace(/^\d+\.\s*/,''));
+  const cfg = {
+    type,
+    data: {
+      labels: cleanLabels,
+      datasets: type==='line'
+        ? [{ label:'KO', data:reordered, borderColor:color, backgroundColor:'rgba(78,205,196,.12)', fill:true, tension:.4, pointRadius:4 }]
+        : [{ label:'KO', data:reordered, backgroundColor:colors, borderRadius:5 }]
+    },
+    options: {
+      responsive:true, indexAxis: horizontal?'y':'x',
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{color:'var(--muted,#888)',font:{size:11}}, grid:{color:'var(--border,#ddd)'} },
+        y:{ ticks:{color:'var(--muted,#888)',font:{size:11}}, grid:{color:'var(--border,#ddd)'} }
+      }
+    }
+  };
+  charts[key] = new Chart(document.getElementById(canvasId), cfg);
+}
+
+// ── KO Table ──────────────────────────────────────────────────────────────
+function renderKOTable() {
+  const rows = getKRows();
+  document.getElementById('pcmsKOCount').textContent = `${rows.length} KO breach${rows.length!==1?'es':''}`;
+  const tbody = document.getElementById('pcmsKOBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">No KO breaches match the filters.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>${r.month}</td>
+    <td>W${r.week}</td>
+    <td style="font-family:monospace;font-size:12px">${r.ticket}</td>
+    <td><span class="badge b-cat">${r.catLabel.replace(/^\d+\.\s*/,'')}</span></td>
+    <td>${r.reason}</td>
+    <td><strong>${r.agent}</strong></td>
+    <td>${r.isMultiAgent?'<span class="badge b-multi">Multi-agent</span>':'<span class="badge b-single">Single</span>'}</td>
+  </tr>`).join('');
+}
+
+// ── Export ────────────────────────────────────────────────────────────────
+document.getElementById('pcmsExportCSV').onclick = () => {
+  const rows = getKRows(); if (!rows.length) return;
+  const hdr = 'Month,Week,Ticket ID,Category,KO Description,Agent,Flag\n';
+  const body = rows.map(r => [r.month,`W${r.week}`,r.ticket,r.catLabel,`"${r.reason}"`,r.agent,r.isMultiAgent?'Multi-agent':'Single'].join(',')).join('\n');
+  dl('PCms_KO_Breaches.csv','text/csv', hdr+body);
+};
+document.getElementById('pcmsExportXLSX').onclick = () => {
+  const rows = getKRows(); if (!rows.length) return;
+  const ws = XLSX.utils.json_to_sheet(rows.map(r=>({ Month:r.month, Week:`W${r.week}`, 'Ticket ID':r.ticket, Category:r.catLabel, 'KO Description':r.reason, Agent:r.agent, Flag:r.isMultiAgent?'Multi-agent':'Single' })));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'KO Breaches');
+  XLSX.writeFile(wb,'PCms_KO_Breaches.xlsx');
+};
+function dl(name,mime,content) {
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type:mime})); a.download=name; a.click();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function setStatus(msg, isErr) {
+  const el = document.getElementById('pcmsStatus');
+  el.textContent = msg; el.classList.remove('pcms-hidden','ok','err');
+  el.classList.add(isErr?'err':'ok');
+}
+const MORD=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function sortMonths(arr) {
+  return [...arr].sort((a,b) => {
+    const ia=MORD.findIndex(m=>a.includes(m)), ib=MORD.findIndex(m=>b.includes(m));
+    if(ia!==ib) return ia-ib;
+    return (parseInt(a.replace(/\D/g,''))||0)-(parseInt(b.replace(/\D/g,''))||0);
+  });
+}
+
+// Initialise theme toggle after script load
+(function initTheme(){
+  const btn = document.querySelector('[data-theme-toggle]');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const t = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('pcms-theme', t);
+  });
+})();
+
+})();
+</script>
+</body>
+</html>

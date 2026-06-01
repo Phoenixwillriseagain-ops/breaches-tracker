@@ -16,6 +16,7 @@
     <a href="reporter.html">Reporter</a>
     <a href="combined-analyzer.html">Combined Analyzer</a>
     <a href="agent-tracker.html">Agent Tracker</a>
+    <a href="pcms-tracker.html">📋 PCms Tracker</a>
   </nav>
 
   <!-- HEADER -->
@@ -41,7 +42,6 @@
   <div class="toolbar" style="display:none;">
     <div class="toolbar-left">
       <button class="btn-outline" id="import-btn" type="button">Import Breaches File</button>
-      <!-- multiple allows selecting several files at once -->
       <input type="file" id="file-input" accept=".csv,.xlsx,.xls" multiple
              style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
       <button class="btn-outline" id="clear-btn" type="button"
@@ -75,6 +75,15 @@
           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
         </svg>
         Agent Tracker
+      </a>
+      <a href="pcms-tracker.html" class="btn-outline"
+         style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+          <rect x="9" y="3" width="6" height="4" rx="2"/>
+          <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/>
+        </svg>
+        PCms Tracker
       </a>
     </div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:16px;">
@@ -144,14 +153,12 @@ document.addEventListener('DOMContentLoaded', function () {
   window.BT.initKeyboardShortcuts();
   window.BT.renderEmptyState(true);
 
-  // ── Multi-file queue processor ─────────────────────────────────────────────────────────────────
   function loadFiles(fileList) {
     var files = Array.from(fileList);
     if (!files.length) return;
     window.BT.startMultiImport(files);
   }
 
-  // toolbar Import button
   var importBtn = document.getElementById('import-btn');
   var fileInput = document.getElementById('file-input');
   importBtn.addEventListener('click', function () { fileInput.click(); });
@@ -160,7 +167,6 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInput.value = '';
   });
 
-  // Clear All button
   var clearBtn = document.getElementById('clear-btn');
   clearBtn.addEventListener('click', function () {
     if (confirm('Clear all loaded data and start fresh?')) {
@@ -168,20 +174,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // drop-zone inner input
   var dzInput = document.getElementById('file-input-dz');
   dzInput.addEventListener('change', function (e) {
     loadFiles(e.target.files);
     dzInput.value = '';
   });
 
-  // drop-zone click → browse
   var dz = document.getElementById('drop-zone');
   dz.addEventListener('click', function (e) {
     if (e.target !== dzInput) dzInput.click();
   });
 
-  // drag-and-drop on drop-zone
   ['dragover','dragenter'].forEach(function (ev) {
     dz.addEventListener(ev, function (e) {
       e.preventDefault();
@@ -195,7 +198,6 @@ document.addEventListener('DOMContentLoaded', function () {
     loadFiles(e.dataTransfer.files);
   });
 
-  // Global drag fallback
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
   document.addEventListener('drop', function (e) {
     e.preventDefault();
