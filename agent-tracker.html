@@ -72,14 +72,9 @@
     }
     .export-btn:hover { color: var(--primary); border-color: var(--primary); }
 
-    /* ── Leaderboard table ── */
     .lb-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: auto; }
     .lb-table thead tr { background: var(--bg); border-bottom: 2px solid var(--border); }
-    .lb-table thead th {
-      padding: 8px 10px; font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
-      white-space: nowrap; user-select: none;
-    }
+    .lb-table thead th { padding: 8px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); white-space: nowrap; user-select: none; }
     .lb-table thead th.sortable { cursor: pointer; }
     .lb-table thead th.sortable:hover { color: var(--primary); }
     .lb-table thead th.sort-active { color: var(--primary); }
@@ -88,41 +83,29 @@
     .lb-table tbody tr:hover { background: var(--surface-2, #f3f0ec); }
     .lb-table tbody td { padding: 9px 10px; vertical-align: middle; }
 
-    /* rank col */
     .td-rank { width: 32px; text-align: center; font-size: 11px; font-weight: 700; color: var(--faint); }
     .td-rank.r1 { color: #d4a017; }
     .td-rank.r2 { color: #9e9e9e; }
     .td-rank.r3 { color: #a0522d; }
-    /* drag col */
     .td-drag { width: 22px; text-align: center; color: var(--faint); cursor: grab; font-size: 15px; padding: 0 4px !important; }
     .lb-table tbody tr:hover .td-drag { color: var(--muted); }
     .lb-table tbody tr.lb-dragging { opacity: .35; }
     .lb-table tbody tr.lb-drag-over { outline: 2px solid var(--primary); outline-offset: -1px; }
-    /* name col */
     .td-name { font-weight: 600; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    /* number cols */
     .td-num { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
     .td-num.net { font-size: 13px; }
     .td-num.raw { color: var(--muted); }
     .td-num.excl { color: var(--primary); }
-    /* bar col */
     .td-bar { width: 120px; }
     .bar-wrap { height: 8px; background: var(--divider); border-radius: 4px; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 4px; background: #964219; transition: width .3s; }
-    /* chips col */
     .td-chips { white-space: nowrap; }
     .kpi-chips { display: inline-flex; gap: 3px; flex-wrap: wrap; }
 
-    /* manual order badge */
-    .manual-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #e8f4fd; border: 1px solid #b3d9f7; border-radius: 20px;
-      padding: 2px 9px; font-size: 11px; color: #006494; font-weight: 600;
-    }
+    .manual-badge { display: inline-flex; align-items: center; gap: 4px; background: #e8f4fd; border: 1px solid #b3d9f7; border-radius: 20px; padding: 2px 9px; font-size: 11px; color: #006494; font-weight: 600; }
     .manual-badge button { background: none; border: none; cursor: pointer; color: #006494; font-size: 12px; padding: 0 0 0 3px; font-family: inherit; font-weight: 700; line-height: 1; }
     .manual-badge button:hover { color: #c0392b; }
 
-    /* chips */
     .chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
     .ch-ksl4  { background: #dce9f3; color: #006494; }
     .ch-km1   { background: #dce9f3; color: #006494; }
@@ -132,7 +115,6 @@
     .ch-excl  { background: #f0eeea; color: var(--muted); }
     .ch-jira  { background: #e8edf8; color: #0052cc; font-family: monospace; }
 
-    /* agent detail */
     .agent-detail { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
     .agent-detail-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
     .agent-detail-name { font-size: 18px; font-weight: 700; }
@@ -187,6 +169,7 @@
     <a href="reporter.html">Reporter</a>
     <a href="combined-analyzer.html">Combined Analyzer</a>
     <a href="agent-tracker.html" class="active">Agent Tracker</a>
+    <a href="pcms-tracker.html">📋 PCms Tracker</a>
   </nav>
 
   <div class="toolbar">
@@ -271,19 +254,11 @@ var NAME_MAP = {
 };
 function normAgent(s){ var t=String(s||'').trim(); return NAME_MAP[t]||t; }
 
-/* ── State ── */
-var _raw         = [];
-var _currentTab  = 'leaderboard';
-var _detailAgent = null;
-var _kpiSortCol  = {};
-/* Leaderboard sort — managed ONLY by column-header clicks, never overwritten by dropdown */
-var _lbSortCol   = 'net';
-var _lbSortDir   = -1;      // -1 = descending (highest first)
-var _manualOrder = null;    // null = auto; array of names = manual drag order
+var _raw=[], _currentTab='leaderboard', _detailAgent=null, _kpiSortCol={};
+var _lbSortCol='net', _lbSortDir=-1, _manualOrder=null;
 
 function downloadCSV(f,c){ var a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(c); a.download=f; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 
-/* ── Parse ── */
 function parseFile(file) {
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -320,7 +295,6 @@ function parseFile(file) {
 function _countAgents(rows){ var s=new Set(); rows.forEach(function(r){if(r.agent)s.add(r.agent);}); return s.size; }
 function setStatus(m,c){ var el=document.getElementById('at-upload-status'); el.textContent=m; el.className=c||''; }
 
-/* ── Filters ── */
 function _buildFilters(){
   function pop(id,vals){ var s=document.getElementById(id),c=s.value; s.innerHTML='<option value="All">All</option>'; vals.sort().forEach(function(v){if(v)s.innerHTML+='<option value="'+_esc(v)+'">'+_esc(v)+'</option>';}); if(c)s.value=c; }
   var kpis=new Set(),reasons=new Set(),weeks=new Set(),queues=new Set();
@@ -329,14 +303,7 @@ function _buildFilters(){
   pop('filter-week',Array.from(weeks)); pop('filter-queue',Array.from(queues));
 }
 function getFilters(){
-  return {
-    agentName:(document.getElementById('filter-agent-name').value||'').trim().toLowerCase(),
-    kpi:document.getElementById('filter-kpi').value,
-    reason:document.getElementById('filter-reason').value,
-    week:document.getElementById('filter-week').value,
-    queue:document.getElementById('filter-queue').value,
-    excl:document.getElementById('filter-excl').value
-  };
+  return { agentName:(document.getElementById('filter-agent-name').value||'').trim().toLowerCase(), kpi:document.getElementById('filter-kpi').value, reason:document.getElementById('filter-reason').value, week:document.getElementById('filter-week').value, queue:document.getElementById('filter-queue').value, excl:document.getElementById('filter-excl').value };
 }
 function applyFilters(rows){
   var f=getFilters();
@@ -352,7 +319,6 @@ function applyFilters(rows){
   });
 }
 
-/* ── Aggregation ── */
 function buildAgentMap(rows){
   var map={};
   rows.forEach(function(r){
@@ -367,352 +333,133 @@ function buildAgentMap(rows){
   });
   return map;
 }
-function sortAgents(agents, col, dir){
-  return agents.slice().sort(function(a,b){
-    if(col==='name') return dir * a.name.localeCompare(b.name);
-    if(col==='raw')  return dir * (b.total - a.total);
-    if(col==='excl') return dir * (b.excluded - a.excluded);
-    return dir * (b.net - a.net);   /* default: net */
-  });
-}
+function sortAgents(agents,col,dir){ return agents.slice().sort(function(a,b){ if(col==='name')return dir*a.name.localeCompare(b.name); if(col==='raw')return dir*(b.total-a.total); if(col==='excl')return dir*(b.excluded-a.excluded); return dir*(b.net-a.net); }); }
 
-/* ── Main render ── */
 function render(){
-  var filtered = applyFilters(_raw);
-  var agentMap = buildAgentMap(filtered);
-  var autoSorted = sortAgents(Object.values(agentMap), _lbSortCol, _lbSortDir);
+  var filtered=applyFilters(_raw), agentMap=buildAgentMap(filtered);
+  var autoSorted=sortAgents(Object.values(agentMap),_lbSortCol,_lbSortDir);
   var agents;
-  if(_manualOrder){
-    var nameSet = new Set(_manualOrder);
-    agents = _manualOrder.filter(function(n){return !!agentMap[n];}).map(function(n){return agentMap[n];});
-    autoSorted.forEach(function(a){ if(!nameSet.has(a.name)) agents.push(a); });
-  } else {
-    agents = autoSorted;
-  }
-  buildKpis(filtered, agents);
-  renderTab(agents, filtered);
+  if(_manualOrder){ var nameSet=new Set(_manualOrder); agents=_manualOrder.filter(function(n){return !!agentMap[n];}).map(function(n){return agentMap[n];}); autoSorted.forEach(function(a){if(!nameSet.has(a.name))agents.push(a);}); } else { agents=autoSorted; }
+  buildKpis(filtered,agents); renderTab(agents,filtered);
 }
 
-function buildKpis(rows, agents){
-  var total=rows.length, net=rows.filter(function(r){return !r.excluded;}).length;
-  var excl=total-net;
+function buildKpis(rows,agents){
+  var total=rows.length,net=rows.filter(function(r){return !r.excluded;}).length,excl=total-net;
   var kr=function(k){return rows.filter(function(r){return r.kpi===k&&!r.excluded;}).length;};
-  document.getElementById('at-kpi-row').innerHTML=
-    kc('c-agents','Agents w/ Breaches',agents.length,_countAgents(_raw)+' total in file')+
-    kc('c-total','Total Rows',total,'Raw, all KPIs')+
-    kc('c-total','Net Rows',net,'After exclusions')+
-    kc('c-ksl5a','KSL-5a',kr('KSL-5a'),'Comm. Quality')+
-    kc('c-km1','KM-1',kr('KM-1'),'Reopen Analysis')+
-    kc('c-km2','KM-2',kr('KM-2'),'Assign Back')+
-    kc('c-ksl4','KSL-4',kr('KSL-4'),'RI Linking')+
-    kc('c-excl','Excluded',excl,pct(excl,total)+' of total');
+  document.getElementById('at-kpi-row').innerHTML=kc('c-agents','Agents w/ Breaches',agents.length,_countAgents(_raw)+' total in file')+kc('c-total','Total Rows',total,'Raw, all KPIs')+kc('c-total','Net Rows',net,'After exclusions')+kc('c-ksl5a','KSL-5a',kr('KSL-5a'),'Comm. Quality')+kc('c-km1','KM-1',kr('KM-1'),'Reopen Analysis')+kc('c-km2','KM-2',kr('KM-2'),'Assign Back')+kc('c-ksl4','KSL-4',kr('KSL-4'),'RI Linking')+kc('c-excl','Excluded',excl,pct(excl,total)+' of total');
 }
 function kc(cls,lbl,val,sub){ return '<div class="kpi-card '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub">'+sub+'</div></div>'; }
 
-function renderTab(agents, filtered){
-  var el=document.getElementById('at-tab-content');
-  if(_detailAgent){ el.innerHTML=buildDetail(_detailAgent); return; }
-  if(_currentTab==='leaderboard')        el.innerHTML=buildLeaderboard(agents);
-  else if(_currentTab==='kpi-breakdown') el.innerHTML=buildKpiBreakdown(filtered);
-  else if(_currentTab==='trends')        el.innerHTML=buildTrends(filtered);
-  else if(_currentTab==='tickets')       el.innerHTML=buildAllTickets(filtered);
-}
+function renderTab(agents,filtered){ var el=document.getElementById('at-tab-content'); if(_detailAgent){el.innerHTML=buildDetail(_detailAgent);return;} if(_currentTab==='leaderboard')el.innerHTML=buildLeaderboard(agents); else if(_currentTab==='kpi-breakdown')el.innerHTML=buildKpiBreakdown(filtered); else if(_currentTab==='trends')el.innerHTML=buildTrends(filtered); else if(_currentTab==='tickets')el.innerHTML=buildAllTickets(filtered); }
 
-/* ══════════════════════════════════════
-   LEADERBOARD — proper <table>
-══════════════════════════════════════ */
 function buildLeaderboard(agents){
   if(!agents.length) return '<div class="empty-state">No agent breach data found with current filters.</div>';
-  var maxNet = Math.max.apply(null, agents.map(function(a){return a.net;})) || 1;
-
-  function th(col, label, align){
-    var active = !_manualOrder && _lbSortCol===col;
-    var arrow  = active ? (_lbSortDir===-1 ? ' ↓' : ' ↑') : ' ↕';
-    var style  = 'text-align:'+(align||'center')+';'+(active?'color:var(--primary)':'');
-    return '<th class="sortable'+(active?' sort-active':'')+'" data-lb-col="'+col+'" style="'+style+'">'+label+'<span style="opacity:.5;font-size:9px">'+arrow+'</span></th>';
-  }
-
-  var manualBadge = _manualOrder
-    ? '<span class="manual-badge">⠿ Manual order <button onclick="AT.clearManualOrder()">✕</button></span>'
-    : '';
-
-  var thead = '<thead><tr>'
-    + '<th style="width:22px"></th>'   /* drag handle */
-    + '<th style="width:32px;text-align:center">#</th>'
-    + th('name','Agent','left')
-    + th('net','NET','center')
-    + th('raw','RAW','center')
-    + th('excl','EXCL','center')
-    + '<th style="width:130px">Bar (net)</th>'
-    + '<th>KPI Breakdown</th>'
-    + '</tr></thead>';
-
-  var tbody = '<tbody id="lb-tbody">' + agents.map(function(a,i){
-    var rankCls = i===0?'r1':i===1?'r2':i===2?'r3':'';
-    var chips = Object.keys(a.kpis).sort().map(function(k){
-      return '<span class="chip ch-'+k.toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(k)+' <strong>'+a.kpis[k]+'</strong></span>';
-    }).join(' ');
-    return '<tr draggable="true" data-agent="'+_esc(a.name)+'" onclick="AT.openDetail(\''+_escJ(a.name)+'\')">'
-      + '<td class="td-drag" onclick="event.stopPropagation()" title="Drag to reorder">⠿</td>'
-      + '<td class="td-rank '+rankCls+'">'+(i+1)+'</td>'
-      + '<td class="td-name" title="'+_esc(a.name)+'">'+_esc(a.name)+'</td>'
-      + '<td class="td-num net">'+a.net+'</td>'
-      + '<td class="td-num raw">'+a.total+'</td>'
-      + '<td class="td-num excl">'+(a.excluded||'—')+'</td>'
-      + '<td class="td-bar"><div class="bar-wrap"><div class="bar-fill" style="width:'+Math.round(a.net/maxNet*100)+'%"></div></div></td>'
-      + '<td class="td-chips"><div class="kpi-chips">'+chips+'</div></td>'
-      + '</tr>';
-  }).join('') + '</tbody>';
-
-  return '<div class="sc">'
-    + '<div class="sc-head"><h2>Agent Breach Leaderboard</h2>'
-    + '<span class="badge">'+agents.length+' agent(s)</span>'
-    + manualBadge
-    + '<button class="export-btn" onclick="AT.exportLeaderboard()">&#8659; Export CSV</button>'
-    + '</div>'
-    + '<div class="sc-body-flush"><table class="lb-table">'+thead+tbody+'</table></div>'
-    + '</div>'
-    + '<p style="font-size:10px;color:var(--faint);margin:4px 0 0">⠿ Drag rows to reorder &nbsp;|&nbsp; Click column headers to sort &nbsp;|&nbsp; Click any row for agent detail.</p>';
+  var maxNet=Math.max.apply(null,agents.map(function(a){return a.net;}))||1;
+  function th(col,label,align){ var active=!_manualOrder&&_lbSortCol===col; var arrow=active?(_lbSortDir===-1?' ↓':' ↑'):' ↕'; var style='text-align:'+(align||'center')+';'+(active?'color:var(--primary)':''); return '<th class="sortable'+(active?' sort-active':'')+'" data-lb-col="'+col+'" style="'+style+'">'+label+'<span style="opacity:.5;font-size:9px">'+arrow+'</span></th>'; }
+  var manualBadge=_manualOrder?'<span class="manual-badge">⡀ Manual order <button onclick="AT.clearManualOrder()">✕</button></span>':'';
+  var thead='<thead><tr><th style="width:22px"></th><th style="width:32px;text-align:center">#</th>'+th('name','Agent','left')+th('net','NET','center')+th('raw','RAW','center')+th('excl','EXCL','center')+'<th style="width:130px">Bar (net)</th><th>KPI Breakdown</th></tr></thead>';
+  var tbody='<tbody id="lb-tbody">'+agents.map(function(a,i){ var rankCls=i===0?'r1':i===1?'r2':i===2?'r3':''; var chips=Object.keys(a.kpis).sort().map(function(k){return '<span class="chip ch-'+k.toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(k)+' <strong>'+a.kpis[k]+'</strong></span>';}).join(' '); return '<tr draggable="true" data-agent="'+_esc(a.name)+'" onclick="AT.openDetail(\''+_escJ(a.name)+'\')">'+'<td class="td-drag" onclick="event.stopPropagation()" title="Drag to reorder">⡀</td>'+'<td class="td-rank '+rankCls+'">'+(i+1)+'</td>'+'<td class="td-name" title="'+_esc(a.name)+'">'+_esc(a.name)+'</td>'+'<td class="td-num net">'+a.net+'</td>'+'<td class="td-num raw">'+a.total+'</td>'+'<td class="td-num excl">'+(a.excluded||'—')+'</td>'+'<td class="td-bar"><div class="bar-wrap"><div class="bar-fill" style="width:'+Math.round(a.net/maxNet*100)+'%"></div></div></td>'+'<td class="td-chips"><div class="kpi-chips">'+chips+'</div></td>'+'</tr>'; }).join('')+'</tbody>';
+  return '<div class="sc"><div class="sc-head"><h2>Agent Breach Leaderboard</h2><span class="badge">'+agents.length+' agent(s)</span>'+manualBadge+'<button class="export-btn" onclick="AT.exportLeaderboard()">&#8659; Export CSV</button></div><div class="sc-body-flush"><table class="lb-table">'+thead+tbody+'</table></div></div><p style="font-size:10px;color:var(--faint);margin:4px 0 0">⡀ Drag rows to reorder &nbsp;|&nbsp; Click column headers to sort &nbsp;|&nbsp; Click any row for agent detail.</p>';
 }
 
-/* ── Drag-to-reorder (table rows) ── */
-var _dragSrc = null;
-document.addEventListener('dragstart', function(e){
-  var tr = e.target.closest('#lb-tbody tr');
-  if(!tr) return;
-  _dragSrc = tr;
-  setTimeout(function(){ tr.classList.add('lb-dragging'); }, 0);
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', tr.dataset.agent||'');
-});
-document.addEventListener('dragend', function(){
-  if(_dragSrc) _dragSrc.classList.remove('lb-dragging');
-  document.querySelectorAll('.lb-drag-over').forEach(function(r){ r.classList.remove('lb-drag-over'); });
-  _dragSrc = null;
-});
-document.addEventListener('dragover', function(e){
-  var tr = e.target.closest('#lb-tbody tr');
-  if(!tr || tr===_dragSrc) return;
-  e.preventDefault();
-  document.querySelectorAll('.lb-drag-over').forEach(function(r){ r.classList.remove('lb-drag-over'); });
-  tr.classList.add('lb-drag-over');
-});
-document.addEventListener('drop', function(e){
-  var target = e.target.closest('#lb-tbody tr');
-  if(!target || !_dragSrc || target===_dragSrc) return;
-  e.preventDefault();
-  var tbody = document.getElementById('lb-tbody');
-  if(!tbody) return;
-  var allRows = Array.from(tbody.querySelectorAll('tr'));
-  var names   = allRows.map(function(r){ return r.dataset.agent; });
-  var si = names.indexOf(_dragSrc.dataset.agent);
-  var ti = names.indexOf(target.dataset.agent);
-  if(si===-1||ti===-1) return;
-  names.splice(si,1); names.splice(ti,0,_dragSrc.dataset.agent);
-  _manualOrder = names;
-  if(_raw.length) render();
-});
+var _dragSrc=null;
+document.addEventListener('dragstart',function(e){var tr=e.target.closest('#lb-tbody tr');if(!tr)return;_dragSrc=tr;setTimeout(function(){tr.classList.add('lb-dragging');},0);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',tr.dataset.agent||'');});
+document.addEventListener('dragend',function(){if(_dragSrc)_dragSrc.classList.remove('lb-dragging');document.querySelectorAll('.lb-drag-over').forEach(function(r){r.classList.remove('lb-drag-over');});_dragSrc=null;});
+document.addEventListener('dragover',function(e){var tr=e.target.closest('#lb-tbody tr');if(!tr||tr===_dragSrc)return;e.preventDefault();document.querySelectorAll('.lb-drag-over').forEach(function(r){r.classList.remove('lb-drag-over');});tr.classList.add('lb-drag-over');});
+document.addEventListener('drop',function(e){var target=e.target.closest('#lb-tbody tr');if(!target||!_dragSrc||target===_dragSrc)return;e.preventDefault();var tbody=document.getElementById('lb-tbody');if(!tbody)return;var allRows=Array.from(tbody.querySelectorAll('tr'));var names=allRows.map(function(r){return r.dataset.agent;});var si=names.indexOf(_dragSrc.dataset.agent),ti=names.indexOf(target.dataset.agent);if(si===-1||ti===-1)return;names.splice(si,1);names.splice(ti,0,_dragSrc.dataset.agent);_manualOrder=names;if(_raw.length)render();});
+document.addEventListener('click',function(e){var th=e.target.closest('th[data-lb-col]');if(!th)return;var col=th.dataset.lbCol;_manualOrder=null;if(_lbSortCol===col){_lbSortDir=_lbSortDir*-1;}else{_lbSortCol=col;_lbSortDir=(col==='name'?1:-1);}if(_raw.length)render();});
 
-/* ── Leaderboard column sort (header click) ── */
-document.addEventListener('click', function(e){
-  var th = e.target.closest('th[data-lb-col]');
-  if(!th) return;
-  var col = th.dataset.lbCol;
-  _manualOrder = null;
-  if(_lbSortCol===col){
-    _lbSortDir = _lbSortDir * -1;
-  } else {
-    _lbSortCol = col;
-    _lbSortDir = (col==='name' ? 1 : -1);
-  }
-  if(_raw.length) render();
-});
-
-/* ══════════════════════════════════════
-   AGENT DETAIL
-══════════════════════════════════════ */
 function buildDetail(agentName){
   var rows=applyFilters(_raw).filter(function(r){return r.agent===agentName;});
   if(!rows.length) return '<div class="empty-state">No records for this agent.</div>';
-  var net=rows.filter(function(r){return !r.excluded;}).length;
-  var excl=rows.filter(function(r){return r.excluded;}).length;
+  var net=rows.filter(function(r){return !r.excluded;}).length,excl=rows.filter(function(r){return r.excluded;}).length;
   var reasonMap={},kpiMap={};
-  rows.forEach(function(r){ if(!r.excluded){ if(r.reason)reasonMap[r.reason]=(reasonMap[r.reason]||0)+1; kpiMap[r.kpi]=(kpiMap[r.kpi]||0)+1; } });
+  rows.forEach(function(r){if(!r.excluded){if(r.reason)reasonMap[r.reason]=(reasonMap[r.reason]||0)+1;kpiMap[r.kpi]=(kpiMap[r.kpi]||0)+1;}});
   var kpiColors={'KSL-5a':'#964219','KM-1':'#006494','KM-2':'#7a39bb','KSL-4':'#006494'};
-  var tRows=rows.map(function(r){
-    return '<tr class="'+(r.excluded?'excl':'')+'"><td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td>'
-      +'<td><span class="chip ch-'+r.kpi.toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(r.kpi)+'</span></td>'
-      +'<td>'+_esc(r.reason)+'</td><td>'+_esc(r.queue)+'</td>'
-      +'<td style="text-align:center">'+_esc(r.week)+'</td>'
-      +'<td style="text-align:center">'+(r.jira?'<span class="chip ch-jira">'+_esc(r.jira)+'</span>':'—')+'</td>'
-      +'<td style="text-align:center">'+(r.excluded?'<span class="chip ch-excl">Excl</span>':'')+'</td></tr>';
-  }).join('');
-  return '<div style="display:flex;flex-direction:column;gap:16px">'
-    +'<div style="display:flex;align-items:center;gap:10px">'
-    +'<button class="back-btn" onclick="AT.closeDetail()">&#8592; Back to leaderboard</button>'
-    +'<button class="export-btn" onclick="AT.exportAgentDetail(\''+_escJ(agentName)+'\')" style="margin-left:0">&#8659; Export CSV</button>'
-    +'</div>'
-    +'<div class="agent-detail"><div class="agent-detail-head">'
-    +'<div><div class="agent-detail-name">'+_esc(agentName)+'</div>'
-    +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+rows.length+' breach row(s) total</div></div>'
-    +'<div class="agent-stat-pills">'
-    +'<div class="stat-pill sp-net"><div class="sp-val">'+net+'</div><div class="sp-lbl">Net</div></div>'
-    +'<div class="stat-pill sp-raw"><div class="sp-val">'+rows.length+'</div><div class="sp-lbl">Raw</div></div>'
-    +'<div class="stat-pill sp-excl"><div class="sp-val">'+(excl||0)+'</div><div class="sp-lbl">Excl</div></div>'
-    +'</div></div>'
-    +'<div class="detail-grid">'
-    +'<div class="sc" style="border:none"><div class="sc-head"><h2>By KPI (active)</h2></div><div class="sc-body">'+_barChart(kpiMap,kpiColors)+'</div></div>'
-    +'<div class="sc" style="border:none"><div class="sc-head"><h2>By Reason (active)</h2></div><div class="sc-body">'+_barChart(reasonMap,{})+'</div></div>'
-    +'</div>'
-    +'<div style="padding:0 16px 16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:10px 0 8px">All Tickets</div>'
-    +'<div style="overflow-x:auto"><table class="dt"><thead><tr><th>Ticket</th><th>KPI</th><th>Reason</th><th>Queue</th>'
-    +'<th style="text-align:center">Week</th><th style="text-align:center">Jira</th><th style="text-align:center">Excl</th></tr></thead>'
-    +'<tbody>'+tRows+'</tbody></table></div></div></div></div>';
+  var tRows=rows.map(function(r){return '<tr class="'+(r.excluded?'excl':'')+'"><td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td><td><span class="chip ch-'+r.kpi.toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(r.kpi)+'</span></td><td>'+_esc(r.reason)+'</td><td>'+_esc(r.queue)+'</td><td style="text-align:center">'+_esc(r.week)+'</td><td style="text-align:center">'+(r.jira?'<span class="chip ch-jira">'+_esc(r.jira)+'</span>':'—')+'</td><td style="text-align:center">'+(r.excluded?'<span class="chip ch-excl">Excl</span>':'')+'</td></tr>';}).join('');
+  return '<div style="display:flex;flex-direction:column;gap:16px"><div style="display:flex;align-items:center;gap:10px"><button class="back-btn" onclick="AT.closeDetail()">&#8592; Back to leaderboard</button><button class="export-btn" onclick="AT.exportAgentDetail(\''+_escJ(agentName)+'\')" style="margin-left:0">&#8659; Export CSV</button></div><div class="agent-detail"><div class="agent-detail-head"><div><div class="agent-detail-name">'+_esc(agentName)+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">'+rows.length+' breach row(s) total</div></div><div class="agent-stat-pills"><div class="stat-pill sp-net"><div class="sp-val">'+net+'</div><div class="sp-lbl">Net</div></div><div class="stat-pill sp-raw"><div class="sp-val">'+rows.length+'</div><div class="sp-lbl">Raw</div></div><div class="stat-pill sp-excl"><div class="sp-val">'+(excl||0)+'</div><div class="sp-lbl">Excl</div></div></div></div><div class="detail-grid"><div class="sc" style="border:none"><div class="sc-head"><h2>By KPI (active)</h2></div><div class="sc-body">'+_barChart(kpiMap,kpiColors)+'</div></div><div class="sc" style="border:none"><div class="sc-head"><h2>By Reason (active)</h2></div><div class="sc-body">'+_barChart(reasonMap,{})+'</div></div></div><div style="padding:0 16px 16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:10px 0 8px">All Tickets</div><div style="overflow-x:auto"><table class="dt"><thead><tr><th>Ticket</th><th>KPI</th><th>Reason</th><th>Queue</th><th style="text-align:center">Week</th><th style="text-align:center">Jira</th><th style="text-align:center">Excl</th></tr></thead><tbody>'+tRows+'</tbody></table></div></div></div></div>';
 }
 
-/* ══════════════════════════════════════
-   KPI BREAKDOWN
-══════════════════════════════════════ */
 function buildKpiBreakdown(filtered){
-  var KPIs=['KSL-5a','KM-1','KM-2','KSL-4'];
-  var kpiColors={'KSL-5a':'#964219','KM-1':'#006494','KM-2':'#7a39bb','KSL-4':'#1a6e3c'};
-  var kpiDesc={'KSL-5a':'Communication Quality','KM-1':'Reopen Analysis','KM-2':'Assign Back','KSL-4':'Related Incident Linking'};
+  var KPIs=['KSL-5a','KM-1','KM-2','KSL-4'],kpiColors={'KSL-5a':'#964219','KM-1':'#006494','KM-2':'#7a39bb','KSL-4':'#1a6e3c'},kpiDesc={'KSL-5a':'Communication Quality','KM-1':'Reopen Analysis','KM-2':'Assign Back','KSL-4':'Related Incident Linking'};
   return '<div style="display:flex;flex-direction:column;gap:20px">'+KPIs.map(function(kpi){
     var kr=filtered.filter(function(r){return r.kpi===kpi&&!r.excluded;});
     if(!kr.length) return '<div class="sc"><div class="sc-head"><h2>'+_esc(kpi)+'</h2><span class="badge">0 active</span></div><div class="sc-body"><p style="color:var(--muted);font-size:12px">No active breaches.</p></div></div>';
-    var aMap={};
-    kr.forEach(function(r){if(r.agent)aMap[r.agent]=(aMap[r.agent]||0)+1;});
-    var ss=_kpiSortCol[kpi]||{col:'count',dir:-1};
-    var rows=Object.entries(aMap).map(function(e){ return {agent:e[0],count:e[1],pct:Math.round(e[1]/kr.length*100)}; });
-    rows.sort(function(a,b){ if(ss.col==='agent')return ss.dir*a.agent.localeCompare(b.agent); if(ss.col==='pct')return ss.dir*(b.pct-a.pct); return ss.dir*(b.count-a.count); });
-    var maxV=rows.length?rows[0].count:1;
-    var color=kpiColors[kpi]||'var(--primary)';
-    var bars=rows.slice().sort(function(a,b){return b.count-a.count;}).map(function(e){
-      return '<div class="bar-row"><div class="bar-lbl" title="'+_esc(e.agent)+'">'+_esc(e.agent)+'</div>'
-        +'<div class="bar-track"><div class="bar-fill2" style="width:'+Math.round(e.count/maxV*100)+'%;background:'+color+'"></div></div>'
-        +'<div class="bar-cnt">'+e.count+'</div></div>';
-    }).join('');
-    function thS(col,lbl){ var a=ss.col===col; return '<th style="'+(a?'color:var(--primary)':'')+';cursor:pointer;white-space:nowrap" onclick="AT.sortKpiTable(\''+kpi+'\',\''+col+'\')">'+lbl+(a?(ss.dir===-1?' ↓':' ↑'):'')+'</th>'; }
-    var tRows=rows.map(function(r,i){ return '<tr><td style="text-align:center;font-weight:700;color:var(--muted);font-size:11px">'+(i+1)+'</td>'
-      +'<td><button style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:12px;font-weight:600;font-family:inherit;padding:0" onclick="AT.openDetail(\''+_escJ(r.agent)+'\')">'+_esc(r.agent)+'</button></td>'
-      +'<td style="text-align:center;font-weight:700">'+r.count+'</td>'
-      +'<td style="text-align:center;color:var(--muted)">'+r.pct+'%</td></tr>'; }).join('');
-    return '<div class="sc"><div class="sc-head"><h2>'+_esc(kpi)+'</h2>'
-      +'<span style="font-size:11px;color:var(--muted)">'+_esc(kpiDesc[kpi]||'')+'</span>'
-      +'<span class="badge">'+kr.length+' active</span>'
-      +'<button class="export-btn" onclick="AT.exportKpiTable(\''+kpi+'\')" style="margin-left:0">&#8659; Export CSV</button>'
-      +'</div><div class="kpi-split">'
-      +'<div class="kpi-split-left"><div class="bar-chart">'+bars+'</div></div>'
-      +'<div class="kpi-split-right"><table class="dt" style="width:100%"><thead><tr>'
-      +'<th style="text-align:center;width:28px">#</th>'+thS('agent','Agent')+thS('count','Breaches')+thS('pct','% of KPI')
-      +'</tr></thead><tbody>'+tRows+'</tbody></table>'
-      +'<p style="font-size:10px;color:var(--faint);margin-top:6px">Click agent for detail. Click column to sort.</p>'
-      +'</div></div></div>';
+    var aMap={}; kr.forEach(function(r){if(r.agent)aMap[r.agent]=(aMap[r.agent]||0)+1;});
+    var ss=_kpiSortCol[kpi]||{col:'count',dir:-1},rows=Object.entries(aMap).map(function(e){return {agent:e[0],count:e[1],pct:Math.round(e[1]/kr.length*100)};});
+    rows.sort(function(a,b){if(ss.col==='agent')return ss.dir*a.agent.localeCompare(b.agent);if(ss.col==='pct')return ss.dir*(b.pct-a.pct);return ss.dir*(b.count-a.count);});
+    var maxV=rows.length?rows[0].count:1,color=kpiColors[kpi]||'var(--primary)';
+    var bars=rows.slice().sort(function(a,b){return b.count-a.count;}).map(function(e){return '<div class="bar-row"><div class="bar-lbl" title="'+_esc(e.agent)+'">'+_esc(e.agent)+'</div><div class="bar-track"><div class="bar-fill2" style="width:'+Math.round(e.count/maxV*100)+'%;background:'+color+'"></div></div><div class="bar-cnt">'+e.count+'</div></div>';}).join('');
+    function thS(col,lbl){var a=ss.col===col;return '<th style="'+(a?'color:var(--primary)':'')+';cursor:pointer;white-space:nowrap" onclick="AT.sortKpiTable(\''+kpi+'\',\''+col+'\')">'+ lbl+(a?(ss.dir===-1?' ↓':' ↑'):'')+'</th>';}
+    var tRows=rows.map(function(r,i){return '<tr><td style="text-align:center;font-weight:700;color:var(--muted);font-size:11px">'+(i+1)+'</td><td><button style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:12px;font-weight:600;font-family:inherit;padding:0" onclick="AT.openDetail(\''+_escJ(r.agent)+'\')">' +_esc(r.agent)+'</button></td><td style="text-align:center;font-weight:700">'+r.count+'</td><td style="text-align:center;color:var(--muted)">'+r.pct+'%</td></tr>';}).join('');
+    return '<div class="sc"><div class="sc-head"><h2>'+_esc(kpi)+'</h2><span style="font-size:11px;color:var(--muted)">'+_esc(kpiDesc[kpi]||'')+'</span><span class="badge">'+kr.length+' active</span><button class="export-btn" onclick="AT.exportKpiTable(\''+kpi+'\')" style="margin-left:0">&#8659; Export CSV</button></div><div class="kpi-split"><div class="kpi-split-left"><div class="bar-chart">'+bars+'</div></div><div class="kpi-split-right"><table class="dt" style="width:100%"><thead><tr><th style="text-align:center;width:28px">#</th>'+thS('agent','Agent')+thS('count','Breaches')+thS('pct','% of KPI')+'</tr></thead><tbody>'+tRows+'</tbody></table><p style="font-size:10px;color:var(--faint);margin-top:6px">Click agent for detail. Click column to sort.</p></div></div></div>';
   }).join('')+'</div>';
 }
 
-/* ══════════════════════════════════════
-   WEEKLY TRENDS
-══════════════════════════════════════ */
 function buildTrends(filtered){
-  var weekSet={};
-  filtered.forEach(function(r){if(r.week)weekSet[r.week]=1;});
-  var weeks=Object.keys(weekSet).sort();
+  var weekSet={}; filtered.forEach(function(r){if(r.week)weekSet[r.week]=1;}); var weeks=Object.keys(weekSet).sort();
   if(!weeks.length) return '<div class="empty-state">No week data available.</div>';
-  var agentSet={};
-  filtered.filter(function(r){return !r.excluded;}).forEach(function(r){if(r.agent)agentSet[r.agent]=1;});
-  var agentNames=Object.keys(agentSet);
-  var matrix={};
-  agentNames.forEach(function(a){ matrix[a]={}; weeks.forEach(function(w){ matrix[a][w]=filtered.filter(function(r){return r.agent===a&&r.week===w&&!r.excluded;}).length; }); });
-  agentNames.sort(function(a,b){ var ta=Object.values(matrix[a]).reduce(function(s,v){return s+v;},0),tb=Object.values(matrix[b]).reduce(function(s,v){return s+v;},0); return tb-ta; });
+  var agentSet={}; filtered.filter(function(r){return !r.excluded;}).forEach(function(r){if(r.agent)agentSet[r.agent]=1;});
+  var agentNames=Object.keys(agentSet),matrix={};
+  agentNames.forEach(function(a){matrix[a]={};weeks.forEach(function(w){matrix[a][w]=filtered.filter(function(r){return r.agent===a&&r.week===w&&!r.excluded;}).length;});});
+  agentNames.sort(function(a,b){var ta=Object.values(matrix[a]).reduce(function(s,v){return s+v;},0),tb=Object.values(matrix[b]).reduce(function(s,v){return s+v;},0);return tb-ta;});
   var BASE=[247,246,242],TARGET=[150,66,25],gMax=1;
   agentNames.forEach(function(a){weeks.forEach(function(w){if(matrix[a][w]>gMax)gMax=matrix[a][w];});});
-  function cs(v){ if(!v) return 'background:#f0eeea;color:var(--faint)'; var r=Math.pow(v/gMax,0.6),R=Math.round(BASE[0]+r*(TARGET[0]-BASE[0])),G=Math.round(BASE[1]+r*(TARGET[1]-BASE[1])),B=Math.round(BASE[2]+r*(TARGET[2]-BASE[2])); return 'background:rgb('+R+','+G+','+B+');color:'+(0.299*R+0.587*G+0.114*B<140?'#fff':'#28251d'); }
-  var thead='<thead><tr><th style="text-align:left;padding:6px 10px;min-width:140px;background:var(--bg);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border)">Agent</th>'
-    +weeks.map(function(w){return '<th style="text-align:center;padding:6px 8px;background:var(--bg);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);min-width:44px">'+_esc(w)+'</th>';}).join('')
-    +'<th style="text-align:center;padding:6px 8px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text);border-bottom:1px solid var(--border);border-left:2px solid var(--border)">Total</th></tr></thead>';
-  var tbody=agentNames.map(function(a){ var total=0; var cells=weeks.map(function(w){var v=matrix[a][w];total+=v;return '<td style="'+cs(v)+';text-align:center;border-radius:4px;padding:0 4px;height:28px;font-size:11px;font-weight:700" title="'+_esc(a)+' | Wk '+_esc(w)+': '+v+'">'+(v||'')+'</td>';}).join('');
-    return '<tr><td style="padding:5px 10px;border-bottom:1px solid var(--divider)"><button style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--primary);font-family:inherit;padding:0" onclick="AT.openDetail(\''+_escJ(a)+'\')">'+_esc(a)+'</button></td>'+cells+'<td style="text-align:center;font-weight:700;font-size:13px;background:var(--bg);border-bottom:1px solid var(--divider);border-left:2px solid var(--border);padding:0 8px">'+total+'</td></tr>';
-  }).join('');
+  function cs(v){if(!v)return 'background:#f0eeea;color:var(--faint)';var r=Math.pow(v/gMax,0.6),R=Math.round(BASE[0]+r*(TARGET[0]-BASE[0])),G=Math.round(BASE[1]+r*(TARGET[1]-BASE[1])),B=Math.round(BASE[2]+r*(TARGET[2]-BASE[2]));return 'background:rgb('+R+','+G+','+B+');color:'+(0.299*R+0.587*G+0.114*B<140?'#fff':'#28251d');}
+  var thead='<thead><tr><th style="text-align:left;padding:6px 10px;min-width:140px;background:var(--bg);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border)">Agent</th>'+weeks.map(function(w){return '<th style="text-align:center;padding:6px 8px;background:var(--bg);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);min-width:44px">'+_esc(w)+'</th>';}).join('')+'<th style="text-align:center;padding:6px 8px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text);border-bottom:1px solid var(--border);border-left:2px solid var(--border)">Total</th></tr></thead>';
+  var tbody=agentNames.map(function(a){var total=0;var cells=weeks.map(function(w){var v=matrix[a][w];total+=v;return '<td style="'+cs(v)+';text-align:center;border-radius:4px;padding:0 4px;height:28px;font-size:11px;font-weight:700" title="'+_esc(a)+' | Wk '+_esc(w)+': '+v+'">'+(v||'')+'</td>';}).join('');return '<tr><td style="padding:5px 10px;border-bottom:1px solid var(--divider)"><button style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--primary);font-family:inherit;padding:0" onclick="AT.openDetail(\''+_escJ(a)+'\')">' +_esc(a)+'</button></td>'+cells+'<td style="text-align:center;font-weight:700;font-size:13px;background:var(--bg);border-bottom:1px solid var(--divider);border-left:2px solid var(--border);padding:0 8px">'+total+'</td></tr>';}).join('');
   return '<div class="sc"><div class="sc-head"><h2>Agent Weekly Breach Trends (Active)</h2><span class="badge">'+agentNames.length+' agent(s) &bull; '+weeks.length+' week(s)</span><button class="export-btn" onclick="AT.exportTrends()" style="margin-left:0">&#8659; Export CSV</button></div><div class="sc-body"><div style="overflow-x:auto"><table style="border-collapse:separate;border-spacing:3px;font-size:11px;white-space:nowrap">'+thead+'<tbody>'+tbody+'</tbody></table><p style="font-size:10px;color:var(--faint);margin-top:8px">Active breaches per agent per week. Click agent name for full detail.</p></div></div></div>';
 }
 
-/* ══════════════════════════════════════
-   ALL TICKETS
-══════════════════════════════════════ */
 function buildAllTickets(filtered){
   var rows=filtered.slice().sort(function(a,b){return a.agent.localeCompare(b.agent)||a.kpi.localeCompare(b.kpi);});
-  var tRows=rows.map(function(r){ return '<tr class="'+(r.excluded?'excl':'')+'"><td><button style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:12px;font-weight:600;font-family:inherit;padding:0" onclick="AT.openDetail(\''+_escJ(r.agent||'')+'\')">'+_esc(r.agent||'—')+'</button></td><td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td><td><span class="chip ch-'+r.kpi.toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(r.kpi)+'</span></td><td>'+_esc(r.reason)+'</td><td>'+_esc(r.queue)+'</td><td style="text-align:center">'+_esc(r.week)+'</td><td style="text-align:center">'+(r.jira?'<span class="chip ch-jira">'+_esc(r.jira)+'</span>':'—')+'</td><td style="text-align:center">'+(r.excluded?'<span class="chip ch-excl">Excl</span>':'Active')+'</td></tr>'; }).join('');
+  var tRows=rows.map(function(r){return '<tr class="'+(r.excluded?'excl':'')+'"><td><button style="background:none;border:none;cursor:pointer;color:var(--primary);font-size:12px;font-weight:600;font-family:inherit;padding:0" onclick="AT.openDetail(\''+_escJ(r.agent||'')+'\')">'+_esc(r.agent||'—')+'</button></td><td style="font-family:monospace;font-size:11px">'+_esc(r.ticket)+'</td><td><span class="chip ch-'+r.kpi.toLowerCase().replace(/[^a-z0-9]/g,'')+'">'+_esc(r.kpi)+'</span></td><td>'+_esc(r.reason)+'</td><td>'+_esc(r.queue)+'</td><td style="text-align:center">'+_esc(r.week)+'</td><td style="text-align:center">'+(r.jira?'<span class="chip ch-jira">'+_esc(r.jira)+'</span>':'—')+'</td><td style="text-align:center">'+(r.excluded?'<span class="chip ch-excl">Excl</span>':'Active')+'</td></tr>';}).join('');
   return '<div class="sc"><div class="sc-head"><h2>All Agent Breach Tickets</h2><span class="badge">'+rows.length+' row(s)</span><button class="export-btn" onclick="AT.exportAllTickets()" style="margin-left:0">&#8659; Export CSV</button></div><div class="sc-body"><div style="overflow-x:auto"><table class="dt"><thead><tr><th>Agent</th><th>Ticket</th><th>KPI</th><th>Reason</th><th>Queue</th><th style="text-align:center">Week</th><th style="text-align:center">Jira</th><th style="text-align:center">Status</th></tr></thead><tbody>'+tRows+'</tbody></table></div></div></div>';
 }
 
-/* ── Helpers ── */
-function _barChart(map,colorMap){ var def=['#964219','#006494','#7a39bb','#437a22','#d19900','#01696f','#b52030']; var entries=Object.entries(map).sort(function(a,b){return b[1]-a[1];}); if(!entries.length) return '<p style="color:var(--muted);font-size:12px">No data</p>'; var mx=entries[0][1]; return '<div class="bar-chart">'+entries.map(function(e,i){ var c=colorMap[e[0]]||def[i%def.length]; return '<div class="bar-row"><div class="bar-lbl" title="'+_esc(e[0])+'">'+_esc(e[0])+'</div><div class="bar-track"><div class="bar-fill2" style="width:'+Math.round(e[1]/mx*100)+'%;background:'+c+'"></div></div><div class="bar-cnt">'+e[1]+'</div></div>'; }).join('')+'</div>'; }
-function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function _escJ(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-function pct(n,d){ return d ? Math.round(n/d*100)+'%' : '0%'; }
+function _barChart(map,colorMap){var def=['#964219','#006494','#7a39bb','#437a22','#d19900','#01696f','#b52030'];var entries=Object.entries(map).sort(function(a,b){return b[1]-a[1];});if(!entries.length)return '<p style="color:var(--muted);font-size:12px">No data</p>';var mx=entries[0][1];return '<div class="bar-chart">'+entries.map(function(e,i){var c=colorMap[e[0]]||def[i%def.length];return '<div class="bar-row"><div class="bar-lbl" title="'+_esc(e[0])+'">'+_esc(e[0])+'</div><div class="bar-track"><div class="bar-fill2" style="width:'+Math.round(e[1]/mx*100)+'%;background:'+c+'"></div></div><div class="bar-cnt">'+e[1]+'</div></div>';}).join('')+'</div>';}
+function _esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _escJ(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function pct(n,d){return d?Math.round(n/d*100)+'%':'0%';}
 
-/* ── Exports ── */
-function exportLeaderboard(){ var f=applyFilters(_raw),am=buildAgentMap(f),ag=sortAgents(Object.values(am),_lbSortCol,_lbSortDir); var lines=[['Rank','Agent','Net','Raw','Excluded','KPIs']].concat(ag.map(function(a,i){ return [i+1,a.name,a.net,a.total,a.excluded,Object.entries(a.kpis).map(function(e){return e[0]+':'+e[1];}).join(' | ')]; })); downloadCSV('agent-leaderboard.csv',lines.map(function(r){return r.map(csvEsc).join(',');}).join('\n')); }
-function exportKpiTable(kpi){ var f=applyFilters(_raw),kr=f.filter(function(r){return r.kpi===kpi&&!r.excluded;}),am={}; kr.forEach(function(r){if(r.agent)am[r.agent]=(am[r.agent]||0)+1;}); var ss=_kpiSortCol[kpi]||{col:'count',dir:-1},rows=Object.entries(am).map(function(e){return {agent:e[0],count:e[1],pct:kr.length?Math.round(e[1]/kr.length*100):0};}); rows.sort(function(a,b){if(ss.col==='agent')return ss.dir*a.agent.localeCompare(b.agent);if(ss.col==='pct')return ss.dir*(b.pct-a.pct);return ss.dir*(b.count-a.count);}); downloadCSV('kpi-'+kpi+'-agents.csv',[['Rank','Agent','Breaches','% of KPI']].concat(rows.map(function(r,i){return [i+1,r.agent,r.count,r.pct+'%'];})).map(function(r){return r.map(csvEsc).join(',');}).join('\n')); }
-function exportTrends(){ var f=applyFilters(_raw),wS={},aS={}; f.forEach(function(r){if(r.week)wS[r.week]=1;}); f.filter(function(r){return !r.excluded;}).forEach(function(r){if(r.agent)aS[r.agent]=1;}); var weeks=Object.keys(wS).sort(),agents=Object.keys(aS); var mx={}; agents.forEach(function(a){mx[a]={};weeks.forEach(function(w){mx[a][w]=f.filter(function(r){return r.agent===a&&r.week===w&&!r.excluded;}).length;});}); agents.sort(function(a,b){return Object.values(mx[b]).reduce(function(s,v){return s+v;},0)-Object.values(mx[a]).reduce(function(s,v){return s+v;},0);}); downloadCSV('agent-weekly-trends.csv',[['Agent'].concat(weeks).concat(['Total'])].concat(agents.map(function(a){var t=0,c=weeks.map(function(w){var v=mx[a][w];t+=v;return v;});return [a].concat(c).concat([t]);})).map(function(r){return r.map(csvEsc).join(',');}).join('\n')); }
-function exportAllTickets(){ var rows=applyFilters(_raw).slice().sort(function(a,b){return a.agent.localeCompare(b.agent)||a.kpi.localeCompare(b.kpi);}); downloadCSV('all-agent-tickets.csv',[['Agent','Ticket','KPI','Reason','Queue','Week','Jira','Status']].concat(rows.map(function(r){return [r.agent,r.ticket,r.kpi,r.reason,r.queue,r.week,r.jira,r.excluded?'Excluded':'Active'];})).map(function(r){return r.map(csvEsc).join(',');}).join('\n')); }
-function exportAgentDetail(n){ var rows=applyFilters(_raw).filter(function(r){return r.agent===n;}); downloadCSV('agent-'+n.replace(/[^a-zA-Z0-9]/g,'-')+'.csv',[['Agent','Ticket','KPI','Reason','Queue','Week','Jira','Status']].concat(rows.map(function(r){return [r.agent,r.ticket,r.kpi,r.reason,r.queue,r.week,r.jira,r.excluded?'Excluded':'Active'];})).map(function(r){return r.map(csvEsc).join(',');}).join('\n')); }
-function csvEsc(v){ var s=String(v==null?'':v); return (s.includes(',')||s.includes('"')||s.includes('\n')) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function exportLeaderboard(){var f=applyFilters(_raw),am=buildAgentMap(f),ag=sortAgents(Object.values(am),_lbSortCol,_lbSortDir);var lines=[['Rank','Agent','Net','Raw','Excluded','KPIs']].concat(ag.map(function(a,i){return [i+1,a.name,a.net,a.total,a.excluded,Object.entries(a.kpis).map(function(e){return e[0]+':'+e[1];}).join(' | ')];}));downloadCSV('agent-leaderboard.csv',lines.map(function(r){return r.map(csvEsc).join(',');}).join('\n'));}
+function exportKpiTable(kpi){var f=applyFilters(_raw),kr=f.filter(function(r){return r.kpi===kpi&&!r.excluded;}),am={};kr.forEach(function(r){if(r.agent)am[r.agent]=(am[r.agent]||0)+1;});var ss=_kpiSortCol[kpi]||{col:'count',dir:-1},rows=Object.entries(am).map(function(e){return {agent:e[0],count:e[1],pct:kr.length?Math.round(e[1]/kr.length*100):0};});rows.sort(function(a,b){if(ss.col==='agent')return ss.dir*a.agent.localeCompare(b.agent);if(ss.col==='pct')return ss.dir*(b.pct-a.pct);return ss.dir*(b.count-a.count);});downloadCSV('kpi-'+kpi+'-agents.csv',[['Rank','Agent','Breaches','% of KPI']].concat(rows.map(function(r,i){return [i+1,r.agent,r.count,r.pct+'%'];})).map(function(r){return r.map(csvEsc).join(',');}).join('\n'));}
+function exportTrends(){var f=applyFilters(_raw),wS={},aS={};f.forEach(function(r){if(r.week)wS[r.week]=1;});f.filter(function(r){return !r.excluded;}).forEach(function(r){if(r.agent)aS[r.agent]=1;});var weeks=Object.keys(wS).sort(),agents=Object.keys(aS);var mx={};agents.forEach(function(a){mx[a]={};weeks.forEach(function(w){mx[a][w]=f.filter(function(r){return r.agent===a&&r.week===w&&!r.excluded;}).length;});});agents.sort(function(a,b){return Object.values(mx[b]).reduce(function(s,v){return s+v;},0)-Object.values(mx[a]).reduce(function(s,v){return s+v;},0);});downloadCSV('agent-weekly-trends.csv',[['Agent'].concat(weeks).concat(['Total'])].concat(agents.map(function(a){var t=0,c=weeks.map(function(w){var v=mx[a][w];t+=v;return v;});return [a].concat(c).concat([t]);})).map(function(r){return r.map(csvEsc).join(',');}).join('\n'));}
+function exportAllTickets(){var rows=applyFilters(_raw).slice().sort(function(a,b){return a.agent.localeCompare(b.agent)||a.kpi.localeCompare(b.kpi);});downloadCSV('all-agent-tickets.csv',[['Agent','Ticket','KPI','Reason','Queue','Week','Jira','Status']].concat(rows.map(function(r){return [r.agent,r.ticket,r.kpi,r.reason,r.queue,r.week,r.jira,r.excluded?'Excluded':'Active'];})).map(function(r){return r.map(csvEsc).join(',');}).join('\n'));}
+function exportAgentDetail(n){var rows=applyFilters(_raw).filter(function(r){return r.agent===n;});downloadCSV('agent-'+n.replace(/[^a-zA-Z0-9]/g,'-')+'.csv',[['Agent','Ticket','KPI','Reason','Queue','Week','Jira','Status']].concat(rows.map(function(r){return [r.agent,r.ticket,r.kpi,r.reason,r.queue,r.week,r.jira,r.excluded?'Excluded':'Active'];})).map(function(r){return r.map(csvEsc).join(',');}).join('\n'));}
+function csvEsc(v){var s=String(v==null?'':v);return (s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s;}
 
-/* ── Public API ── */
-window.AT = {
-  openDetail: function(name){ _detailAgent=name; _currentTab='leaderboard'; document.querySelectorAll('#at-tab-bar .rpt-tab').forEach(function(b){b.classList.remove('active');}); document.querySelector('.rpt-tab[data-tab="leaderboard"]').classList.add('active'); render(); },
-  closeDetail: function(){ _detailAgent=null; render(); },
-  clearManualOrder: function(){ _manualOrder=null; render(); },
-  resetFilters: function(){
-    document.getElementById('filter-agent-name').value='';
-    ['filter-kpi','filter-reason','filter-week','filter-queue'].forEach(function(id){document.getElementById(id).value='All';});
-    document.getElementById('filter-excl').value='all';
-    _detailAgent=null; _kpiSortCol={}; _lbSortCol='net'; _lbSortDir=-1; _manualOrder=null; render();
-  },
-  sortKpiTable: function(kpi,col){ var ss=_kpiSortCol[kpi]||{col:'count',dir:-1}; _kpiSortCol[kpi]=(ss.col===col)?{col:col,dir:ss.dir*-1}:{col:col,dir:-1}; render(); },
-  exportCurrentTab: function(){ if(_currentTab==='leaderboard'||_detailAgent) exportLeaderboard(); else if(_currentTab==='kpi-breakdown') exportKpiTable('KSL-5a'); else if(_currentTab==='trends') exportTrends(); else exportAllTickets(); },
-  exportLeaderboard: exportLeaderboard, exportKpiTable: exportKpiTable,
-  exportTrends: exportTrends, exportAllTickets: exportAllTickets, exportAgentDetail: exportAgentDetail
+window.AT={
+  openDetail:function(name){_detailAgent=name;_currentTab='leaderboard';document.querySelectorAll('#at-tab-bar .rpt-tab').forEach(function(b){b.classList.remove('active');});document.querySelector('.rpt-tab[data-tab="leaderboard"]').classList.add('active');render();},
+  closeDetail:function(){_detailAgent=null;render();},
+  clearManualOrder:function(){_manualOrder=null;render();},
+  resetFilters:function(){document.getElementById('filter-agent-name').value='';['filter-kpi','filter-reason','filter-week','filter-queue'].forEach(function(id){document.getElementById(id).value='All';});document.getElementById('filter-excl').value='all';_detailAgent=null;_kpiSortCol={};_lbSortCol='net';_lbSortDir=-1;_manualOrder=null;render();},
+  sortKpiTable:function(kpi,col){var ss=_kpiSortCol[kpi]||{col:'count',dir:-1};_kpiSortCol[kpi]=(ss.col===col)?{col:col,dir:ss.dir*-1}:{col:col,dir:-1};render();},
+  exportCurrentTab:function(){if(_currentTab==='leaderboard'||_detailAgent)exportLeaderboard();else if(_currentTab==='kpi-breakdown')exportKpiTable('KSL-5a');else if(_currentTab==='trends')exportTrends();else exportAllTickets();},
+  exportLeaderboard:exportLeaderboard,exportKpiTable:exportKpiTable,exportTrends:exportTrends,exportAllTickets:exportAllTickets,exportAgentDetail:exportAgentDetail
 };
 
-/* ── Init ── */
-document.addEventListener('DOMContentLoaded', function(){
-  var importBtn=document.getElementById('at-import-btn');
-  var fileInput=document.getElementById('at-file-input');
-  importBtn.addEventListener('click', function(){ fileInput.value=''; fileInput.click(); });
-  fileInput.addEventListener('change', function(){ if(fileInput.files&&fileInput.files[0]) parseFile(fileInput.files[0]); });
-
+document.addEventListener('DOMContentLoaded',function(){
+  var importBtn=document.getElementById('at-import-btn'),fileInput=document.getElementById('at-file-input');
+  importBtn.addEventListener('click',function(){fileInput.value='';fileInput.click();});
+  fileInput.addEventListener('change',function(){if(fileInput.files&&fileInput.files[0])parseFile(fileInput.files[0]);});
   var dz=document.getElementById('at-drop-zone');
-  dz.addEventListener('click', function(){ fileInput.value=''; fileInput.click(); });
-  dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', function(){ dz.classList.remove('drag-over'); });
-  dz.addEventListener('drop', function(e){ e.preventDefault(); dz.classList.remove('drag-over'); var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) parseFile(f); });
-
-  document.getElementById('at-clear-btn').addEventListener('click', function(){
+  dz.addEventListener('click',function(){fileInput.value='';fileInput.click();});
+  dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});
+  dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag-over');var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)parseFile(f);});
+  document.getElementById('at-clear-btn').addEventListener('click',function(){
     _raw=[];_detailAgent=null;_kpiSortCol={};_lbSortCol='net';_lbSortDir=-1;_manualOrder=null;
     document.getElementById('at-upload-section').style.display='';
-    var ds=document.getElementById('at-data-section'); ds.style.display='none'; ds.classList.remove('visible');
+    var ds=document.getElementById('at-data-section');ds.style.display='none';ds.classList.remove('visible');
     document.getElementById('at-sidebar').style.display='none';
     document.getElementById('at-clear-btn').style.display='none';
     document.getElementById('at-export-btn').style.display='none';
     document.getElementById('at-record-count').textContent='';
     setStatus('','');
   });
-
-  document.getElementById('at-tab-bar').addEventListener('click', function(e){
-    var btn=e.target.closest('.rpt-tab'); if(!btn) return;
-    _currentTab=btn.dataset.tab; _detailAgent=null;
-    document.querySelectorAll('#at-tab-bar .rpt-tab').forEach(function(b){b.classList.remove('active');});
-    btn.classList.add('active');
-    if(_raw.length) render();
-  });
-
-  ['filter-agent-name','filter-kpi','filter-reason','filter-week','filter-queue','filter-excl'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el) el.addEventListener(el.tagName==='INPUT'?'input':'change', function(){ if(_raw.length) render(); });
-  });
+  document.getElementById('at-tab-bar').addEventListener('click',function(e){var btn=e.target.closest('.rpt-tab');if(!btn)return;_currentTab=btn.dataset.tab;_detailAgent=null;document.querySelectorAll('#at-tab-bar .rpt-tab').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');if(_raw.length)render();});
+  ['filter-agent-name','filter-kpi','filter-reason','filter-week','filter-queue','filter-excl'].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener(el.tagName==='INPUT'?'input':'change',function(){if(_raw.length)render();});});
 });
 
 })();
