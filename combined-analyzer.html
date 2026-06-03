@@ -866,48 +866,76 @@ function renderKpiTrends(){
    KPI DEEP DIVE TAB
 ═══════════════════════════════════════════════════════ */
 var _kpiPage={};
+var _kpiQueue={};   // stores selected queue per KPI code, null = All
 function renderKpiTab(code){
   var meta=KPI_META[code]||{color:'#888',what:'',isKM:false};
-  var rows=state.slaData[code]||[];
-  var bRows=state.breachData[code]||[];
+  var allSlaRows=state.slaData[code]||[];
+  var allBRows=state.breachData[code]||[];
   var month=state.activeMonth;
+  var selQueue=_kpiQueue[code]||null;
+
+  /* ── Queue list (from all months so chips don't disappear on month switch) ── */
+  var queueCounts={};
+  var srcForQueues=month?allSlaRows.filter(function(r){return r.month===month;}):allSlaRows;
+  srcForQueues.forEach(function(r){var q=r.queue||'Unknown';queueCounts[q]=(queueCounts[q]||0)+1;});
+  var queues=Object.keys(queueCounts).sort();
+
+  /* ── Apply month + queue filter ── */
+  var rows=allSlaRows;
   if(month) rows=rows.filter(function(r){return r.month===month;});
+  if(selQueue) rows=rows.filter(function(r){return (r.queue||'Unknown')===selQueue;});
+
+  var bRows=allBRows;
+  if(month) bRows=bRows.filter(function(r){return r.month===month;});
+  if(selQueue) bRows=bRows.filter(function(r){return (r.queue||'Unknown')===selQueue;});
+
   var total=rows.length;
   var excluded=rows.filter(function(r){return r.isExcluded;}).length;
   var breaches=rows.filter(function(r){return r.isBreach;}).length;
   var rawBreaches=breaches+excluded;
   var exclPct=total?parseFloat((excluded/total*100).toFixed(1)):0;
   var t=calcTarget(total,breaches,meta.isKM,meta.target);
-var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
+  var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
   if(!_kpiPage[code]) _kpiPage[code]=1;
 
-  var uniqueBreachRows=bRows.filter(function(r){return r.unique && !r.excluded;});
-  if(month) uniqueBreachRows=uniqueBreachRows.filter(function(r){return r.month===month;});
-
+  var uniqueBreachRows=bRows.filter(function(r){return r.unique&&!r.excluded;});
   var excludedBreachRows=bRows.filter(function(r){return r.excluded;});
-  if(month) excludedBreachRows=excludedBreachRows.filter(function(r){return r.month===month;});
 
-  /* compliance delta for KSL */
+  /* ── Queue filter chips ── */
+  var queueChipsHtml='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--divider)">'+
+    '<span style="font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0">Queue:</span>'+
+    '<button class="month-chip'+(selQueue===null?' active':'').'" onclick="_setKpiQueue(\''+code+'\',null)">All Queues <span style="opacity:.6">('+srcForQueues.length+')</span></button>'+
+    queues.map(function(q){
+      var cnt=queueCounts[q]||0;
+      return '<button class="month-chip'+(selQueue===q?' active':'').'" onclick="_setKpiQueue(\''+code+'\',\''+q.replace(/'/g,"\\'")+'\')" title="'+esc(q)+'">'+
+        esc(q)+' <span style="opacity:.6">('+cnt+')</span></button>';
+    }).join('')+
+    '</div>';
+
+  /* ── compliance delta ── */
   var complianceDeltaHtml='';
   if(!meta.isKM&&excluded>0){
     var delta=parseFloat((t.value-tRaw.value).toFixed(1));
-    var dClass=delta>0?'c-delta-pos':delta<0?'c-delta-neg':'c-delta-zero';
-    complianceDeltaHtml=_sc('Raw '+( meta.isKM?'Occurrence':'Compliance'),tRaw.display,'Before exclusions','none')+
+    complianceDeltaHtml=_sc('Raw '+(meta.isKM?'Occurrence':'Compliance'),tRaw.display,'Before exclusions','none')+
       _sc('Adjusted '+(meta.isKM?'Occurrence':'Compliance'),t.display,(delta>0?'+':'')+delta+'pp after excl.','rag-'+t.rag);
   }
 
-  var header='<div class="sc"><div class="sc-head">'+
-    '<h2>'+esc(code)+'</h2>'+
-    '<span class="badge rag-'+t.rag+'">'+t.display+' &middot; '+ragLabel(t.rag,meta.isKM)+'</span>'+
-    '<span style="font-size:11px;color:var(--muted);margin-left:8px">'+esc(meta.what)+'</span>'+
+  var header='<div class="sc">'+
+    '<div class="sc-head">'+
+      '<h2>'+esc(code)+'</h2>'+
+      '<span class="badge rag-'+t.rag+'">'+t.display+' &middot; '+ragLabel(t.rag,meta.isKM)+'</span>'+
+      (selQueue?'<span style="font-size:11px;background:var(--primary);color:#fff;padding:2px 10px;border-radius:20px;margin-left:6px">&#x1F4CC; '+esc(selQueue)+'</span>':'')+
+      '<span style="font-size:11px;color:var(--muted);margin-left:8px">'+esc(meta.what)+'</span>'+
     '</div>'+
+    queueChipsHtml+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)">'+
-    _sc('Total',fmt(total),'tickets in scope','none')+
-    _sc('Net Breaches',fmt(breaches),'after exclusions','none')+
-    _sc('Excluded',fmt(excluded),exclPct+'% &middot; Excluded=1 in Breaches file','excl')+
-    (complianceDeltaHtml||_sc(meta.isKM?'Occurrence':'Compliance',t.display,meta.isKM?'Target &#x2264; 5%':'Target &#x2265; 95%','rag-'+t.rag))+
+      _sc('Total',fmt(total),'tickets in scope','none')+
+      _sc('Net Breaches',fmt(breaches),'after exclusions','none')+
+      _sc('Excluded',fmt(excluded),exclPct+'% &middot; Excluded=1 in Breaches file','excl')+
+      (complianceDeltaHtml||_sc(meta.isKM?'Occurrence':'Compliance',t.display,meta.isKM?'Target &#x2264; '+meta.target+'%':'Target &#x2265; '+meta.target+'%','rag-'+t.rag))+
     '</div></div>';
 
+  /* ── Reason bars ── */
   var reasonHtml='';
   if(uniqueBreachRows.length){
     var reasons={};
@@ -916,12 +944,11 @@ var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
     var maxR=sortedR[0][1];
     var reasonBars=sortedR.map(function(e){
       var w=Math.round(e[1]/maxR*100);
-      var pctR=parseFloat(pct(e[1],uniqueBreachRows.length));
       return '<div class="bar-row">'+
         '<div class="bar-lbl">'+esc(e[0])+'</div>'+
         '<div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:'+esc(meta.color)+'"></div></div>'+
         '<div class="bar-cnt">'+e[1]+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);margin-left:4px;flex-shrink:0">'+pctR+'%</div>'+
+        '<div style="font-size:10px;color:var(--muted);margin-left:4px;flex-shrink:0">'+parseFloat(pct(e[1],uniqueBreachRows.length))+'%</div>'+
       '</div>';
     }).join('');
     reasonHtml='<div class="sc"><div class="sc-head"><h2>Breach Reasons</h2>'+
@@ -929,12 +956,13 @@ var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
       '<div class="sc-body"><div class="bar-chart">'+reasonBars+'</div></div></div>';
   }
 
+  /* ── Queue breach bars ── */
   var queueHtml='';
   var breachSlaRows=rows.filter(function(r){return r.isBreach;});
   if(breachSlaRows.length){
-    var queues={};
-    breachSlaRows.forEach(function(r){var k=r.queue||'Unknown';queues[k]=(queues[k]||0)+1;});
-    var sortedQ=Object.keys(queues).map(function(k){return[k,queues[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,15);
+    var queuesB={};
+    breachSlaRows.forEach(function(r){var k=r.queue||'Unknown';queuesB[k]=(queuesB[k]||0)+1;});
+    var sortedQ=Object.keys(queuesB).map(function(k){return[k,queuesB[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,15);
     var maxQ=sortedQ[0][1];
     var qBars=sortedQ.map(function(e){
       var w=Math.round(e[1]/maxQ*100);
@@ -949,6 +977,107 @@ var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
       '<div class="sc-body"><div class="bar-chart">'+qBars+'</div></div></div>';
   }
 
+  /* ── Queue Trend Chart ── */
+  var queueTrendHtml='';
+  var months=state.months;
+  if(months.length>=2){
+    var trendQueues=selQueue?[selQueue]:Object.keys(queueCounts).sort(function(a,b){
+      /* sort by total breach count descending, cap at 8 */
+      var bA=(allSlaRows.filter(function(r){return (r.queue||'Unknown')===a&&r.isBreach;})).length;
+      var bB=(allSlaRows.filter(function(r){return (r.queue||'Unknown')===b&&r.isBreach;})).length;
+      return bB-bA;
+    }).slice(0,8);
+
+    /* palette */
+    var palette=['#006494','#437a22','#d19900','#7a39bb','#964219','#01696f','#a12c4b','#3a3a8c'];
+    var W=560,H=160,PL=40,PR=16,PT=14,PB=32;
+    var cW=W-PL-PR,cH=H-PT-PB;
+
+    /* collect all valid points per queue */
+    var qSeries=trendQueues.map(function(q,qi){
+      var points=months.map(function(m){
+        var rs=(allSlaRows).filter(function(r){return r.month===m&&(r.queue||'Unknown')===q;});
+        if(!rs.length) return null;
+        var tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;
+        var tv=calcTarget(tot,br,meta.isKM,meta.target);
+        return {m:m,v:tv.value,rag:tv.rag,tot:tot,br:br};
+      });
+      var valid=points.filter(Boolean);
+      return {q:q,points:points,valid:valid,color:palette[qi%palette.length]};
+    }).filter(function(s){return s.valid.length>=1;});
+
+    if(qSeries.length){
+      var allV=[];
+      qSeries.forEach(function(s){s.valid.forEach(function(p){allV.push(p.v);});});
+      var minV=meta.isKM?0:Math.max(0,Math.min.apply(null,allV)-10);
+      var maxV=meta.isKM?Math.min(100,Math.max.apply(null,allV)+10):100;
+      if(maxV===minV){maxV=minV+10;}
+
+      function xPos(i){return PL+i/(months.length-1||1)*cW;}
+      function yPos(v){return PT+cH-(v-minV)/(maxV-minV)*cH;}
+
+      /* grid + y-axis */
+      var gridLines='';
+      for(var gi=0;gi<=4;gi++){
+        var gv=minV+(maxV-minV)*gi/4;
+        var gy=yPos(gv);
+        gridLines+='<line x1="'+PL+'" y1="'+gy+'" x2="'+(PL+cW)+'" y2="'+gy+'" stroke="#e5e7eb" stroke-width="0.5"/>'+
+          '<text x="'+(PL-4)+'" y="'+(gy+3)+'" font-size="8" fill="#9ca3af" text-anchor="end">'+Math.round(gv)+'%</text>';
+      }
+
+      /* target line */
+      var targetV=(meta.target!==null&&meta.target!==undefined)?meta.target:(meta.isKM?5:95);
+      var tyQ=yPos(targetV);
+      var targetLineQ='';
+      if(targetV>=minV&&targetV<=maxV){
+        targetLineQ='<line x1="'+PL+'" y1="'+tyQ+'" x2="'+(PL+cW)+'" y2="'+tyQ+'" stroke="#d19900" stroke-width="1" stroke-dasharray="4 3" opacity="0.8"/>'+
+          '<text x="'+(PL+cW+2)+'" y="'+(tyQ+3)+'" font-size="8" fill="#d19900">'+targetV+'%</text>';
+      }
+
+      /* x-axis labels */
+      var xLabelsQ=months.map(function(m,i){
+        return '<text x="'+xPos(i)+'" y="'+(H-4)+'" font-size="8" fill="#9ca3af" text-anchor="middle">'+monthLabel(m)+'</text>';
+      }).join('');
+
+      /* lines + dots per queue */
+      var seriesSvg=qSeries.map(function(s){
+        var linePts=[];
+        s.points.forEach(function(p,i){if(p!==null)linePts.push(xPos(i)+','+yPos(p.v));});
+        var lineEl=linePts.length>1?'<polyline points="'+linePts.join(' ')+'" fill="none" stroke="'+s.color+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>':'';
+        var dotsEl=s.points.map(function(p,i){
+          if(!p) return '';
+          var cx=xPos(i),cy=yPos(p.v);
+          return '<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="'+s.color+'" stroke="#fff" stroke-width="1.5">'+
+            '<title>'+esc(s.q)+' · '+monthLabel(p.m)+' · '+p.v+'% ('+p.br+'/'+p.tot+')</title></circle>';
+        }).join('');
+        return lineEl+dotsEl;
+      }).join('');
+
+      /* legend */
+      var legendHtml='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:10px">'+
+        qSeries.map(function(s){
+          return '<span style="display:inline-flex;align-items:center;gap:4px">'+
+            '<span style="display:inline-block;width:18px;height:3px;background:'+s.color+';border-radius:2px;flex-shrink:0"></span>'+
+            '<span style="color:var(--muted)">'+esc(s.q)+'</span>'+
+          '</span>';
+        }).join('')+
+      '</div>';
+
+      var svgQ='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;display:block;overflow:visible">'+
+        gridLines+targetLineQ+seriesSvg+xLabelsQ+
+      '</svg>';
+
+      var note=selQueue
+        ? '<p style="font-size:10px;color:var(--muted);margin-top:6px">Showing trend for selected queue only. Clear the queue filter to compare all queues.</p>'
+        : '<p style="font-size:10px;color:var(--muted);margin-top:6px">Showing top 8 queues by breach count. Select a queue chip above to isolate one line.</p>';
+
+      queueTrendHtml='<div class="sc"><div class="sc-head"><h2>&#x1F4C8; Queue Trend</h2>'+
+        '<span class="badge">'+(meta.isKM?'Occurrence % per queue (lower=better)':'Compliance % per queue (higher=better)')+' &middot; dashed = target</span></div>'+
+        '<div class="sc-body">'+svgQ+legendHtml+note+'</div></div>';
+    }
+  }
+
+  /* ── Excluded detail table ── */
   var exclDetailHtml='';
   if(excludedBreachRows.length){
     var PAGE=15,pg=_kpiPage[code]||1;
@@ -957,16 +1086,16 @@ var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
     var exclTableRows=pageRows.map(function(r){
       return '<tr>'+
         '<td style="font-weight:600;font-size:11px">'+esc(r.ticket)+'</td>'+
-        '<td style="font-size:11px">'+esc(r.reason||'&#x2014;')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.agent||'&#x2014;')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.queue||'&#x2014;')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.comment||'&#x2014;')+'</td>'+
-        '<td style="font-size:11px">'+esc(r.jira||'&#x2014;')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.reason||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.agent||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.queue||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.comment||'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(r.jira||'—')+'</td>'+
       '</tr>';
     }).join('');
     var pgBtns='';
     for(var p=1;p<=totalExclPages;p++){
-      pgBtns+='<button class="pg-btn'+(p===pg?' on':'')+'" onclick="_kpiPage[\''+code+'\']='+p+';renderTab()">'+p+'</button>';
+      pgBtns+='<button class="pg-btn'+(p===pg?' on':'').'" onclick="_kpiPage[\''+code+'\']='+p+';renderTab()">'+p+'</button>';
     }
     exclDetailHtml='<div class="sc"><div class="sc-head"><h2>&#x1F6AB; Excluded Tickets Detail</h2>'+
       '<span class="badge">'+excludedBreachRows.length+' excluded &middot; from Breaches file (Excluded=1)</span></div>'+
@@ -978,6 +1107,7 @@ var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
       '</div></div>';
   }
 
+  /* ── Breach ticket list ── */
   var PAGE2=20,pg2=_kpiPage[code+'_breach']||1;
   var totalPg2=Math.ceil(breachSlaRows.length/PAGE2);
   var pageBreachRows=breachSlaRows.slice((pg2-1)*PAGE2,pg2*PAGE2);
@@ -985,17 +1115,17 @@ var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
     var bInfoRow=uniqueBreachRows.find(function(b){return b.ticket===r.ticket;})||null;
     return '<tr>'+
       '<td style="font-weight:600;font-size:11px">'+esc(r.ticket)+'</td>'+
-      '<td style="font-size:11px">'+esc(r.queue||'&#x2014;')+'</td>'+
-      '<td style="font-size:11px">'+esc(r.priority||'&#x2014;')+'</td>'+
-      '<td style="font-size:11px">'+esc(r.language||'&#x2014;')+'</td>'+
-      '<td style="font-size:11px">'+esc(r.month||'&#x2014;')+'</td>'+
-      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.reason:'&#x2014;')+'</td>'+
-      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.agent:'&#x2014;')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.queue||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.priority||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.language||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(r.month||'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.reason:'—')+'</td>'+
+      '<td style="font-size:11px">'+esc(bInfoRow?bInfoRow.agent:'—')+'</td>'+
     '</tr>';
   }).join('');
   var pgBtns2='';
   for(var p2=1;p2<=totalPg2;p2++){
-    pgBtns2+='<button class="pg-btn'+(p2===pg2?' on':'')+'" onclick="_kpiPage[\''+code+'_breach\']='+p2+';renderTab()">'+p2+'</button>';
+    pgBtns2+='<button class="pg-btn'+(p2===pg2?' on':'').'" onclick="_kpiPage[\''+code+'_breach\']='+p2+';renderTab()">'+p2+'</button>';
   }
   var breachListHtml='<div class="sc"><div class="sc-head"><h2>Breach Ticket List</h2>'+
     '<span class="badge">'+breachSlaRows.length+' breaches &middot; SLA file &middot; enriched with Breaches file where available</span></div>'+
@@ -1008,9 +1138,17 @@ var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
 
   return header+
     '<div class="two-col">'+reasonHtml+queueHtml+'</div>'+
+    queueTrendHtml+
     exclDetailHtml+
     breachListHtml;
 }
+
+window._setKpiQueue=function(code,q){
+  _kpiQueue[code]=q||null;
+  _kpiPage[code]=1;
+  _kpiPage[code+'_breach']=1;
+  renderTab();
+};
 
 /* ═══════════════════════════════════════════════════════
    FILE UPLOAD HANDLING
