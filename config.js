@@ -50,21 +50,34 @@
     nok:        18,
   };
 
-  // CSV column mappings (ServiceNow SLAs-Details export — unchanged)
+  // ─── CSV column mappings (ServiceNow SLAs-Details export) ────────────────────────
+  // Headers (0-based) from "3093-SLAs-Details" ServiceNow export:
+  //  0: SLA Kennzahl                          → sla_code
+  //  8: Ticket Priorität                      → priority
+  // 10: SLA Prüfung                           → sla_n
+  // 11: SLA Prüfung Name                      → breach_desc
+  // 12: SLA Prüfung Zeitpunkt                 → breach_dt
+  // 13: SLA Prüfung ist OK/NOK?               → nok
+  // 19: Element geschlossen am                → date_close
+  // 20: Element Status                        → status
+  // 21: Incident Element Supportsprache       → lang  (ISO code: de, en, fr …)
+  // 22: Incident Ticket                       → ticket
+  // 23: Ticket Gruppe                         → queue
+  // 28: KM Anwendung                          → tool / topic  (#SW#AOS, #SW#ISTA …)
   const C_CSV = {
-    sla_code: 0,
-    priority: 8,
-    sla_n: 10,
+    sla_code:    0,
+    priority:    8,
+    sla_n:       10,
     breach_desc: 11,
-    breach_dt: 12,
-    nok: 13,
-    tool: 15,
-    date_close: 18,
-    status: 19,
-    lang: 20,
-    ticket: 21,
-    queue: 22,
-    topic: 27,
+    breach_dt:   12,
+    nok:         13,
+    date_close:  19,
+    status:      20,
+    lang:        21,
+    ticket:      22,
+    queue:       23,
+    tool:        28,
+    topic:       28,
   };
 
   // Output column headers (standardized order for export)
