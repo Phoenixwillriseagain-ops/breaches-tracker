@@ -221,11 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Users can still import additional files or clear and start fresh.
   (function autoLoadBundledCSV() {
     var CSV_FILENAME = '3093-SLAs-Details-16.csv';
-    var CSV_B64 = 'U0xBIEtlbm56YWhsLFNMQSBLZW5uemFobCBOYW1lLFNMQSBLZW5uemFobCBSZWloZW5mb2xnZSxTTEEgS2VubnphaGwgR3J1cHBlLFNMQSBLZW5uemFobCBWZXJnbGVpY2hzYXJ0LFNMQSBUZWN0ZXQgQmVhcmJlaXR1bmdzem5l7QSBEa2V0Y2V0IHZpYy4gUmVha3Rpb25zemVpdCxTTEEgVGlja2V0IEFuemFobCBJbi1Qcm9ncmVzcyxUaWNrZXQgUHJpb3JpdOBdCg=='; // placeholder
-    // The actual embed is handled via the data-processor CSV reader;
-    // this block converts the b64 string to a File object and imports it.
     try {
-      // Decode base64 → Uint8Array → Blob → File
       var b64 = window.__BUNDLED_CSV_B64__;
       if (!b64) return; // no bundled data, user must upload manually
       var bin = atob(b64);
