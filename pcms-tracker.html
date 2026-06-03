@@ -30,6 +30,11 @@
     .pcms-status.ok  { background:rgba(76,175,125,.1); border:1px solid #4caf7d; color:#4caf7d; }
     .pcms-status.err { background:rgba(224,92,92,.1);  border:1px solid #e05c5c; color:#e05c5c; }
 
+    /* Clear button */
+    .pcms-clear-bar { display:flex; justify-content:flex-end; margin-bottom:16px; }
+    .pcms-btn-clear { background:transparent; border:1px solid #e05c5c; color:#e05c5c; padding:6px 14px; border-radius:7px; cursor:pointer; font-size:12px; font-weight:600; transition:all .2s; }
+    .pcms-btn-clear:hover { background:#e05c5c; color:#fff; }
+
     /* Stats row */
     .pcms-stats { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
     .pcms-stat { flex:1; min-width:140px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
@@ -130,6 +135,9 @@
 
   <!-- OVERVIEW -->
   <div class="pcms-section pcms-hidden" id="pt-overview">
+    <div class="pcms-clear-bar">
+      <button class="pcms-btn-clear" id="pcmsClearOverview">✕ Clear &amp; Load New File</button>
+    </div>
     <div class="pcms-toolbar">
       <div class="pcms-fg"><label>Month</label><select id="pFMonth"><option value="">All Months</option></select></div>
       <div class="pcms-fg"><label>Week</label><select id="pFWeek"><option value="">All Weeks</option></select></div>
@@ -146,6 +154,9 @@
 
   <!-- KO BREACHES -->
   <div class="pcms-section pcms-hidden" id="pt-ko">
+    <div class="pcms-clear-bar">
+      <button class="pcms-btn-clear" id="pcmsClearKO">✕ Clear &amp; Load New File</button>
+    </div>
     <div class="pcms-toolbar">
       <div class="pcms-fg"><label>Month</label><select id="kFMonth"><option value="">All Months</option></select></div>
       <div class="pcms-fg"><label>Week</label><select id="kFWeek"><option value="">All Weeks</option></select></div>
@@ -175,7 +186,7 @@
 (function(){
 'use strict';
 
-// ── Theme (reuse breaches-tracker pattern) ─────────────────────────────
+// ── Theme ─────────────────────────────────────────────────────────────────
 const saved = localStorage.getItem('pcms-theme') || localStorage.getItem('bt-theme') || 'light';
 document.documentElement.setAttribute('data-theme', saved);
 document.querySelector('[data-theme-toggle]').addEventListener('click', () => {
@@ -194,6 +205,54 @@ const CATEGORY_COLS = [
   '9. Reasonable Ticket Processing','10. Service Efficiency','11. Other Errors'
 ];
 
+// Month name lookup — converts a raw value from Excel into a human-readable
+// month label like "May 2026".  Handles three input forms:
+//   1. A JS Date object  (SheetJS cellDates:true)
+//   2. A numeric Excel serial (e.g. 45795)
+//   3. A plain number that is already a month-of-year  (e.g. 5 → "May")
+//   4. A string that already contains a month name  (returned as-is)
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function normaliseMonth(raw) {
+  if (!raw && raw !== 0) return '';
+
+  // ── Already a JS Date (SheetJS with cellDates:true) ────────────────
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    return MONTH_NAMES[raw.getMonth()] + ' ' + raw.getFullYear();
+  }
+
+  const str = String(raw).trim();
+
+  // ── Already contains a month name ("May 2026", "January", …) ──────
+  for (let i = 0; i < 12; i++) {
+    if (str.toLowerCase().includes(MONTH_NAMES[i].toLowerCase()) ||
+        str.toLowerCase().includes(MONTH_FULL[i].toLowerCase())) {
+      return str; // already readable, return unchanged
+    }
+  }
+
+  const n = parseFloat(str);
+  if (isNaN(n)) return str; // non-numeric string we don't recognise → keep it
+
+  // ── Excel date serial  (values > 100 are almost certainly serials) ─
+  if (n > 100) {
+    // Excel epoch: 1899-12-30
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000)); // UTC
+    if (!isNaN(d.getTime())) {
+      return MONTH_NAMES[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+    }
+  }
+
+  // ── Plain month-of-year number  (1 – 12) ──────────────────────────
+  const m = Math.round(n);
+  if (m >= 1 && m <= 12) {
+    return MONTH_NAMES[m - 1]; // no year available in this case
+  }
+
+  return str; // fallback: return as string
+}
+
 // ── Sub-tab navigation ───────────────────────────────────────────────────
 document.querySelectorAll('.pcms-tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -203,6 +262,23 @@ document.querySelectorAll('.pcms-tab-btn').forEach(btn => {
     document.getElementById('pt-' + btn.dataset.ptab).classList.remove('pcms-hidden');
   });
 });
+
+// ── Clear / reset ────────────────────────────────────────────────────────
+function clearAll() {
+  rawRows = []; koRows = [];
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+  // Reset file input so the same file can be re-selected
+  const fi = document.getElementById('pcmsFileInput');
+  fi.value = '';
+  // Hide status
+  const st = document.getElementById('pcmsStatus');
+  st.classList.add('pcms-hidden'); st.classList.remove('ok','err'); st.textContent = '';
+  // Go back to Upload tab
+  document.querySelector('[data-ptab="upload"]').click();
+}
+document.getElementById('pcmsClearOverview').addEventListener('click', clearAll);
+document.getElementById('pcmsClearKO').addEventListener('click', clearAll);
 
 // ── File upload ──────────────────────────────────────────────────────────
 const drop = document.getElementById('pcmsDrop');
@@ -217,8 +293,10 @@ function handleFile(file) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    try { parseWorkbook(XLSX.read(e.target.result, { type:'array' })); }
-    catch(err) { setStatus('Failed to read file: ' + err.message, true); }
+    try {
+      // cellDates:true makes SheetJS return JS Date objects for date cells
+      parseWorkbook(XLSX.read(e.target.result, { type:'array', cellDates:true }));
+    } catch(err) { setStatus('Failed to read file: ' + err.message, true); }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -229,7 +307,7 @@ function parseWorkbook(wb) {
     n.toLowerCase().includes('summary') || n.toLowerCase().includes('overall')
   ) || wb.SheetNames[0];
   const ws   = wb.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:true });
   if (data.length < 2) { setStatus('Sheet appears empty.', true); return; }
 
   // Find header row
@@ -252,7 +330,8 @@ function parseWorkbook(wb) {
     const row = data[i];
     if (!row || row.every(c => c === '')) continue;
     const week   = weekCol  >= 0 ? String(row[weekCol]  || '').trim() : '';
-    const month  = monthCol >= 0 ? String(row[monthCol] || '').trim() : '';
+    // normaliseMonth converts numbers/serials/dates to readable "Mon YYYY"
+    const month  = monthCol >= 0 ? normaliseMonth(row[monthCol]) : '';
     const ticket = String(row[ticketCol] || '').trim();
     if (!ticket) continue;
 
@@ -445,25 +524,27 @@ function setStatus(msg, isErr) {
   el.textContent = msg; el.classList.remove('pcms-hidden','ok','err');
   el.classList.add(isErr?'err':'ok');
 }
-const MORD=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Sort month labels chronologically regardless of format
 function sortMonths(arr) {
-  return [...arr].sort((a,b) => {
-    const ia=MORD.findIndex(m=>a.includes(m)), ib=MORD.findIndex(m=>b.includes(m));
-    if(ia!==ib) return ia-ib;
-    return (parseInt(a.replace(/\D/g,''))||0)-(parseInt(b.replace(/\D/g,''))||0);
+  return [...arr].sort((a, b) => {
+    // Extract month index from label
+    const midxOf = s => {
+      for (let i = 0; i < 12; i++) {
+        if (s.toLowerCase().includes(MONTH_NAMES[i].toLowerCase()) ||
+            s.toLowerCase().includes(MONTH_FULL[i].toLowerCase())) return i;
+      }
+      return -1;
+    };
+    const ia = midxOf(a), ib = midxOf(b);
+    // Extract year from label (e.g. "May 2026" → 2026)
+    const ya = parseInt(a.replace(/\D/g,'').slice(-4)) || 0;
+    const yb = parseInt(b.replace(/\D/g,'').slice(-4)) || 0;
+    if (ya !== yb) return ya - yb;
+    if (ia !== ib)  return ia - ib;
+    return 0;
   });
 }
-
-// Initialise theme toggle after script load
-(function initTheme(){
-  const btn = document.querySelector('[data-theme-toggle]');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    const t = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
-    document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('pcms-theme', t);
-  });
-})();
 
 })();
 </script>
