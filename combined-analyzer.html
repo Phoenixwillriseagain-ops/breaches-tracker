@@ -124,7 +124,7 @@
     .excl-bar-track{flex:1;height:10px;background:var(--divider);border-radius:3px;overflow:hidden;min-width:60px;display:inline-block;vertical-align:middle}
     .excl-bar-fill{height:100%;border-radius:3px;background:#6b7280}
     /* KPI Trend Line Charts */
-.kpi-trend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.kpi-trend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:16px}
 .ktc{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .ktc-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
 .ktc-head h3{font-size:12px;font-weight:700;margin:0}
@@ -779,7 +779,7 @@ function renderKpiTrends(){
     var valid=points.filter(function(p){return p!==null;});
     if(!valid.length) return '';
 
-    var W=320,H=110,PL=36,PR=12,PT=10,PB=28;
+    var W=500,H=180,PL=36,PR=12,PT=10,PB=28;
     var cW=W-PL-PR, cH=H-PT-PB;
     var minV=meta.isKM?0:Math.max(0,Math.min.apply(null,valid.map(function(p){return p.v;}))-10);
     var maxV=meta.isKM?Math.min(100,Math.max.apply(null,valid.map(function(p){return p.v;}))+10):100;
@@ -990,7 +990,7 @@ function renderKpiTab(code){
 
     /* palette */
     var palette=['#006494','#437a22','#d19900','#7a39bb','#964219','#01696f','#a12c4b','#3a3a8c'];
-    var W=560,H=160,PL=40,PR=16,PT=14,PB=32;
+    var W=860,H=240,PL=40,PR=16,PT=14,PB=32;
     var cW=W-PL-PR,cH=H-PT-PB;
 
     /* collect all valid points per queue */
@@ -1063,7 +1063,7 @@ function renderKpiTab(code){
         }).join('')+
       '</div>';
 
-      var svgQ='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;display:block;overflow:visible">'+
+      var svgQ='<svg viewBox=\"0 0 '+W+' '+H+'\" style=\"width:100%;display:block;overflow:visible\">'+
         gridLines+targetLineQ+seriesSvg+xLabelsQ+
       '</svg>';
 
