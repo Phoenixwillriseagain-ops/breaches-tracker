@@ -196,31 +196,35 @@
 ============================================================ */
 
 var KPI_META = {
-  'KSL-1':  {color:'#437a22', what:'Time from ticket creation to first agent reply.',          isKM:false},
-  'KSL-2a': {color:'#437a22', what:'Not resolved within SLA window – Normal priority.',        isKM:false},
-  'KSL-2b': {color:'#437a22', what:'Not resolved within SLA window – Low priority.',           isKM:false},
-  'KSL-2c': {color:'#01696f', what:'Not resolved within SLA window – High priority.',          isKM:false},
-  'KSL-2d': {color:'#01696f', what:'Not resolved within SLA window – Critical priority.',      isKM:false},
-  'KSL-3a': {color:'#7a39bb', what:'On Hold status used incorrectly (wrong reason/missing info).',isKM:false},
-  'KSL-4':  {color:'#006494', what:'Related Incident must be linked before ticket closure.',    isKM:false},
-  'KSL-5a': {color:'#964219', what:'Required communication steps were not followed.',          isKM:false},
-  'KSL-5b': {color:'#964219', what:'Ticket closed without meeting closure checklist.',         isKM:false},
-  'KSL-6':  {color:'#d19900', what:'Ticket re-opened after resolution.',                       isKM:false},
-  'KM-1':   {color:'#006494', what:'Customer re-opened the ticket — solution did not work.',   isKM:true},
-  'KM-2':   {color:'#7a39bb', what:'Ticket assigned to wrong team and bounced back.',          isKM:true},
+  'KSL-1':  {color:'#437a22', what:'Dealer satisfaction – quality of service delivery rated via web-based survey.',          isKM:false, target:null,  targetLabel:'Rating L1 ≥ 4.00'},
+  'KSL-2a': {color:'#437a22', what:'Handling Time – Low priority tickets resolved within 180 min.',                          isKM:false, target:90,   targetLabel:'Compliance Rate ≥ 90%'},
+  'KSL-2b': {color:'#437a22', what:'Handling Time – Low priority tickets resolved within 300 min.',                          isKM:false, target:95,   targetLabel:'Compliance Rate ≥ 95%'},
+  'KSL-2c': {color:'#01696f', what:'Handling Time – Medium priority tickets resolved within 150 min.',                       isKM:false, target:90,   targetLabel:'Compliance Rate ≥ 90%'},
+  'KSL-2d': {color:'#01696f', what:'Handling Time – Medium priority tickets resolved within 180 min.',                       isKM:false, target:95,   targetLabel:'Compliance Rate ≥ 95%'},
+  'KSL-3a': {color:'#7a39bb', what:'Reaction Time – Ticket response/acceptance within 30 min.',                             isKM:false, target:95,   targetLabel:'Compliance Rate ≥ 95%'},
+  'KSL-3b': {color:'#7a39bb', what:'Reaction Time – Chat acceptance/feedback within 60 sec.',                               isKM:false, target:95,   targetLabel:'Compliance Rate ≥ 95%'},
+  'KSL-4':  {color:'#006494', what:'Solution Quality – Tickets resolved at 1st level without involving a subsequent level.', isKM:false, target:75,   targetLabel:'Compliance Rate ≥ 75%'},
+  'KM-1':   {color:'#964219', what:'Solution Quality – Tickets resolved then reopened at 1st level.',                        isKM:true,  target:5,    targetLabel:'Occurrence Rate ≤ 5%'},
+  'KSL-5a': {color:'#d19900', what:'Process Conformity – Automatically measured via reports (PCa).',                         isKM:false, target:90,   targetLabel:'Compliance Rate ≥ 90%'},
+  'KSL-5b': {color:'#d19900', what:'Process Conformity – Manually checked via representative ticket sample (PCm).',          isKM:false, target:90,   targetLabel:'Compliance Rate ≥ 90%'},
+  'KSL-6':  {color:'#006494', what:'Linking – Ticket linked to a Knowledge Base document (Compass).',                        isKM:false, target:95,   targetLabel:'Compliance Rate ≥ 95%'},
+  'KM-2':   {color:'#7a39bb', what:'Assign Back – Ticket rejected and sent back by a subsequent level.',                     isKM:true,  target:5,    targetLabel:'Occurrence Rate ≤ 5%'},
 };
-var KPI_ORDER = ['KSL-4','KM-1','KSL-5b','KSL-5a','KSL-3a','KSL-6','KSL-2c','KSL-2d','KSL-2a','KSL-2b','KM-2','KSL-1'];
+var KPI_ORDER = ['KSL-1','KSL-2a','KSL-2b','KSL-2c','KSL-2d','KSL-3a','KSL-3b','KSL-4','KM-1','KSL-5a','KSL-5b','KSL-6','KM-2'];
 
-function calcTarget(totalWithExcl, breaches, isKM){
+function calcTarget(totalWithExcl, breaches, isKM, targetPct){
   if(!totalWithExcl) return {value:0, display:'0.0%', rag:'none', targetLabel:''};
+  var tgt = (targetPct !== undefined && targetPct !== null) ? targetPct : (isKM ? 5 : 95);
   if(isKM){
     var rate = parseFloat((breaches / totalWithExcl * 100).toFixed(1));
-    var r = rate > 15 ? 'red' : rate > 5 ? 'amber' : 'green';
-    return {value:rate, display:rate+'%', rag:r, targetLabel:'Occurrence Rate (lower is better)'};
+    var amber = tgt * 3; // e.g. for tgt=5: amber threshold = 15
+    var r = rate > amber ? 'red' : rate > tgt ? 'amber' : 'green';
+    return {value:rate, display:rate+'%', rag:r, targetLabel:'Occurrence Rate ≤ '+tgt+'%'};
   } else {
     var compliance = parseFloat(((totalWithExcl - breaches) / totalWithExcl * 100).toFixed(1));
-    var r2 = compliance < 85 ? 'red' : compliance < 95 ? 'amber' : 'green';
-    return {value:compliance, display:compliance+'%', rag:r2, targetLabel:'Compliance Rate (higher is better)'};
+    var redThreshold = tgt - 10; // e.g. for tgt=95: red < 85; for tgt=90: red < 80; for tgt=70: red < 60
+    var r2 = compliance < redThreshold ? 'red' : compliance < tgt ? 'amber' : 'green';
+    return {value:compliance, display:compliance+'%', rag:r2, targetLabel:'Compliance Rate ≥ '+tgt+'%'};
   }
 }
 
@@ -372,8 +376,8 @@ function getSummary(month){
     /* raw = before exclusions: excluded tickets treated as breaches */
     var rawBreaches=breaches+excluded;
     var meta=KPI_META[code]||{isKM:false};
-    var t=calcTarget(total,breaches,meta.isKM);
-    var tRaw=calcTarget(total,rawBreaches,meta.isKM);
+    var t=calcTarget(total,breaches,meta.isKM,meta.target);
+var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
     return {code,total,excluded,breaches,rawBreaches,target:t,targetRaw:tRaw};
   });
 }
@@ -651,7 +655,7 @@ function renderTrend(){
       if(!rs.length) return '<td style="background:#f0eeea;color:var(--faint)">&#x2014;</td>';
       var tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;
       var excl=rs.filter(function(r){return r.isExcluded;}).length;
-      var t=calcTarget(tot,br,meta.isKM);
+      var t=calcTarget(tot,br,meta.isKM,meta.target);
       return '<td style="'+cellStyle(t.rag,false)+'" title="'+monthLabel(m)+' &middot; '+br+' breaches / '+tot+' total &middot; '+excl+' excluded">'+t.display+'</td>';
     }).join('');
     var deltaTds=cols.map(function(m,i){
@@ -660,8 +664,8 @@ function renderTrend(){
       var prs=(state.slaData[code]||[]).filter(function(r){return r.month===pM;});
       var crs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
       if(!prs.length||!crs.length) return '<td style="background:none;height:18px;font-size:9px;color:var(--faint)">&#x2014;</td>';
-      var pt=calcTarget(prs.length,prs.filter(function(r){return r.isBreach;}).length,meta.isKM);
-      var ct=calcTarget(crs.length,crs.filter(function(r){return r.isBreach;}).length,meta.isKM);
+      var pt=calcTarget(prs.length,prs.filter(function(r){return r.isBreach;}).length,meta.isKM,meta.target);
+var ct=calcTarget(crs.length,crs.filter(function(r){return r.isBreach;}).length,meta.isKM,meta.target);
       var d=(ct.value-pt.value).toFixed(1);
       var isGood=meta.isKM?(parseFloat(d)<0):(parseFloat(d)>0);
       var sty=parseFloat(d)===0?'background:#f0eeea;color:#bab9b4':isGood?'background:#e3f2e8;color:#2e6b38':'background:#fce8e8;color:#a12c3a';
@@ -769,7 +773,7 @@ function renderKpiTrends(){
       var rs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
       if(!rs.length) return null;
       var tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;
-      var t=calcTarget(tot,br,meta.isKM);
+      var t=calcTarget(tot,br,meta.isKM,meta.target);
       return {m:m,v:t.value,rag:t.rag,tot:tot,br:br};
     });
     var valid=points.filter(function(p){return p!==null;});
@@ -785,7 +789,7 @@ function renderKpiTrends(){
     function yPos(v){return PT+cH-(v-minV)/(maxV-minV)*cH;}
 
     // target line
-    var targetV=meta.isKM?5:95;
+    var targetV=(meta.target!==null&&meta.target!==undefined)?meta.target:(meta.isKM?5:95);
     var ty=yPos(targetV);
     var targetLine='';
     if(targetV>=minV&&targetV<=maxV){
@@ -873,8 +877,8 @@ function renderKpiTab(code){
   var breaches=rows.filter(function(r){return r.isBreach;}).length;
   var rawBreaches=breaches+excluded;
   var exclPct=total?parseFloat((excluded/total*100).toFixed(1)):0;
-  var t=calcTarget(total,breaches,meta.isKM);
-  var tRaw=calcTarget(total,rawBreaches,meta.isKM);
+  var t=calcTarget(total,breaches,meta.isKM,meta.target);
+var tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
   if(!_kpiPage[code]) _kpiPage[code]=1;
 
   var uniqueBreachRows=bRows.filter(function(r){return r.unique && !r.excluded;});
