@@ -904,10 +904,10 @@ function renderKpiTab(code){
   /* ── Queue filter chips ── */
   var queueChipsHtml='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--divider)">'+
     '<span style="font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0">Queue:</span>'+
-    '<button class="month-chip'+(selQueue===null?' active':'').'" onclick="_setKpiQueue(\''+code+'\',null)">All Queues <span style="opacity:.6">('+srcForQueues.length+')</span></button>'+
+    '<button class="month-chip'+(selQueue===null?' active':'')+'" onclick="_setKpiQueue(\''+code+'\',null)">All Queues <span style="opacity:.6">('+srcForQueues.length+')</span></button>'+
     queues.map(function(q){
       var cnt=queueCounts[q]||0;
-      return '<button class="month-chip'+(selQueue===q?' active':'').'" onclick="_setKpiQueue(\''+code+'\',\''+q.replace(/'/g,"\\'")+'\')" title="'+esc(q)+'">'+
+      return '<button class="month-chip'+(selQueue===q?' active':'')+'" onclick="_setKpiQueue(\''+code+'\',\''+q.replace(/'/g,"\\'")+'\')" title="'+esc(q)+'">'+
         esc(q)+' <span style="opacity:.6">('+cnt+')</span></button>';
     }).join('')+
     '</div>';
