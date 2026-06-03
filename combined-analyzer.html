@@ -1095,7 +1095,7 @@ function renderKpiTab(code){
     }).join('');
     var pgBtns='';
     for(var p=1;p<=totalExclPages;p++){
-      pgBtns+='<button class="pg-btn'+(p===pg?' on':'').'" onclick="_kpiPage[\''+code+'\']='+p+';renderTab()">'+p+'</button>';
+      pgBtns+='<button class="pg-btn'+(p===pg?' on':'')+'" onclick="_kpiPage[\''+code+'\']='+p+';renderTab()">'+p+'</button>';
     }
     exclDetailHtml='<div class="sc"><div class="sc-head"><h2>&#x1F6AB; Excluded Tickets Detail</h2>'+
       '<span class="badge">'+excludedBreachRows.length+' excluded &middot; from Breaches file (Excluded=1)</span></div>'+
@@ -1125,7 +1125,7 @@ function renderKpiTab(code){
   }).join('');
   var pgBtns2='';
   for(var p2=1;p2<=totalPg2;p2++){
-    pgBtns2+='<button class="pg-btn'+(p2===pg2?' on':'').'" onclick="_kpiPage[\''+code+'_breach\']='+p2+';renderTab()">'+p2+'</button>';
+    pgBtns2+='<button class="pg-btn'+(p2===pg2?' on':'')+'" onclick="_kpiPage[\''+code+'_breach\']='+p2+';renderTab()">'+p2+'</button>';
   }
   var breachListHtml='<div class="sc"><div class="sc-head"><h2>Breach Ticket List</h2>'+
     '<span class="badge">'+breachSlaRows.length+' breaches &middot; SLA file &middot; enriched with Breaches file where available</span></div>'+
