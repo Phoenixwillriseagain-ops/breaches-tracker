@@ -119,7 +119,6 @@
     .ktc-head .ktc-badge{margin-left:auto;font-size:10px;color:var(--muted)}
     .ktc-body{padding:12px 14px}
     .ktc svg{display:block;width:100%;overflow:visible}
-    /* Weekly tab layout */
     .weekly-section{display:flex;flex-direction:column;gap:20px}
     .weekly-view-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
     .wv-btn{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
@@ -133,6 +132,7 @@
     .empty-state-box p{font-size:12px;max-width:38ch;line-height:1.6}
     .sparse-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;background:#fff3cc;color:#7a4200;margin-left:6px;vertical-align:middle}
     .weekly-kpi-selector{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 0 2px}
+    .diag-banner{background:#fff3cc;border:1px solid #f0cc50;border-radius:8px;padding:10px 14px;font-size:11px;color:#7a4200;margin-bottom:14px;line-height:1.6}
     @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid{grid-template-columns:1fr}.bar-lbl{width:110px}}
   </style>
 </head>
@@ -196,12 +196,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
-   COMBINED ANALYZER — full rebuild with weekly KPI + per-queue trends
-   Bugs fixed v2:
-     1. renderQueueWeeklyCard: pt.v → pt.value (NaN in all per-queue charts)
-     2. _parseSlaWb: ticket fallback key stops silent drop of blank-ID rows
-     3. _parseSlaWb: sheet name trim + case-insensitive match
-     4. _parseSlaWb: hasBreach checks Is_Breach/IsBreach/BREACH columns
+   COMBINED ANALYZER v3 — full 9-KPI support, fuzzy sheet matching,
+   weekly KPI trend + per-queue weekly breakdown
+   Fixes v3:
+     1. Fuzzy KPI sheet-name matching: strip non-alphanum + prefix match
+        so KST1, KST-1, "KST-1 Data", kst1 all resolve correctly
+     2. Diagnostic banner in Overview when some KPIs not found
+     3. Better error message shows actual detected sheet names
+     4. Console debug logging on runAnalysis
+     5. Weekly graphs use all available weeks (not cut by month filter)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── KPI configuration ─────────────────────────────────────────────────── */
@@ -251,6 +254,31 @@ function parseDate(v){
   return null;
 }
 
+/* ─── Fuzzy KPI name matcher ─────────────────────────────────────────────
+   Resolves sheet names like: KST1, KST-1, "KST-1 Data", kst1, KM1, KSL2a
+   to canonical KPI codes like: KST-1, KM-1, KSL-2a
+*/
+function norm(s){return String(s).replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
+function matchKpi(rawName){
+  var name=rawName.trim();
+  /* 1. exact match */
+  if(KPI_META[name]) return name;
+  /* 2. case-insensitive exact */
+  var found=KPI_ORDER.find(function(k){return k.toLowerCase()===name.toLowerCase();});
+  if(found) return found;
+  /* 3. strip non-alphanum and compare (KST1 == KST-1) */
+  var nn=norm(name);
+  found=KPI_ORDER.find(function(k){return norm(k)===nn;});
+  if(found) return found;
+  /* 4. prefix match: sheet "KSL-2a Compliance" starts with norm("KSL-2a") */
+  found=KPI_ORDER.find(function(k){var kn=norm(k);return nn.indexOf(kn)===0;});
+  if(found) return found;
+  /* 5. suffix/contains match for cases like "Data KST-1" */
+  found=KPI_ORDER.find(function(k){var kn=norm(k);return nn.indexOf(kn)!==-1;});
+  if(found) return found;
+  return null;
+}
+
 function ragColor(rag){return rag==='red'?'#ffdcdc':rag==='amber'?'#fff3cc':'#d4edda';}
 function ragText(rag){return rag==='red'?'#880000':rag==='amber'?'#7a4200':'#1a6b1a';}
 function ragLabel(rag,isKM){if(isKM) return rag==='green'?'PASS':rag==='amber'?'WATCH':'FAIL';return rag==='green'?'ON TARGET':rag==='amber'?'WATCH':'BELOW TARGET';}
@@ -270,15 +298,13 @@ function _sc(lbl,val,sub,rag){return '<div class="s-card rag-'+rag+'"><div class
 /* ─── Parsers ───────────────────────────────────────────────────────────── */
 function _parseSlaWb(wb){
   var out={};
+  var unmatched=[];
   wb.SheetNames.forEach(function(rawName){
-    var name=rawName.trim(); /* trim sheet name whitespace */
-    if(!KPI_META[name]){
-      /* case-insensitive fallback */
-      var found=KPI_ORDER.find(function(k){return k.toLowerCase()===name.toLowerCase();});
-      if(found) name=found; else return;
-    }
+    var code=matchKpi(rawName);
+    if(!code){unmatched.push(rawName);return;}
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[rawName],{defval:''});
-    out[name]=rows.map(function(r,ri){
+    if(!out[code]) out[code]=[];
+    out[code]=out[code].concat(rows.map(function(r,ri){
       var keys=Object.keys(r);
       function col(){for(var i=0;i<arguments.length;i++){for(var k=0;k<keys.length;k++){if(keys[k].replace(/[\s_\-]/g,'').toLowerCase()===arguments[i].replace(/[\s_\-]/g,'').toLowerCase()) return r[keys[k]];}}return '';}
       var dateVal=col('DATECLOSE','DATE_CLOSE','CLOSEDDATE','CLOSEDATE','RESOLVEDDATE','RESOLUTION_DATE');
@@ -286,39 +312,35 @@ function _parseSlaWb(wb){
       var month=d?d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1):'unknown';
       var week=d?isoWeekStr(d):'No week';
       var ticket=String(col('TICKET','TICKETID','TICKET_ID','ID','CASEID','INCIDENTTICKET')||'').trim();
-      /* fallback key ensures no row is silently dropped due to blank ticket ID */
       var rowKey=ticket||('__row_'+ri);
-      /* hasBreach: check multiple possible column names */
-      var hasBreach=!!(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG','ISBREACH')===1
+      var hasBreach=!!(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')===1
         ||String(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')||'').trim()==='1'
         ||String(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')||'').toUpperCase()==='Y'
         ||String(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')||'').toUpperCase()==='YES'
         ||(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')&&String(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')).trim()&&String(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')).trim()!=='0')
       );
       return {
-        ticket:rowKey,
-        month:month,
-        week:week,
+        ticket:rowKey,month:month,week:week,
         queue:String(col('QUEUE','TEAM','GROUP','DEPARTMENT')||'Unknown'),
         language:String(col('ISOLANGUAGE','ISO_LANGUAGE','LANGUAGE','LANG')||'unknown'),
         isBreach:hasBreach,
         isExcluded:!!(String(col('EXCLUDED','IS_EXCLUDED','EXCLUDE')||'').trim()==='1'||String(col('EXCLUDED','IS_EXCLUDED','EXCLUDE')||'').toUpperCase()==='Y')
       };
-    });
+    }));
   });
+  if(unmatched.length) console.warn('[Analyzer] SLA: unmatched sheets (not a recognized KPI):',unmatched);
   return out;
 }
 
 function _parseBreachWb(wb){
   var out={};
+  var unmatched=[];
   wb.SheetNames.forEach(function(rawName){
-    var name=rawName.trim();
-    if(!KPI_META[name]){
-      var found=KPI_ORDER.find(function(k){return k.toLowerCase()===name.toLowerCase();});
-      if(found) name=found; else return;
-    }
+    var code=matchKpi(rawName);
+    if(!code){unmatched.push(rawName);return;}
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[rawName],{defval:''});
-    out[name]=rows.map(function(r){
+    if(!out[code]) out[code]=[];
+    out[code]=out[code].concat(rows.map(function(r){
       var keys=Object.keys(r);
       function col(){for(var i=0;i<arguments.length;i++){for(var k=0;k<keys.length;k++){if(keys[k].replace(/[\s_\-]/g,'').toLowerCase()===arguments[i].replace(/[\s_\-]/g,'').toLowerCase()) return r[keys[k]];}}return '';}
       var wv=String(col('WEEK','WEEK_NUMBER','WEEKNUMBER')||'');
@@ -329,8 +351,7 @@ function _parseBreachWb(wb){
       var month=monV.match(/^\d{4}-\d{2}$/)?monV:(week!=='No week'?week.slice(0,7):'unknown');
       return {
         ticket:String(col('TICKET','TICKETID','TICKET_ID','ID','CASEID')||''),
-        week:week,
-        month:month,
+        week:week,month:month,
         queue:String(col('QUEUE','TEAM','GROUP','DEPARTMENT')||'Unknown'),
         agent:String(col('AGENT','AGENTNAME','AGENT_NAME','OWNER')||''),
         reason:String(col('REASON','BREACH_REASON','BREACHREASON')||''),
@@ -338,8 +359,9 @@ function _parseBreachWb(wb){
         comment:String(col('COMMENT','COMMENTS','NOTE','NOTES')||''),
         excluded:!!(String(col('EXCLUDED','IS_EXCLUDED','EXCLUDE')||'').trim()==='1'||String(col('EXCLUDED','IS_EXCLUDED','EXCLUDE')||'').toUpperCase()==='Y')
       };
-    }).filter(function(r){return !r.excluded;});
+    }).filter(function(r){return !r.excluded;}));
   });
+  if(unmatched.length) console.warn('[Analyzer] Breaches: unmatched sheets:',unmatched);
   return out;
 }
 
@@ -377,6 +399,7 @@ function buildStateFromQueues(){
 function getWeeklySummary(code,queue){
   var meta=KPI_META[code]||{isKM:false,target:null};
   var rows=state.slaData[code]||[];
+  /* Only apply month filter when a specific month is selected */
   if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
   if(queue) rows=rows.filter(function(r){return r.queue===queue;});
   rows=rows.filter(function(r){return r.week&&r.week!=='No week';});
@@ -403,8 +426,8 @@ function getTopQueues(code){
 /* ─── Tab / month navigation ────────────────────────────────────────────── */
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
-  state.months.forEach(function(m){html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+ monthLabel(m)+'</button>';});
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'\')+'" onclick="setMonth(null)">All</button>';
+  state.months.forEach(function(m){html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';});
   el.innerHTML=html;
 }
 
@@ -435,7 +458,7 @@ function refresh(){
   var bar=document.getElementById('tab-bar');
   bar.innerHTML=tabs.map(function(t){
     var dot=t.rag?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
-    return '<button class="tab-btn'+(state.activeTab===t.id?' active':'')+'" onclick="setTab(\''+t.id+'\')">'+ dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+(state.activeTab===t.id?' active':'')+'" onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
   renderTab();
 }
@@ -454,6 +477,26 @@ function renderTab(){
 
 /* ─── renderOverview ────────────────────────────────────────────────────── */
 function renderOverview(){
+  var _allConfigured=KPI_ORDER.length;
+  var _loadedCodes=KPI_ORDER.filter(function(c){
+    var rows=state.slaData[c]||[];
+    if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
+    return rows.length>0;
+  });
+  var _missingCodes=KPI_ORDER.filter(function(c){return _loadedCodes.indexOf(c)===-1;});
+  var _diagNote='';
+  if(_missingCodes.length>0){
+    var allSheets=[];
+    wbQueueA.forEach(function(e){if(e.wb) allSheets=allSheets.concat(e.wb.SheetNames);});
+    _diagNote='<div class="diag-banner">'\
+      +'<strong>⚠ '+_loadedCodes.length+' of '+_allConfigured+' KPIs loaded</strong> — '\
+      +'Missing: <strong>'+_missingCodes.join(', ')+'</strong>.<br>'\
+      +'Sheets found in your file(s): <em>'+allSheets.join(', ')+'</em>.<br>'\
+      +'Expected names like: KSL-2a, KSL-2b, KSL-3, KM-1, KM-2, KM-3, KST-1, KST-2, KST-3. '\
+      +'The analyzer uses fuzzy matching (strips dashes, case-insensitive) so KST1 or "KST-1 Data" also work. '\
+      +'Check DevTools Console for detailed match logs.'\
+      +'</div>';
+  }
   var cards=KPI_ORDER.map(function(code){
     var meta=KPI_META[code]||{isKM:false};
     var rows=state.slaData[code]||[];
@@ -465,7 +508,7 @@ function renderOverview(){
     return '<div class="s-card rag-'+t.rag+'"><div class="lbl"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+meta.color+';margin-right:5px;vertical-align:middle"></span>'+esc(code)+'</div><div class="val" style="color:'+col+'">'+t.display+'</div><div class="sub">'+fmt(total)+' tickets · '+fmt(breaches)+' breaches</div><div class="sub">'+esc(meta.what)+'</div></div>';
   }).filter(Boolean).join('');
   var period=state.activeMonth?monthLabel(state.activeMonth):'All periods';
-  return '<div class="summary-banner">'+cards+'</div>'
+  return _diagNote+'<div class="summary-banner">'+cards+'</div>'
     +'<div class="sc" style="margin-top:4px"><div class="sc-head"><h2>All KPIs at a Glance</h2><span class="badge">'+esc(period)+'</span></div><div class="sc-body"><table class="rag-table"><thead><tr><th>KPI</th><th>What it measures</th><th>Target</th><th>Tickets</th><th>Breaches</th><th>Rate</th><th>Status</th></tr></thead><tbody>'
     +KPI_ORDER.map(function(code){
       var meta=KPI_META[code]||{isKM:false};
@@ -666,7 +709,7 @@ function renderWeekly(){
             var meta=KPI_META[_weeklyKpi]||{isKM:false,color:'#888'};
             var points=pts.map(function(pt){return {week:pt.week,v:pt.value,rag:pt.rag,isSparse:pt.isSparse};});
             var last=points[points.length-1];
-            return renderSimpleLineCard(q+' – '+_weeklyKpi,meta,points,weekLabel,last?last.v.toFixed(1)+'%':'',true);
+            return renderSimpleLineCard(q+' \u2013 '+_weeklyKpi,meta,points,weekLabel,last?last.v.toFixed(1)+'%':'',true);
           }).filter(Boolean).join('')
           +'</div>';
         queueCards=combinedCard+indivCards;
@@ -805,8 +848,13 @@ function runAnalysis(){
   document.getElementById('run-error').style.display='none';
   try{
     buildStateFromQueues();
+    /* Debug: log what was detected */
+    var _dbgParsed=Object.keys(state.slaData).filter(function(c){return (state.slaData[c]||[]).length>0;});
+    console.log('[Analyzer v3] Loaded KPIs:',_dbgParsed,'| Months:',state.months,'| Weeks:',state.weeks.length);
+    wbQueueA.forEach(function(e){if(e.wb) console.log('[Analyzer v3] SLA file "'+e.name+'" sheets:',e.wb.SheetNames);});
     if(!state.months.length&&!Object.keys(state.slaData).some(function(c){return (state.slaData[c]||[]).length>0;})){
-      throw new Error('No valid ticket data found. Check your files have a DATE_CLOSE column and KPI sheet names match expected codes (KSL-2a, KM-1, etc).');
+      var _sheetNames=[];wbQueueA.forEach(function(e){if(e.wb) _sheetNames=_sheetNames.concat(e.wb.SheetNames);});
+      throw new Error('No valid data found. Sheets detected: ['+_sheetNames.join(', ')+'] — expected: KSL-2a, KSL-2b, KSL-3, KM-1, KM-2, KM-3, KST-1, KST-2, KST-3 (fuzzy match applied). Also verify DATE_CLOSE column exists.');
     }
     state.activeTab='overview';state.activeMonth=null;state.activeLangMonth=null;
     document.getElementById('upload-page').style.display='none';
