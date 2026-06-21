@@ -133,6 +133,8 @@
     .sparse-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;background:#fff3cc;color:#7a4200;margin-left:6px;vertical-align:middle}
     .weekly-kpi-selector{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 0 2px}
     .diag-banner{background:#fff3cc;border:1px solid #f0cc50;border-radius:8px;padding:10px 14px;font-size:11px;color:#7a4200;margin-bottom:14px;line-height:1.6}
+    /* ── no-data badge on KPI tab – shows when the selected month has no data */
+    .tab-btn.no-data-period{opacity:.55}
     @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid{grid-template-columns:1fr}.bar-lbl{width:110px}}
   </style>
 </head>
@@ -196,15 +198,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
-   COMBINED ANALYZER v3 — full 9-KPI support, fuzzy sheet matching,
-   weekly KPI trend + per-queue weekly breakdown
-   Fixes v3:
-     1. Fuzzy KPI sheet-name matching: strip non-alphanum + prefix match
-        so KST1, KST-1, "KST-1 Data", kst1 all resolve correctly
-     2. Diagnostic banner in Overview when some KPIs not found
-     3. Better error message shows actual detected sheet names
-     4. Console debug logging on runAnalysis
-     5. Weekly graphs use all available weeks (not cut by month filter)
+   COMBINED ANALYZER v3.1 — full 9-KPI support, fuzzy sheet matching,
+   weekly KPI trend + per-queue weekly breakdown.
+
+   FIX v3.1:
+     • Tab bar now shows ALL KPIs that have data in ANY period, not just the
+       currently filtered month.  The RAG dot on each tab reflects the
+       selected period (or overall if "All").  KPI tabs with no data for the
+       current period show a dimmed style but remain clickable.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── KPI configuration ─────────────────────────────────────────────────── */
@@ -426,8 +427,8 @@ function getTopQueues(code){
 /* ─── Tab / month navigation ────────────────────────────────────────────── */
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'\')+'" onclick="setMonth(null)">All</button>';
-  state.months.forEach(function(m){html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';});
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'\" onclick="setMonth(null)">All</button>';
+  state.months.forEach(function(m){html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'\" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';});
   el.innerHTML=html;
 }
 
@@ -438,6 +439,14 @@ function setMonth(m){
   renderTab();
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   refresh() — rebuild tab bar.
+   KEY FIX: KPI tabs are shown for ALL codes that have data in ANY period
+   (i.e. state.slaData[code].length > 0).  The RAG dot reflects the
+   currently selected period so the user still gets visual feedback.
+   If there is no data for the selected period the tab gets a dimmed class
+   but is still rendered and clickable.
+   ──────────────────────────────────────────────────────────────────────── */
 function refresh(){
   var tabs=[
     {id:'overview',label:'Overview'},
@@ -445,21 +454,41 @@ function refresh(){
     {id:'kpitrends',label:'KPI Trends'},
     {id:'weekly',label:'📅 Weekly Trends'}
   ];
+
   KPI_ORDER.forEach(function(code){
-    var rows=state.slaData[code]||[];
-    if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
-    if(!rows.length) return;
-    var total=rows.length,breaches=rows.filter(function(r){return r.isBreach;}).length;
-    var meta=KPI_META[code]||{isKM:false};
-    var t=calcTarget(total,breaches,meta.isKM,meta.target);
-    tabs.push({id:code,label:code,rag:t.rag});
+    /* Show tab if the KPI has data in ANY period */
+    var allRows=state.slaData[code]||[];
+    if(!allRows.length) return;
+
+    /* RAG dot based on currently filtered period */
+    var filteredRows=state.activeMonth
+      ? allRows.filter(function(r){return r.month===state.activeMonth;})
+      : allRows;
+
+    var rag='none';
+    var noDataForPeriod=false;
+    if(filteredRows.length){
+      var meta=KPI_META[code]||{isKM:false};
+      var total=filteredRows.length,breaches=filteredRows.filter(function(r){return r.isBreach;}).length;
+      var t=calcTarget(total,breaches,meta.isKM,meta.target);
+      rag=t.rag;
+    } else {
+      noDataForPeriod=true;
+    }
+
+    tabs.push({id:code,label:code,rag:rag,noDataForPeriod:noDataForPeriod});
   });
+
   tabs.push({id:'language',label:'🌐 Languages'});
+
   var bar=document.getElementById('tab-bar');
   bar.innerHTML=tabs.map(function(t){
-    var dot=t.rag?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
-    return '<button class="tab-btn'+(state.activeTab===t.id?' active':'')+'" onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
+    var dimClass=t.noDataForPeriod?' no-data-period':'';
+    var title=t.noDataForPeriod?' title="No data for selected period"':'';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'\"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
+
   renderTab();
 }
 
@@ -483,18 +512,18 @@ function renderOverview(){
     if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
     return rows.length>0;
   });
-  var _missingCodes=KPI_ORDER.filter(function(c){return _loadedCodes.indexOf(c)===-1;});
+  var _missingCodes=KPI_ORDER.filter(function(c){return (state.slaData[c]||[]).length===0;});
   var _diagNote='';
   if(_missingCodes.length>0){
     var allSheets=[];
     wbQueueA.forEach(function(e){if(e.wb) allSheets=allSheets.concat(e.wb.SheetNames);});
-    _diagNote='<div class="diag-banner">'\
-      +'<strong>⚠ '+_loadedCodes.length+' of '+_allConfigured+' KPIs loaded</strong> — '\
-      +'Missing: <strong>'+_missingCodes.join(', ')+'</strong>.<br>'\
-      +'Sheets found in your file(s): <em>'+allSheets.join(', ')+'</em>.<br>'\
-      +'Expected names like: KSL-2a, KSL-2b, KSL-3, KM-1, KM-2, KM-3, KST-1, KST-2, KST-3. '\
-      +'The analyzer uses fuzzy matching (strips dashes, case-insensitive) so KST1 or "KST-1 Data" also work. '\
-      +'Check DevTools Console for detailed match logs.'\
+    _diagNote='<div class="diag-banner">'
+      +'<strong>⚠ '+_loadedCodes.length+' of '+_allConfigured+' KPIs loaded</strong> — '
+      +'Missing: <strong>'+_missingCodes.join(', ')+'</strong>.<br>'
+      +'Sheets found in your file(s): <em>'+allSheets.join(', ')+'</em>.<br>'
+      +'Expected names like: KSL-2a, KSL-2b, KSL-3, KM-1, KM-2, KM-3, KST-1, KST-2, KST-3. '
+      +'The analyzer uses fuzzy matching (strips dashes, case-insensitive) so KST1 or "KST-1 Data" also work. '
+      +'Check DevTools Console for detailed match logs.'
       +'</div>';
   }
   var cards=KPI_ORDER.map(function(code){
@@ -667,8 +696,8 @@ function renderWeekly(){
     return '<div class="sc"><div class="sc-head"><h2>📅 Weekly Trends</h2></div><div class="sc-body"><div class="empty-state-box"><div class="es-icon">📅</div><p>No weekly data found. Make sure your SLA export files include a DATE_CLOSE column with valid dates so weeks can be derived automatically.</p></div></div></div>';
   }
   var viewBar='<div class="weekly-view-tabs">'
-    +'<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'" onclick="setWeeklyView(\'all\')">📈 All KPIs Overview</button>'
-    +'<button class="wv-btn'+(_weeklyView==='byqueue'?' active':'')+'" onclick="setWeeklyView(\'byqueue\')">🗂️ Per Queue</button>'
+    +'<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'\" onclick="setWeeklyView(\'all\')">📈 All KPIs Overview</button>'
+    +'<button class="wv-btn'+(_weeklyView==='byqueue'?' active':'')+'\" onclick="setWeeklyView(\'byqueue\')">🗂️ Per Queue</button>'
     +'</div>';
   var content='';
   if(_weeklyView==='all'){
@@ -694,7 +723,7 @@ function renderWeekly(){
           var pts=getWeeklySummary(c,null);
           var last=pts[pts.length-1];
           var dotClass=last?('dot-'+last.rag):'dot-none';
-          return '<button class="wv-btn'+(_weeklyKpi===c?' active':'')+'" onclick="setWeeklyKpi(\''+c+'\')">'+'<span class="tab-dot '+dotClass+'"></span>'+esc(c)+'</button>';
+          return '<button class="wv-btn'+(_weeklyKpi===c?' active':'')+'\" onclick="setWeeklyKpi(\''+c+'\')">'+'<span class="tab-dot '+dotClass+'"></span>'+esc(c)+'</button>';
         }).join('')+'</div>';
       var queues=getTopQueues(_weeklyKpi);
       var queueCards='';
@@ -728,7 +757,7 @@ function renderKpiTab(code){
   var meta=KPI_META[code]||{isKM:false,color:'#888',what:''};
   var rows=state.slaData[code]||[];
   if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
-  if(!rows.length) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">No data for '+esc(code)+' in selected period.</p></div></div>';
+  if(!rows.length) return '<div class="sc"><div class="sc-head"><h2>'+esc(code)+'</h2></div><div class="sc-body"><div class="empty-state-box"><div class="es-icon">📭</div><p>No data for <strong>'+esc(code)+'</strong> in the selected period.<br>Try switching to <strong>All</strong> or a different month.</p></div></div></div>';
   var total=rows.length,excluded=rows.filter(function(r){return r.isExcluded;}).length,breaches=rows.filter(function(r){return r.isBreach;}).length;
   var t=calcTarget(total,breaches,meta.isKM,meta.target);
   var qc={};
@@ -747,8 +776,8 @@ function renderKpiTab(code){
   var pageRows=filteredBRows.slice(_kpiPage[code]*PAGE,(_kpiPage[code]+1)*PAGE);
   var allQueuesForCode=Object.keys(qc).sort(function(a,b){return qc[b].total-qc[a].total;});
   var qChips='<div class="filter-chips" style="margin-bottom:10px"><span style="font-size:11px;color:var(--muted);font-weight:600">Queue:</span>'
-    +'<button class="month-chip'+(selQ===null?' active':'')+'" onclick="setKpiQueue(\''+esc(code)+'\',null)">All</button>'
-    +allQueuesForCode.map(function(q){return '<button class="month-chip'+(selQ===q?' active':'')+'" onclick="setKpiQueue(\''+esc(code)+'\',\''+esc(q)+'\')">'+esc(q)+'</button>';}).join('')
+    +'<button class="month-chip'+(selQ===null?' active':'')+'\" onclick="setKpiQueue(\''+esc(code)+'\',null)">All</button>'
+    +allQueuesForCode.map(function(q){return '<button class="month-chip'+(selQ===q?' active':'')+'\" onclick="setKpiQueue(\''+esc(code)+'\',\''+esc(q)+'\')">'+esc(q)+'</button>';}).join('')
     +'</div>';
   var hasBreach=bRows.length>0;
   var breachSection='';
@@ -758,7 +787,7 @@ function renderKpiTab(code){
     var pgBtns='';
     if(totalPages>1){
       pgBtns='<div class="pg"><button class="pg-btn" onclick="setKpiPage(\''+esc(code)+'\',-1)" '+((_kpiPage[code]===0)?'disabled':'')+'>&#8249;</button>';
-      for(var pi=0;pi<Math.min(totalPages,10);pi++){pgBtns+='<button class="pg-btn'+(pi===_kpiPage[code]?' on':'')+'" onclick="setKpiPage(\''+esc(code)+'\','+pi+')">'+(pi+1)+'</button>';}
+      for(var pi=0;pi<Math.min(totalPages,10);pi++){pgBtns+='<button class="pg-btn'+(pi===_kpiPage[code]?' on':'')+'\" onclick="setKpiPage(\''+esc(code)+'\','+pi+')">'+(pi+1)+'</button>';}
       pgBtns+='<button class="pg-btn" onclick="setKpiPage(\''+esc(code)+'\',1)" '+(_kpiPage[code]===totalPages-1?'disabled':'')+'>&#8250;</button></div>';
     }
     breachSection='<div class="sc" style="margin-top:16px"><div class="sc-head"><h2>Breach Detail</h2><span class="badge">'+filteredBRows.length+' breach records</span></div><div class="sc-body">'+qChips+'<div style="overflow-x:auto"><table class="excl-tbl"><thead>'+tHead+'</thead><tbody>'+tRows+'</tbody></table></div>'+pgBtns+'</div></div>';
@@ -850,8 +879,8 @@ function runAnalysis(){
     buildStateFromQueues();
     /* Debug: log what was detected */
     var _dbgParsed=Object.keys(state.slaData).filter(function(c){return (state.slaData[c]||[]).length>0;});
-    console.log('[Analyzer v3] Loaded KPIs:',_dbgParsed,'| Months:',state.months,'| Weeks:',state.weeks.length);
-    wbQueueA.forEach(function(e){if(e.wb) console.log('[Analyzer v3] SLA file "'+e.name+'" sheets:',e.wb.SheetNames);});
+    console.log('[Analyzer v3.1] Loaded KPIs:',_dbgParsed,'| Months:',state.months,'| Weeks:',state.weeks.length);
+    wbQueueA.forEach(function(e){if(e.wb) console.log('[Analyzer v3.1] SLA file "'+e.name+'" sheets:',e.wb.SheetNames);});
     if(!state.months.length&&!Object.keys(state.slaData).some(function(c){return (state.slaData[c]||[]).length>0;})){
       var _sheetNames=[];wbQueueA.forEach(function(e){if(e.wb) _sheetNames=_sheetNames.concat(e.wb.SheetNames);});
       throw new Error('No valid data found. Sheets detected: ['+_sheetNames.join(', ')+'] — expected: KSL-2a, KSL-2b, KSL-3, KM-1, KM-2, KM-3, KST-1, KST-2, KST-3 (fuzzy match applied). Also verify DATE_CLOSE column exists.');
@@ -913,16 +942,4 @@ function setupDrop(dzId,inputId,queue,listId,addId,statusId){
   var dz=document.getElementById(dzId),fi=document.getElementById(inputId);
   dz.addEventListener('click',function(){fi.click();});
   dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
-  dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});
-  dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag-over');loadFiles(e.dataTransfer.files,queue,listId,addId,statusId);});
-  fi.addEventListener('change',function(){loadFiles(fi.files,queue,listId,addId,statusId);fi.value='';});
-}
-
-document.addEventListener('DOMContentLoaded',function(){
-  setupDrop('dz-a','fi-a',wbQueueA,'list-a','add-a','status-a');
-  setupDrop('dz-b','fi-b',wbQueueB,'list-b','add-b','status-b');
-  document.getElementById('run-btn').addEventListener('click',runAnalysis);
-});
-</script>
-</body>
-</html>
+  dz.ad
