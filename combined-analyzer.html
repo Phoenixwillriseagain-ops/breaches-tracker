@@ -37,105 +37,45 @@
     .s-card.rag-green{border-left:4px solid #437a22}.s-card.rag-green .val{color:#437a22}
     .s-card.rag-amber{border-left:4px solid #d19900}.s-card.rag-amber .val{color:#d19900}
     .s-card.rag-red{border-left:4px solid #cc2222}.s-card.rag-red .val{color:#cc2222}
-    .s-card.rag-excl{border-left:4px solid #6b7280}.s-card.rag-excl .val{color:#6b7280}
     .s-card.rag-none .val{color:var(--text)}
-    .s-card-compliance{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;grid-column:span 2}
-    @media(max-width:680px){.s-card-compliance{grid-column:span 1}}
-    .s-card-compliance .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
-    .compliance-row{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
-    .compliance-row .c-label{font-size:11px;color:var(--muted);width:80px;flex-shrink:0}
-    .compliance-row .c-val{font-size:22px;font-weight:700;line-height:1}
-    .compliance-row .c-delta{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;margin-left:4px}
-    .c-delta-pos{background:#d4edda;color:#1a6b1a}
-    .c-delta-neg{background:#ffdcdc;color:#880000}
-    .c-delta-zero{background:#f0eeea;color:#6b7280}
-    .compliance-row .c-sub{font-size:10px;color:var(--muted);margin-left:4px}
     .tab-bar{display:flex;border-bottom:2px solid var(--border);flex-wrap:wrap;background:var(--surface);padding:0 20px}
     .tab-btn{padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
     .tab-btn:hover{color:var(--text)}
     .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+    .tab-btn.no-data-period{opacity:.55}
     .tab-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
-    .dot-green{background:#437a22}.dot-amber{background:#d19900}.dot-red{background:#cc2222}.dot-none{background:var(--faint)}
+    .dot-green{background:#437a22}.dot-amber{background:#d19900}.dot-red{background:#cc2222}
     .sc{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .sc-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .sc-head h2{font-size:13px;font-weight:700}
     .sc-head .badge{margin-left:auto;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--muted)}
     .sc-body{padding:16px;overflow-x:auto}
-    .rag-table,.dt,.excl-tbl{width:100%;border-collapse:collapse;font-size:12px}
-    .rag-table th,.dt th,.excl-tbl th{background:var(--bg);padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
-    .rag-table td,.dt td,.excl-tbl td{padding:8px 12px;border-bottom:1px solid var(--divider);vertical-align:middle}
-    .rag-table tr:last-child td,.dt tr:last-child td,.excl-tbl tr:last-child td{border-bottom:none}
-    .rag-table tr:hover td,.dt tr:hover td,.excl-tbl tr:hover td{background:var(--surface-2,#f6f5f2)}
+    .rag-table,.trend-tbl{width:100%;border-collapse:collapse;font-size:12px}
+    .rag-table th,.trend-tbl th{background:var(--bg);padding:7px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+    .rag-table td,.trend-tbl td{padding:8px 12px;border-bottom:1px solid var(--divider);vertical-align:middle}
+    .rag-table tr:last-child td,.trend-tbl tr:last-child td{border-bottom:none}
     .rag-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
     .rag-green{background:#d4edda;color:#1a6b1a}
     .rag-amber{background:#fff3cc;color:#7a4200}
     .rag-red{background:#ffdcdc;color:#880000}
     .rate-cell{font-size:15px;font-weight:700}
     .rate-green{color:#437a22}.rate-amber{color:#d19900}.rate-red{color:#cc2222}
-    .bar-chart{display:flex;flex-direction:column;gap:7px}
-    .bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
-    .bar-lbl{width:180px;min-width:100px;text-align:right;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;font-size:11px}
-    .bar-track{flex:1;height:13px;background:var(--divider);border-radius:4px;overflow:hidden;min-width:80px}
-    .bar-fill{height:100%;border-radius:4px;transition:width .4s}
-    .bar-cnt{width:40px;font-weight:700;font-size:11px;text-align:right;flex-shrink:0}
-    .trend-tbl{border-collapse:separate;border-spacing:3px;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .trend-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:4px 10px;background:none;border:none;text-align:center}
-    .trend-tbl th.row-lbl{text-align:left;min-width:80px}
-    .trend-tbl td{height:32px;min-width:70px;text-align:center;border-radius:5px;font-size:12px;font-weight:700;border:none;padding:0 6px;cursor:default;transition:transform .1s}
-    .trend-tbl td:hover{transform:scale(1.06);z-index:2;position:relative}
-    .trend-tbl td.row-lbl{text-align:left;background:none!important;font-weight:600;font-size:11px;color:var(--muted);padding:0 10px 0 0;min-width:80px}
-    .trend-tbl td.row-lbl:hover{transform:none}
-    .chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-    .ch-green{background:#d4edda;color:#1a6b1a}
-    .ch-excl{background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db}
-    .pg{display:flex;align-items:center;gap:5px;margin-top:10px;justify-content:flex-end;font-size:12px;color:var(--muted);flex-wrap:wrap}
-    .pg-btn{padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:12px;font-family:inherit}
-    .pg-btn:hover{background:var(--bg)}.pg-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}.pg-btn:disabled{opacity:.4;cursor:not-allowed}
-    .insight-strip{display:flex;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--bg);border-top:1px solid var(--divider);font-size:11px;color:var(--muted)}
-    .insight-strip b{color:var(--text)}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    @media(max-width:900px){.two-col{grid-template-columns:1fr}}
-    #upload-page{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;gap:20px}
-    #dashboard-page{display:none;flex-direction:column;flex:1;overflow:hidden}
-    #dashboard-page.visible{display:flex}
-    .month-chips,.filter-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .month-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
     .month-chip{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
     .month-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-    .month-chip:hover:not(.active):not(.pending){border-color:var(--primary);color:var(--primary)}
-    .month-chip.pending{opacity:.5;cursor:not-allowed}
-    .heatmap-tbl{border-collapse:separate;border-spacing:2px;font-size:11px;white-space:nowrap}
-    .heatmap-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:4px 8px;text-align:center;background:none;border:none}
-    .heatmap-tbl th.row-h{text-align:left;min-width:50px}
-    .heatmap-tbl td{height:28px;min-width:64px;text-align:center;border-radius:4px;font-size:11px;font-weight:700;border:none;padding:0 5px;cursor:default;transition:transform .1s}
-    .heatmap-tbl td:hover{transform:scale(1.08);z-index:2;position:relative}
-    .heatmap-tbl td.lang-lbl{text-align:left;background:none!important;font-weight:600;font-size:11px;color:var(--muted);min-width:50px;padding:0 8px 0 0}
-    .heatmap-tbl td.lang-lbl:hover{transform:none}
-    .excl-bar-track{flex:1;height:10px;background:var(--divider);border-radius:3px;overflow:hidden;min-width:60px;display:inline-block;vertical-align:middle}
-    .excl-bar-fill{height:100%;border-radius:3px;background:#6b7280}
-    .kpi-trend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:16px}
+    .month-chip:hover:not(.active){border-color:var(--primary);color:var(--primary)}
+    .kpi-trend-grid,.weekly-grid,.weekly-queue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px}
     .ktc{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .ktc-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .ktc-head h3{font-size:12px;font-weight:700;margin:0}
     .ktc-head .ktc-badge{margin-left:auto;font-size:10px;color:var(--muted)}
     .ktc-body{padding:12px 14px}
-    .ktc svg{display:block;width:100%;overflow:visible}
-    .weekly-section{display:flex;flex-direction:column;gap:20px}
-    .weekly-view-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+    .weekly-view-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
     .wv-btn{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
     .wv-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-    .wv-btn:hover:not(.active){border-color:var(--primary);color:var(--primary)}
-    .weekly-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(500px,1fr));gap:16px}
-    .weekly-queue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px}
-    .mini-note{font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6}
+    .diag-banner{background:#fff3cc;border:1px solid #f0cc50;border-radius:8px;padding:10px 14px;font-size:11px;color:#7a4200;line-height:1.6}
     .empty-state-box{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;color:var(--muted);gap:8px}
-    .empty-state-box .es-icon{font-size:32px;margin-bottom:4px}
-    .empty-state-box p{font-size:12px;max-width:38ch;line-height:1.6}
-    .sparse-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;background:#fff3cc;color:#7a4200;margin-left:6px;vertical-align:middle}
-    .weekly-kpi-selector{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 0 2px}
-    .diag-banner{background:#fff3cc;border:1px solid #f0cc50;border-radius:8px;padding:10px 14px;font-size:11px;color:#7a4200;margin-bottom:14px;line-height:1.6}
-    /* ── no-data badge on KPI tab – shows when the selected month has no data */
-    .tab-btn.no-data-period{opacity:.55}
-    @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid{grid-template-columns:1fr}.bar-lbl{width:110px}}
+    @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -150,12 +90,13 @@
     <div style="text-align:center;max-width:640px">
       <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px">Data Tools</p>
       <h1 style="font-size:22px;font-weight:700;margin-bottom:8px">Combined Analyzer</h1>
-      <p style="font-size:13px;color:var(--muted);line-height:1.6">Upload your SLA export files and (optionally) enriched breaches files to get a full KPI compliance analysis, breach drill-down, and weekly trend tracking.</p>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6">Upload your SLA export files and optional enriched breaches files to get KPI compliance analysis, breach drill-down, and weekly trend tracking.</p>
     </div>
+
     <div class="upload-grid">
       <div class="upload-card">
         <h3>SLA Export Files</h3>
-        <p class="desc">One or more Excel files exported from your SLA system. Each sheet name should match a KPI code (e.g. KSL-2a, KM-1). Requires a DATE_CLOSE or DATECLOSE column.</p>
+        <p class="desc">One or more Excel files exported from your SLA system. Each sheet name should match a KPI code like KSL-2a or KM-1.</p>
         <div class="drop-zone" id="dz-a">
           <p>Drop files here or click to browse</p>
           <span>.xlsx / .xls accepted</span>
@@ -165,9 +106,10 @@
         <span class="add-more" id="add-a" style="display:none" onclick="document.getElementById('fi-a').click()">+ Add more files</span>
         <span class="slot-status" id="status-a">No files loaded</span>
       </div>
+
       <div class="upload-card">
         <h3>Enriched Breaches Files <span style="font-weight:400;color:var(--muted)">(optional)</span></h3>
-        <p class="desc">Breaches export with Week, Queue, Agent, Reason, AOS, and Excluded columns. Used to enrich breach details and per-queue weekly trends.</p>
+        <p class="desc">Used to enrich breach details and queue-level weekly views.</p>
         <div class="drop-zone" id="dz-b">
           <p>Drop files here or click to browse</p>
           <span>.xlsx / .xls accepted</span>
@@ -178,13 +120,14 @@
         <span class="slot-status" id="status-b">No files loaded (optional)</span>
       </div>
     </div>
+
     <div class="run-btn-row">
       <button id="run-btn" class="btn btn-primary" disabled style="opacity:.5;min-width:160px">Run Analysis</button>
     </div>
     <div id="run-error" style="display:none;color:#880000;font-size:12px;background:#ffdcdc;border:1px solid #f0b0b0;border-radius:8px;padding:10px 16px;max-width:640px;text-align:center"></div>
   </div>
 
-  <div id="dashboard-page">
+  <div id="dashboard-page" style="display:none;flex-direction:column;flex:1;overflow:hidden">
     <div class="tab-bar" id="tab-bar"></div>
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <span style="font-size:11px;color:var(--muted);font-weight:600">Period:</span>
@@ -197,43 +140,57 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-/* ═══════════════════════════════════════════════════════════════════════════
-   COMBINED ANALYZER v3.1 — full 9-KPI support, fuzzy sheet matching,
-   weekly KPI trend + per-queue weekly breakdown.
-
-   FIX v3.1:
-     • Tab bar now shows ALL KPIs that have data in ANY period, not just the
-       currently filtered month.  The RAG dot on each tab reflects the
-       selected period (or overall if "All").  KPI tabs with no data for the
-       current period show a dimmed style but remain clickable.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* ─── KPI configuration ─────────────────────────────────────────────────── */
 var KPI_ORDER=['KSL-2a','KSL-2b','KSL-3','KM-1','KM-2','KM-3','KST-1','KST-2','KST-3'];
 var KPI_META={
   'KSL-2a':{what:'First Reply ≤8h',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#006494'},
   'KSL-2b':{what:'First Reply ≤4h (Priority)',isKM:false,target:90,targetLabel:'Target ≥90%',color:'#437a22'},
   'KSL-3': {what:'Resolution ≤24h',isKM:false,target:85,targetLabel:'Target ≥85%',color:'#7a39bb'},
-  'KM-1':  {what:'Missed contacts',isKM:true, target:5, targetLabel:'Target ≤5%', color:'#cc2222'},
-  'KM-2':  {what:'Re-open rate',isKM:true, target:8, targetLabel:'Target ≤8%', color:'#964219'},
-  'KM-3':  {what:'Transfer rate',isKM:true, target:10,targetLabel:'Target ≤10%',color:'#a12c7b'},
+  'KM-1':  {what:'Missed contacts',isKM:true,target:5,targetLabel:'Target ≤5%',color:'#cc2222'},
+  'KM-2':  {what:'Re-open rate',isKM:true,target:8,targetLabel:'Target ≤8%',color:'#964219'},
+  'KM-3':  {what:'Transfer rate',isKM:true,target:10,targetLabel:'Target ≤10%',color:'#a12c7b'},
   'KST-1': {what:'CSAT ≥4',isKM:false,target:80,targetLabel:'Target ≥80%',color:'#01696f'},
   'KST-2': {what:'Quality score',isKM:false,target:90,targetLabel:'Target ≥90%',color:'#d19900'},
   'KST-3': {what:'FCR rate',isKM:false,target:75,targetLabel:'Target ≥75%',color:'#da7101'}
 };
 
-/* ─── Global state ──────────────────────────────────────────────────────── */
 var wbQueueA=[],wbQueueB=[];
-var state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:null,activeLangMonth:null};
-var _kpiPage={},_kpiQueue={},_weeklyQueue=null,_weeklyView='all',_weeklyKpi=null;
+var state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:'overview'};
+var _weeklyView='all';
 
-/* ─── Utilities ─────────────────────────────────────────────────────────── */
 function esc(s){if(s==null)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function fmt(n){return Number(n).toLocaleString();}
-function monthLabel(m){if(!m)return 'All';var parts=m.split('-');if(parts.length===2){var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return (months[parseInt(parts[1],10)-1]||parts[1])+' '+parts[0];}return m;}
-function weekLabel(w){if(!w||w==='No week')return '—';var m=w.match(/^(\d{4})-W(\d{2})$/);if(m){var yr=m[1],wn=parseInt(m[2],10);return 'W'+wn+' \''+yr.slice(2);}return w;}
-function shortWeekLabel(w){if(!w||w==='No week')return '—';var m=w.match(/^(\d{4})-W(\d{2})$/);return m?'W'+m[2]:w;}
-
+function fmt(n){return Number(n||0).toLocaleString();}
+function monthLabel(m){
+  if(!m)return 'All';
+  var parts=m.split('-');
+  if(parts.length===2){
+    var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return (months[parseInt(parts[1],10)-1]||parts[1])+' '+parts[0];
+  }
+  return m;
+}
+function weekLabel(w){
+  if(!w||w==='No week')return '—';
+  var m=w.match(/^(\d{4})-W(\d{2})$/);
+  return m?'W'+parseInt(m[2],10)+' \''+m[1].slice(2):w;
+}
+function parseDate(v){
+  if(!v&&v!==0)return null;
+  if(v instanceof Date)return isNaN(v)?null:v;
+  if(typeof v==='number'){
+    var d=new Date(Math.round((v-25569)*86400000));
+    return isNaN(d)?null:d;
+  }
+  var s=String(v).trim();
+  var d=new Date(s);
+  if(!isNaN(d)) return d;
+  var p=s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+  if(p){
+    var y=parseInt(p[3],10); if(y<100)y+=2000;
+    d=new Date(y,parseInt(p[2],10)-1,parseInt(p[1],10));
+    return isNaN(d)?null:d;
+  }
+  return null;
+}
 function isoWeekStr(date){
   var d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
   var day=d.getUTCDay()||7;
@@ -242,86 +199,124 @@ function isoWeekStr(date){
   var wk=Math.ceil((((d-yearStart)/86400000)+1)/7);
   return d.getUTCFullYear()+'-W'+(wk<10?'0':'')+wk;
 }
-
-function parseDate(v){
-  if(!v&&v!==0) return null;
-  if(v instanceof Date) return isNaN(v)?null:v;
-  if(typeof v==='number'){var d=new Date(Math.round((v-25569)*86400000));return isNaN(d)?null:d;}
-  var s=String(v).trim();
-  var d=new Date(s);
-  if(!isNaN(d)) return d;
-  var parts=s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-  if(parts){var y=parseInt(parts[3]);if(y<100)y+=2000;d=new Date(y,parseInt(parts[2])-1,parseInt(parts[1]));return isNaN(d)?null:d;}
-  return null;
-}
-
-/* ─── Fuzzy KPI name matcher ─────────────────────────────────────────────
-   Resolves sheet names like: KST1, KST-1, "KST-1 Data", kst1, KM1, KSL2a
-   to canonical KPI codes like: KST-1, KM-1, KSL-2a
-*/
-function norm(s){return String(s).replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
+function norm(s){return String(s||'').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
 function matchKpi(rawName){
-  var name=rawName.trim();
-  /* 1. exact match */
+  var name=String(rawName||'').trim();
   if(KPI_META[name]) return name;
-  /* 2. case-insensitive exact */
   var found=KPI_ORDER.find(function(k){return k.toLowerCase()===name.toLowerCase();});
   if(found) return found;
-  /* 3. strip non-alphanum and compare (KST1 == KST-1) */
   var nn=norm(name);
   found=KPI_ORDER.find(function(k){return norm(k)===nn;});
   if(found) return found;
-  /* 4. prefix match: sheet "KSL-2a Compliance" starts with norm("KSL-2a") */
   found=KPI_ORDER.find(function(k){var kn=norm(k);return nn.indexOf(kn)===0;});
   if(found) return found;
-  /* 5. suffix/contains match for cases like "Data KST-1" */
   found=KPI_ORDER.find(function(k){var kn=norm(k);return nn.indexOf(kn)!==-1;});
   if(found) return found;
   return null;
 }
-
 function ragColor(rag){return rag==='red'?'#ffdcdc':rag==='amber'?'#fff3cc':'#d4edda';}
 function ragText(rag){return rag==='red'?'#880000':rag==='amber'?'#7a4200':'#1a6b1a';}
-function ragLabel(rag,isKM){if(isKM) return rag==='green'?'PASS':rag==='amber'?'WATCH':'FAIL';return rag==='green'?'ON TARGET':rag==='amber'?'WATCH':'BELOW TARGET';}
-
+function ragLabel(rag,isKM){if(isKM)return rag==='green'?'PASS':rag==='amber'?'WATCH':'FAIL';return rag==='green'?'ON TARGET':rag==='amber'?'WATCH':'BELOW TARGET';}
 function calcTarget(total,breaches,isKM,target){
   if(!total) return {display:'N/A',rag:'none',targetLabel:''};
   var rate=isKM?(breaches/total*100):((total-breaches)/total*100);
-  var tgt=target!==null&&target!==undefined?target:(isKM?5:95);
+  var tgt=target!=null?target:(isKM?5:95);
   var rag;
   if(isKM) rag=rate<=tgt?'green':rate<=tgt*1.5?'amber':'red';
   else rag=rate>=tgt?'green':rate>=tgt-5?'amber':'red';
   return {display:rate.toFixed(1)+'%',rag:rag,value:rate,targetLabel:(isKM?'≤':'≥')+tgt+'%'};
 }
 
-function _sc(lbl,val,sub,rag){return '<div class="s-card rag-'+rag+'"><div class="lbl">'+esc(lbl)+'</div><div class="val">'+esc(val)+'</div>'+(sub?'<div class="sub">'+esc(sub)+'</div>':'')+'</div>';}
+function parseWorkbook(file,done){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      done({name:file.name,wb:wb});
+    }catch(err){
+      done({name:file.name,error:err.message||String(err)});
+    }
+  };
+  reader.onerror=function(){done({name:file.name,error:'Failed to read file'});};
+  reader.readAsArrayBuffer(file);
+}
 
-/* ─── Parsers ───────────────────────────────────────────────────────────── */
+function renderFileList(which){
+  var list=document.getElementById(which==='a'?'list-a':'list-b');
+  var status=document.getElementById(which==='a'?'status-a':'status-b');
+  var add=document.getElementById(which==='a'?'add-a':'add-b');
+  var arr=which==='a'?wbQueueA:wbQueueB;
+  list.innerHTML=arr.map(function(f,i){
+    var ok=!f.error;
+    return '<div class="file-item"><span class="'+(ok?'fi-ok':'fi-err')+'">'+(ok?'✓':'!')+'</span><span class="fi-name">'+esc(f.name)+'</span><span class="fi-remove" onclick="removeFile(\''+which+'\','+i+')">×</span></div>';
+  }).join('');
+  if(which==='a') status.textContent=arr.length?arr.length+' file(s) loaded':'No files loaded';
+  else status.textContent=arr.length?arr.length+' file(s) loaded':'No files loaded (optional)';
+  add.style.display=arr.length?'block':'none';
+  var runBtn=document.getElementById('run-btn');
+  runBtn.disabled=!wbQueueA.some(function(f){return !f.error;});
+  runBtn.style.opacity=runBtn.disabled?'.5':'1';
+}
+function removeFile(which,i){
+  if(which==='a') wbQueueA.splice(i,1); else wbQueueB.splice(i,1);
+  renderFileList(which);
+}
+function handleFiles(which,files){
+  Array.from(files).forEach(function(file){
+    parseWorkbook(file,function(res){
+      if(which==='a') wbQueueA.push(res); else wbQueueB.push(res);
+      renderFileList(which);
+    });
+  });
+}
+function bindDropZone(zoneId,inputId,which){
+  var dz=document.getElementById(zoneId),fi=document.getElementById(inputId);
+  dz.addEventListener('click',function(){fi.click();});
+  fi.addEventListener('change',function(){handleFiles(which,fi.files);fi.value='';});
+  ['dragenter','dragover'].forEach(function(evt){
+    dz.addEventListener(evt,function(e){e.preventDefault();dz.classList.add('drag-over');});
+  });
+  ['dragleave','drop'].forEach(function(evt){
+    dz.addEventListener(evt,function(e){e.preventDefault();dz.classList.remove('drag-over');});
+  });
+  dz.addEventListener('drop',function(e){handleFiles(which,e.dataTransfer.files);});
+}
+
 function _parseSlaWb(wb){
   var out={};
-  var unmatched=[];
   wb.SheetNames.forEach(function(rawName){
     var code=matchKpi(rawName);
-    if(!code){unmatched.push(rawName);return;}
+    if(!code) return;
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[rawName],{defval:''});
     if(!out[code]) out[code]=[];
     out[code]=out[code].concat(rows.map(function(r,ri){
       var keys=Object.keys(r);
-      function col(){for(var i=0;i<arguments.length;i++){for(var k=0;k<keys.length;k++){if(keys[k].replace(/[\s_\-]/g,'').toLowerCase()===arguments[i].replace(/[\s_\-]/g,'').toLowerCase()) return r[keys[k]];}}return '';}
+      function col(){
+        for(var i=0;i<arguments.length;i++){
+          for(var k=0;k<keys.length;k++){
+            if(keys[k].replace(/[\s_\-]/g,'').toLowerCase()===arguments[i].replace(/[\s_\-]/g,'').toLowerCase()) return r[keys[k]];
+          }
+        }
+        return '';
+      }
       var dateVal=col('DATECLOSE','DATE_CLOSE','CLOSEDDATE','CLOSEDATE','RESOLVEDDATE','RESOLUTION_DATE');
       var d=parseDate(dateVal);
-      var month=d?d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1):'unknown';
+      var month=d?d.getFullYear()+'-'+((d.getMonth()+1)<10?'0':'')+(d.getMonth()+1):'unknown';
       var week=d?isoWeekStr(d):'No week';
       var ticket=String(col('TICKET','TICKETID','TICKET_ID','ID','CASEID','INCIDENTTICKET')||'').trim();
       var rowKey=ticket||('__row_'+ri);
-      var hasBreach=!!(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')===1
-        ||String(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')||'').trim()==='1'
-        ||String(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')||'').toUpperCase()==='Y'
-        ||String(col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG')||'').toUpperCase()==='YES'
-        ||(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')&&String(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')).trim()&&String(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')).trim()!=='0')
+      var breachVal=col('IS_BREACH','ISBREACH','BREACH','BREACH_FLAG');
+      var hasBreach=!!(
+        breachVal===1 ||
+        String(breachVal).trim()==='1' ||
+        String(breachVal).toUpperCase()==='Y' ||
+        String(breachVal).toUpperCase()==='YES' ||
+        (col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME') && String(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')).trim() && String(col('DATE_TIME_BREACH','DATETIMEBREACH','BREACHTIME')).trim()!=='0')
       );
       return {
-        ticket:rowKey,month:month,week:week,
+        ticket:rowKey,
+        month:month,
+        week:week,
         queue:String(col('QUEUE','TEAM','GROUP','DEPARTMENT')||'Unknown'),
         language:String(col('ISOLANGUAGE','ISO_LANGUAGE','LANGUAGE','LANG')||'unknown'),
         isBreach:hasBreach,
@@ -329,30 +324,39 @@ function _parseSlaWb(wb){
       };
     }));
   });
-  if(unmatched.length) console.warn('[Analyzer] SLA: unmatched sheets (not a recognized KPI):',unmatched);
   return out;
 }
 
 function _parseBreachWb(wb){
   var out={};
-  var unmatched=[];
   wb.SheetNames.forEach(function(rawName){
     var code=matchKpi(rawName);
-    if(!code){unmatched.push(rawName);return;}
+    if(!code) return;
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[rawName],{defval:''});
     if(!out[code]) out[code]=[];
     out[code]=out[code].concat(rows.map(function(r){
       var keys=Object.keys(r);
-      function col(){for(var i=0;i<arguments.length;i++){for(var k=0;k<keys.length;k++){if(keys[k].replace(/[\s_\-]/g,'').toLowerCase()===arguments[i].replace(/[\s_\-]/g,'').toLowerCase()) return r[keys[k]];}}return '';}
+      function col(){
+        for(var i=0;i<arguments.length;i++){
+          for(var k=0;k<keys.length;k++){
+            if(keys[k].replace(/[\s_\-]/g,'').toLowerCase()===arguments[i].replace(/[\s_\-]/g,'').toLowerCase()) return r[keys[k]];
+          }
+        }
+        return '';
+      }
       var wv=String(col('WEEK','WEEK_NUMBER','WEEKNUMBER')||'');
       var week=wv.match(/^\d{4}-W\d{2}$/)?wv:'No week';
       var dateVal=col('DATECLOSE','DATE_CLOSE','CLOSEDDATE','CLOSEDATE');
-      if(week==='No week'&&dateVal){var d=parseDate(dateVal);if(d) week=isoWeekStr(d);}
+      if(week==='No week'&&dateVal){
+        var d=parseDate(dateVal);
+        if(d) week=isoWeekStr(d);
+      }
       var monV=String(col('MONTH','PERIOD','YEARMONTH')||'');
       var month=monV.match(/^\d{4}-\d{2}$/)?monV:(week!=='No week'?week.slice(0,7):'unknown');
       return {
         ticket:String(col('TICKET','TICKETID','TICKET_ID','ID','CASEID')||''),
-        week:week,month:month,
+        week:week,
+        month:month,
         queue:String(col('QUEUE','TEAM','GROUP','DEPARTMENT')||'Unknown'),
         agent:String(col('AGENT','AGENTNAME','AGENT_NAME','OWNER')||''),
         reason:String(col('REASON','BREACH_REASON','BREACHREASON')||''),
@@ -362,13 +366,15 @@ function _parseBreachWb(wb){
       };
     }).filter(function(r){return !r.excluded;}));
   });
-  if(unmatched.length) console.warn('[Analyzer] Breaches: unmatched sheets:',unmatched);
   return out;
 }
 
-/* ─── State builder ─────────────────────────────────────────────────────── */
 function buildStateFromQueues(){
-  state.slaData={};state.breachData={};state.months=[];state.weeks=[];
+  state.slaData={};
+  state.breachData={};
+  state.months=[];
+  state.weeks=[];
+
   wbQueueA.forEach(function(e){
     if(!e.wb||e.error) return;
     var parsed=_parseSlaWb(e.wb);
@@ -377,6 +383,7 @@ function buildStateFromQueues(){
       state.slaData[code]=state.slaData[code].concat(parsed[code]);
     });
   });
+
   wbQueueB.forEach(function(e){
     if(!e.wb||e.error) return;
     var parsed=_parseBreachWb(e.wb);
@@ -385,6 +392,7 @@ function buildStateFromQueues(){
       state.breachData[code]=state.breachData[code].concat(parsed[code]);
     });
   });
+
   var mSet={},wSet={};
   KPI_ORDER.forEach(function(code){
     (state.slaData[code]||[]).forEach(function(r){
@@ -392,61 +400,58 @@ function buildStateFromQueues(){
       if(r.week&&r.week!=='No week') wSet[r.week]=1;
     });
   });
+
   state.months=Object.keys(mSet).sort();
   state.weeks=Object.keys(wSet).sort();
 }
 
-/* ─── Weekly summary helper ─────────────────────────────────────────────── */
+function getFilteredRows(code){
+  var rows=(state.slaData[code]||[]).slice();
+  if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
+  return rows;
+}
 function getWeeklySummary(code,queue){
   var meta=KPI_META[code]||{isKM:false,target:null};
-  var rows=state.slaData[code]||[];
-  /* Only apply month filter when a specific month is selected */
-  if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
+  var rows=getFilteredRows(code).filter(function(r){return r.week&&r.week!=='No week';});
   if(queue) rows=rows.filter(function(r){return r.queue===queue;});
-  rows=rows.filter(function(r){return r.week&&r.week!=='No week';});
-  if(!rows.length) return [];
   var grouped={};
-  rows.forEach(function(r){var w=r.week;if(!grouped[w]) grouped[w]=[];grouped[w].push(r);});
-  var weeks=Object.keys(grouped).sort();
-  return weeks.map(function(w){
+  rows.forEach(function(r){
+    if(!grouped[r.week]) grouped[r.week]=[];
+    grouped[r.week].push(r);
+  });
+  return Object.keys(grouped).sort().map(function(w){
     var wRows=grouped[w];
-    var total=wRows.length,breaches=wRows.filter(function(r){return r.isBreach;}).length;
+    var total=wRows.length;
+    var breaches=wRows.filter(function(r){return r.isBreach;}).length;
     var t=calcTarget(total,breaches,meta.isKM,meta.target);
-    return {week:w,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag,isSparse:total<5};
+    return {week:w,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
   });
 }
-
 function getTopQueues(code){
-  var rows=state.slaData[code]||[];
-  if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
-  var qc={};
-  rows.forEach(function(r){var q=r.queue||'Unknown';qc[q]=(qc[q]||0)+1;});
-  return Object.keys(qc).sort(function(a,b){return qc[b]-qc[a];}).slice(0,6);
+  var rows=getFilteredRows(code);
+  var counts={};
+  rows.forEach(function(r){counts[r.queue||'Unknown']=(counts[r.queue||'Unknown']||0)+1;});
+  return Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).slice(0,6);
 }
 
-/* ─── Tab / month navigation ────────────────────────────────────────────── */
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'\" onclick="setMonth(null)">All</button>';
-  state.months.forEach(function(m){html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'\" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';});
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
+  state.months.forEach(function(m){
+    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
+  });
   el.innerHTML=html;
 }
-
 function setMonth(m){
   state.activeMonth=m;
-  _weeklyKpi=null;
   buildMonthChips();
-  renderTab();
+  refresh();
+}
+function setTab(id){
+  state.activeTab=id;
+  refresh();
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   refresh() — rebuild tab bar.
-   KEY FIX: KPI tabs are shown for ALL codes that have data in ANY period
-   (i.e. state.slaData[code].length > 0).  The RAG dot reflects the
-   currently selected period so the user still gets visual feedback.
-   If there is no data for the selected period the tab gets a dimmed class
-   but is still rendered and clickable.
-   ──────────────────────────────────────────────────────────────────────── */
 function refresh(){
   var tabs=[
     {id:'overview',label:'Overview'},
@@ -456,23 +461,23 @@ function refresh(){
   ];
 
   KPI_ORDER.forEach(function(code){
-    /* Show tab if the KPI has data in ANY period */
     var allRows=state.slaData[code]||[];
     if(!allRows.length) return;
 
-    /* RAG dot based on currently filtered period */
     var filteredRows=state.activeMonth
       ? allRows.filter(function(r){return r.month===state.activeMonth;})
       : allRows;
 
     var rag='none';
     var noDataForPeriod=false;
+
     if(filteredRows.length){
       var meta=KPI_META[code]||{isKM:false};
-      var total=filteredRows.length,breaches=filteredRows.filter(function(r){return r.isBreach;}).length;
+      var total=filteredRows.length;
+      var breaches=filteredRows.filter(function(r){return r.isBreach;}).length;
       var t=calcTarget(total,breaches,meta.isKM,meta.target);
       rag=t.rag;
-    } else {
+    }else{
       noDataForPeriod=true;
     }
 
@@ -481,465 +486,213 @@ function refresh(){
 
   tabs.push({id:'language',label:'🌐 Languages'});
 
-  var bar=document.getElementById('tab-bar');
-  bar.innerHTML=tabs.map(function(t){
+  document.getElementById('tab-bar').innerHTML=tabs.map(function(t){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'\"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
 }
 
-function setTab(id){state.activeTab=id;refresh();}
-
 function renderTab(){
-  var el=document.getElementById('analyzer-main'),tab=state.activeTab;
-  if(!tab||tab==='overview'){el.innerHTML=renderOverview();return;}
-  if(tab==='trend'){el.innerHTML=renderTrend();return;}
-  if(tab==='kpitrends'){el.innerHTML=renderKpiTrends();return;}
-  if(tab==='weekly'){el.innerHTML=renderWeekly();return;}
-  if(tab==='language'){el.innerHTML=renderLanguage();return;}
-  el.innerHTML=renderKpiTab(tab);
+  var el=document.getElementById('analyzer-main');
+  if(state.activeTab==='overview') el.innerHTML=renderOverview();
+  else if(state.activeTab==='trend') el.innerHTML=renderTrend();
+  else if(state.activeTab==='kpitrends') el.innerHTML=renderKpiTrends();
+  else if(state.activeTab==='weekly') el.innerHTML=renderWeekly();
+  else if(state.activeTab==='language') el.innerHTML=renderLanguage();
+  else el.innerHTML=renderKpiTab(state.activeTab);
 }
 
-/* ─── renderOverview ────────────────────────────────────────────────────── */
 function renderOverview(){
-  var _allConfigured=KPI_ORDER.length;
-  var _loadedCodes=KPI_ORDER.filter(function(c){
-    var rows=state.slaData[c]||[];
-    if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
-    return rows.length>0;
-  });
-  var _missingCodes=KPI_ORDER.filter(function(c){return (state.slaData[c]||[]).length===0;});
-  var _diagNote='';
-  if(_missingCodes.length>0){
+  var loadedCodes=KPI_ORDER.filter(function(c){return (state.slaData[c]||[]).length>0;});
+  var missingCodes=KPI_ORDER.filter(function(c){return (state.slaData[c]||[]).length===0;});
+  var diag='';
+  if(missingCodes.length){
     var allSheets=[];
     wbQueueA.forEach(function(e){if(e.wb) allSheets=allSheets.concat(e.wb.SheetNames);});
-    _diagNote='<div class="diag-banner">'
-      +'<strong>⚠ '+_loadedCodes.length+' of '+_allConfigured+' KPIs loaded</strong> — '
-      +'Missing: <strong>'+_missingCodes.join(', ')+'</strong>.<br>'
-      +'Sheets found in your file(s): <em>'+allSheets.join(', ')+'</em>.<br>'
-      +'Expected names like: KSL-2a, KSL-2b, KSL-3, KM-1, KM-2, KM-3, KST-1, KST-2, KST-3. '
-      +'The analyzer uses fuzzy matching (strips dashes, case-insensitive) so KST1 or "KST-1 Data" also work. '
-      +'Check DevTools Console for detailed match logs.'
-      +'</div>';
+    diag='<div class="diag-banner"><strong>⚠ '+loadedCodes.length+' of '+KPI_ORDER.length+' KPIs loaded</strong> — Missing: <strong>'+missingCodes.join(', ')+'</strong>.<br>Sheets found in your file(s): <em>'+esc(allSheets.join(', '))+'</em>.</div>';
   }
+
   var cards=KPI_ORDER.map(function(code){
-    var meta=KPI_META[code]||{isKM:false};
-    var rows=state.slaData[code]||[];
-    if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
+    var meta=KPI_META[code];
+    var rows=getFilteredRows(code);
     if(!rows.length) return '';
-    var total=rows.length,breaches=rows.filter(function(r){return r.isBreach;}).length;
+    var total=rows.length;
+    var breaches=rows.filter(function(r){return r.isBreach;}).length;
     var t=calcTarget(total,breaches,meta.isKM,meta.target);
-    var col=t.rag==='red'?'#cc2222':t.rag==='amber'?'#d19900':'#437a22';
-    return '<div class="s-card rag-'+t.rag+'"><div class="lbl"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+meta.color+';margin-right:5px;vertical-align:middle"></span>'+esc(code)+'</div><div class="val" style="color:'+col+'">'+t.display+'</div><div class="sub">'+fmt(total)+' tickets · '+fmt(breaches)+' breaches</div><div class="sub">'+esc(meta.what)+'</div></div>';
+    return '<div class="s-card rag-'+t.rag+'"><div class="lbl">'+esc(code)+'</div><div class="val">'+t.display+'</div><div class="sub">'+fmt(total)+' tickets · '+fmt(breaches)+' breaches</div><div class="sub">'+esc(meta.what)+'</div></div>';
   }).filter(Boolean).join('');
-  var period=state.activeMonth?monthLabel(state.activeMonth):'All periods';
-  return _diagNote+'<div class="summary-banner">'+cards+'</div>'
-    +'<div class="sc" style="margin-top:4px"><div class="sc-head"><h2>All KPIs at a Glance</h2><span class="badge">'+esc(period)+'</span></div><div class="sc-body"><table class="rag-table"><thead><tr><th>KPI</th><th>What it measures</th><th>Target</th><th>Tickets</th><th>Breaches</th><th>Rate</th><th>Status</th></tr></thead><tbody>'
-    +KPI_ORDER.map(function(code){
-      var meta=KPI_META[code]||{isKM:false};
-      var rows=state.slaData[code]||[];
-      if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
-      if(!rows.length) return '';
-      var total=rows.length,breaches=rows.filter(function(r){return r.isBreach;}).length;
-      var t=calcTarget(total,breaches,meta.isKM,meta.target);
-      return '<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+(KPI_META[code]||{color:'#888'}).color+';margin-right:6px;vertical-align:middle"></span><strong>'+esc(code)+'</strong></td><td>'+esc(meta.what)+'</td><td>'+esc(meta.targetLabel||'')+'</td><td>'+fmt(total)+'</td><td>'+fmt(breaches)+'</td><td class="rate-cell rate-'+t.rag+'">'+t.display+'</td><td><span class="rag-pill rag-'+t.rag+'">'+ragLabel(t.rag,meta.isKM)+'</span></td></tr>';
-    }).filter(Boolean).join('')
-    +'</tbody></table></div></div>';
+
+  var tableRows=KPI_ORDER.map(function(code){
+    var meta=KPI_META[code];
+    var rows=getFilteredRows(code);
+    if(!rows.length) return '';
+    var total=rows.length;
+    var breaches=rows.filter(function(r){return r.isBreach;}).length;
+    var t=calcTarget(total,breaches,meta.isKM,meta.target);
+    return '<tr><td><strong>'+esc(code)+'</strong></td><td>'+esc(meta.what)+'</td><td>'+esc(meta.targetLabel)+'</td><td>'+fmt(total)+'</td><td>'+fmt(breaches)+'</td><td class="rate-cell rate-'+t.rag+'">'+t.display+'</td><td><span class="rag-pill rag-'+t.rag+'">'+ragLabel(t.rag,meta.isKM)+'</span></td></tr>';
+  }).filter(Boolean).join('');
+
+  return diag+
+    '<div class="summary-banner">'+cards+'</div>'+
+    '<div class="sc"><div class="sc-head"><h2>All KPIs at a Glance</h2><span class="badge">'+esc(state.activeMonth?monthLabel(state.activeMonth):'All periods')+'</span></div><div class="sc-body"><table class="rag-table"><thead><tr><th>KPI</th><th>What it measures</th><th>Target</th><th>Tickets</th><th>Breaches</th><th>Rate</th><th>Status</th></tr></thead><tbody>'+tableRows+'</tbody></table></div></div>';
 }
 
-/* ─── renderTrend ───────────────────────────────────────────────────────── */
 function renderTrend(){
   var months=state.months.slice(-3);
   if(months.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">Need at least 2 months of data to show a trend.</p></div></div>';
-  var rows='';
-  KPI_ORDER.forEach(function(code){
-    var meta=KPI_META[code]||{isKM:false};
+  var rows=KPI_ORDER.map(function(code){
+    var meta=KPI_META[code];
     var allRows=state.slaData[code]||[];
-    if(!allRows.length) return;
+    if(!allRows.length) return '';
     var cells=months.map(function(m){
       var mRows=allRows.filter(function(r){return r.month===m;});
-      if(!mRows.length) return '<td style="color:#ccc">—</td>';
+      if(!mRows.length) return '<td>—</td>';
       var total=mRows.length,breaches=mRows.filter(function(r){return r.isBreach;}).length;
       var t=calcTarget(total,breaches,meta.isKM,meta.target);
       return '<td style="background:'+ragColor(t.rag)+';color:'+ragText(t.rag)+'">'+t.display+'</td>';
     }).join('');
-    rows+='<tr><td class="row-lbl"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+meta.color+';margin-right:5px;vertical-align:middle"></span>'+esc(code)+'</td>'+cells+'</tr>';
-  });
-  var ths=months.map(function(m){return '<th>'+monthLabel(m)+'</th>';}).join('');
-  return '<div class="sc"><div class="sc-head"><h2>3-Month Trend</h2><span class="badge">Last '+months.length+' months</span></div><div class="sc-body" style="overflow-x:auto"><table class="trend-tbl"><thead><tr><th class="row-lbl">KPI</th>'+ths+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    return '<tr><td><strong>'+esc(code)+'</strong></td>'+cells+'</tr>';
+  }).filter(Boolean).join('');
+  var heads=months.map(function(m){return '<th>'+monthLabel(m)+'</th>';}).join('');
+  return '<div class="sc"><div class="sc-head"><h2>3-Month Trend</h2></div><div class="sc-body"><table class="trend-tbl"><thead><tr><th>KPI</th>'+heads+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 }
 
-/* ─── renderKpiTrends ───────────────────────────────────────────────────── */
+function renderSimpleLineCard(code,meta,points,labelFn,badgeText){
+  if(!points.length) return '';
+  var list=points.map(function(p){
+    var color=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#437a22';
+    return '<tr><td>'+esc(labelFn(p.label))+'</td><td>'+fmt(p.total||0)+'</td><td>'+fmt(p.breaches||0)+'</td><td style="color:'+color+';font-weight:700">'+p.value.toFixed(1)+'%</td></tr>';
+  }).join('');
+  return '<div class="ktc"><div class="ktc-head"><h3>'+esc(code)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what)+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div><div class="ktc-body"><table class="rag-table"><thead><tr><th>Period</th><th>Tickets</th><th>Breaches</th><th>Rate</th></tr></thead><tbody>'+list+'</tbody></table></div></div>';
+}
+
 function renderKpiTrends(){
   var months=state.months;
   if(months.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">Need at least 2 months of data.</p></div></div>';
   var cards=KPI_ORDER.map(function(code){
-    var meta=KPI_META[code]||{isKM:false,color:'#888'};
+    var meta=KPI_META[code];
     var points=months.map(function(m){
       var rows=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
       if(!rows.length) return null;
-      var total=rows.length,breaches=rows.filter(function(r){return r.isBreach;}).length;
+      var total=rows.length;
+      var breaches=rows.filter(function(r){return r.isBreach;}).length;
       var t=calcTarget(total,breaches,meta.isKM,meta.target);
-      return {m:m,v:parseFloat(t.value||0),rag:t.rag};
+      return {label:m,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
     }).filter(Boolean);
     if(!points.length) return '';
-    var last=points[points.length-1];
-    return renderSimpleLineCard(code,meta,points,monthLabel,last?last.v+'%':'',false);
+    return renderSimpleLineCard(code,meta,points,monthLabel,state.activeMonth?monthLabel(state.activeMonth):'All periods');
   }).filter(Boolean).join('');
   return '<div class="kpi-trend-grid">'+cards+'</div>';
 }
 
-/* ─── renderSimpleLineCard ──────────────────────────────────────────────── */
-function renderSimpleLineCard(code,meta,points,labelFn,badgeText,compact){
-  if(!points||!points.length) return '';
-  function getKey(p){return p.week||p.m||'';}
-  if(points.length===1){
-    var p=points[0];
-    var col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#437a22';
-    return '<div class="ktc"><div class="ktc-head"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+meta.color+';flex-shrink:0"></span><h3>'+esc(code)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what||'')+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div><div class="ktc-body" style="display:flex;align-items:center;gap:14px;padding:18px 14px"><span style="font-size:28px;font-weight:700;color:'+col+'">'+p.v+'%</span><span style="font-size:11px;color:var(--muted)">'+esc(labelFn(getKey(p)))+'<br>Only 1 data point – need 2+ to draw a trend line.</span></div></div>';
-  }
-  var W=compact?400:480,H=compact?140:180,PL=38,PR=14,PT=12,PB=30;
-  var cW=W-PL-PR,cH=H-PT-PB;
-  var vals=points.map(function(p){return p.v;});
-  var minV=meta.isKM?0:Math.max(0,Math.min.apply(null,vals)-10);
-  var maxV=meta.isKM?Math.min(100,Math.max.apply(null,vals)+10):100;
-  if(maxV<=minV) maxV=minV+10;
-  function xPos(i){return PL+i/(points.length-1||1)*cW;}
-  function yPos(v){return PT+cH-(v-minV)/(maxV-minV)*cH;}
-  var yLabels='';
-  for(var s=0;s<=4;s++){var lv=minV+(maxV-minV)*s/4,ly=yPos(lv);yLabels+='<text x="'+(PL-4)+'" y="'+(ly+3)+'" font-size="8" fill="#9ca3af" text-anchor="end">'+Math.round(lv)+'%</text><line x1="'+PL+'" y1="'+ly+'" x2="'+(PL+cW)+'" y2="'+ly+'" stroke="#e5e7eb" stroke-width="0.5"/>';}
-  var targetV=(meta.target!==null&&meta.target!==undefined)?meta.target:(meta.isKM?5:95);
-  var ty=yPos(targetV),targetLine=(targetV>=minV&&targetV<=maxV)?'<line x1="'+PL+'" y1="'+ty+'" x2="'+(PL+cW)+'" y2="'+ty+'" stroke="#d19900" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>':'';
-  var pathD=points.map(function(p,i){return (i===0?'M ':'L ')+xPos(i)+' '+yPos(p.v);}).join(' ');
-  var lineColor=points[points.length-1].rag==='red'?'#cc2222':points[points.length-1].rag==='amber'?'#d19900':'#437a22';
-  var linePath='<path d="'+pathD+'" fill="none" stroke="'+lineColor+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
-  var areaD=pathD+' L '+xPos(points.length-1)+' '+(PT+cH)+' L '+xPos(0)+' '+(PT+cH)+' Z';
-  var area='<path d="'+areaD+'" fill="'+lineColor+'" opacity="0.07"/>';
-  var dots=points.map(function(p,i){
-    var cy=yPos(p.v);
-    var dc=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#437a22';
-    return p.isSparse
-      ?'<circle cx="'+xPos(i)+'" cy="'+cy+'" r="3" fill="#fff" stroke="'+dc+'" stroke-width="1.5" opacity="0.8"/>'
-      :'<circle cx="'+xPos(i)+'" cy="'+cy+'" r="3" fill="'+dc+'" stroke="#fff" stroke-width="1.5"/>';
-  }).join('');
-  var step=points.length>8?2:1;
-  var xLabels=points.map(function(p,i){
-    if(i%step!==0&&i!==points.length-1) return '';
-    return '<text x="'+xPos(i)+'" y="'+(H-4)+'" font-size="8" fill="#9ca3af" text-anchor="middle">'+esc(labelFn(getKey(p)))+'</text>';
-  }).join('');
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" height="'+H+'">'+yLabels+targetLine+area+linePath+dots+xLabels+'</svg>';
-  return '<div class="ktc"><div class="ktc-head"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+meta.color+';flex-shrink:0"></span><h3>'+esc(code)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what||'')+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div><div class="ktc-body">'+svg+'</div></div>';
-}
-
-/* ─── renderQueueWeeklyCard ─────────────────────────────────────────────── */
-function renderQueueWeeklyCard(code,queues){
-  var meta=KPI_META[code]||{isKM:false,color:'#888'};
-  var weekSet={};
-  queues.forEach(function(q){getWeeklySummary(code,q).forEach(function(pt){weekSet[pt.week]=1;});});
-  var allWeeks=Object.keys(weekSet).sort();
-  if(allWeeks.length<2) return '<div class="ktc"><div class="ktc-head"><h3>'+esc(code)+'</h3></div><div class="empty-state-box"><p>Need at least 2 weeks to draw a trend.</p></div></div>';
-  var QUEUE_COLORS=['#006494','#437a22','#7a39bb','#d19900','#964219','#a12c7b','#01696f','#cc2222'];
-  var W=520,H=190,PL=38,PR=14,PT=12,PB=30,cW=W-PL-PR,cH=H-PT-PB;
-  var allVals=[];
-  var seriesData=queues.map(function(q,qi){
-    var pts=getWeeklySummary(code,q);
-    var map={};pts.forEach(function(pt){map[pt.week]=pt;});
-    var series=allWeeks.map(function(w){return map[w]||null;});
-    series.forEach(function(pt){if(pt) allVals.push(pt.value);});
-    return {queue:q,series:series,color:QUEUE_COLORS[qi%QUEUE_COLORS.length]};
-  });
-  if(!allVals.length) return '<div class="ktc"><div class="ktc-head"><h3>'+esc(code)+'</h3></div><div class="empty-state-box"><p>No weekly data.</p></div></div>';
-  var minV=meta.isKM?0:Math.max(0,Math.min.apply(null,allVals)-10);
-  var maxV=meta.isKM?Math.min(100,Math.max.apply(null,allVals)+10):100;
-  if(maxV<=minV) maxV=minV+10;
-  function xPos(i){return PL+i/(allWeeks.length-1||1)*cW;}
-  function yPos(v){return PT+cH-(v-minV)/(maxV-minV)*cH;}
-  var yLabels='';
-  for(var s=0;s<=4;s++){var lv=minV+(maxV-minV)*s/4,ly=yPos(lv);yLabels+='<text x="'+(PL-4)+'" y="'+(ly+3)+'" font-size="8" fill="#9ca3af" text-anchor="end">'+Math.round(lv)+'%</text><line x1="'+PL+'" y1="'+ly+'" x2="'+(PL+cW)+'" y2="'+ly+'" stroke="#e5e7eb" stroke-width="0.5"/>';}
-  var targetV=(meta.target!==null&&meta.target!==undefined)?meta.target:(meta.isKM?5:95);
-  var ty=yPos(targetV),targetLine=(targetV>=minV&&targetV<=maxV)?'<line x1="'+PL+'" y1="'+ty+'" x2="'+(PL+cW)+'" y2="'+ty+'" stroke="#d19900" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>':'';
-  var lines=seriesData.map(function(sd){
-    var validPts=sd.series.map(function(pt,i){return pt?{i:i,v:pt.value}:null;}).filter(Boolean);
-    if(validPts.length<2) return '';
-    var pathParts=[],inPath=false;
-    sd.series.forEach(function(pt,i){
-      if(pt){
-        if(!inPath){pathParts.push('M '+xPos(i)+' '+yPos(pt.value));inPath=true;}
-        else{pathParts.push('L '+xPos(i)+' '+yPos(pt.value));}
-      } else {inPath=false;}
-    });
-    var dots=sd.series.map(function(pt,i){
-      if(!pt) return '';
-      return '<circle cx="'+xPos(i)+'" cy="'+yPos(pt.value)+'" r="2.5" fill="'+sd.color+'" stroke="#fff" stroke-width="1.2"/>';
-    }).join('');
-    return '<path d="'+pathParts.join(' ')+'" fill="none" stroke="'+sd.color+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>'+dots;
-  }).join('');
-  var step=allWeeks.length>8?2:1;
-  var xLabels=allWeeks.map(function(w,i){if(i%step!==0&&i!==allWeeks.length-1)return '';return '<text x="'+xPos(i)+'" y="'+(H-4)+'" font-size="8" fill="#9ca3af" text-anchor="middle">'+shortWeekLabel(w)+'</text>';}).join('');
-  var legendItems=seriesData.map(function(sd){return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:9px;color:var(--muted);margin-right:8px"><span style="display:inline-block;width:10px;height:3px;background:'+sd.color+';border-radius:2px"></span>'+esc(sd.queue)+'</span>';}).join('');
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" height="'+H+'">'+yLabels+targetLine+lines+xLabels+'</svg>';
-  return '<div class="ktc"><div class="ktc-head"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+meta.color+';flex-shrink:0"></span><h3>'+esc(code)+' — Combined Queue View</h3><span class="ktc-badge">Per-queue weekly</span></div><div class="ktc-body">'+svg+'</div><div style="display:flex;flex-wrap:wrap;padding:4px 14px 10px;gap:2px">'+legendItems+'</div></div>';
-}
-
-/* ─── renderWeekly ──────────────────────────────────────────────────────── */
 function renderWeekly(){
-  var hasWeeks=KPI_ORDER.some(function(code){
-    var rows=state.slaData[code]||[];
-    if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
-    return rows.some(function(r){return r.week&&r.week!=='No week';});
-  });
-  if(!hasWeeks){
-    return '<div class="sc"><div class="sc-head"><h2>📅 Weekly Trends</h2></div><div class="sc-body"><div class="empty-state-box"><div class="es-icon">📅</div><p>No weekly data found. Make sure your SLA export files include a DATE_CLOSE column with valid dates so weeks can be derived automatically.</p></div></div></div>';
-  }
-  var viewBar='<div class="weekly-view-tabs">'
-    +'<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'\" onclick="setWeeklyView(\'all\')">📈 All KPIs Overview</button>'
-    +'<button class="wv-btn'+(_weeklyView==='byqueue'?' active':'')+'\" onclick="setWeeklyView(\'byqueue\')">🗂️ Per Queue</button>'
-    +'</div>';
-  var content='';
-  if(_weeklyView==='all'){
-    var cards=KPI_ORDER.map(function(code){
-      var meta=KPI_META[code]||{isKM:false,color:'#888'};
-      var pts=getWeeklySummary(code,null);
-      if(!pts.length) return '';
-      var points=pts.map(function(pt){return {week:pt.week,v:pt.value,rag:pt.rag,isSparse:pt.isSparse};});
-      var last=points[points.length-1];
-      return renderSimpleLineCard(code,meta,points,weekLabel,last?last.v.toFixed(1)+'%':'',false);
-    }).filter(Boolean).join('');
-    content=cards
-      ?'<div class="weekly-grid">'+cards+'</div><p class="mini-note">○ Hollow dots = sparse weeks (&lt;5 tickets). Dashed line = target threshold.</p>'
-      :'<div class="empty-state-box"><div class="es-icon">📊</div><p>No weekly KPI data available for the selected period.</p></div>';
-  } else {
-    var kpisWithData=KPI_ORDER.filter(function(code){return getWeeklySummary(code,null).length>=2;});
-    if(!kpisWithData.length){
-      content='<div class="empty-state-box"><div class="es-icon">🗂️</div><p>Not enough weekly data (need ≥ 2 weeks per KPI) for per-queue view.</p></div>';
-    } else {
-      if(!_weeklyKpi||kpisWithData.indexOf(_weeklyKpi)===-1) _weeklyKpi=kpisWithData[0];
-      var kpiChips='<div class="weekly-kpi-selector"><span style="font-size:11px;font-weight:600;color:var(--muted)">KPI:</span>'
-        +kpisWithData.map(function(c){
-          var pts=getWeeklySummary(c,null);
-          var last=pts[pts.length-1];
-          var dotClass=last?('dot-'+last.rag):'dot-none';
-          return '<button class="wv-btn'+(_weeklyKpi===c?' active':'')+'\" onclick="setWeeklyKpi(\''+c+'\')">'+'<span class="tab-dot '+dotClass+'"></span>'+esc(c)+'</button>';
-        }).join('')+'</div>';
-      var queues=getTopQueues(_weeklyKpi);
-      var queueCards='';
-      if(!queues.length){
-        queueCards='<div class="empty-state-box"><p>No queue data found for '+esc(_weeklyKpi)+' in the selected period.</p></div>';
-      } else {
-        var combinedCard=renderQueueWeeklyCard(_weeklyKpi,queues);
-        var indivCards='<div class="weekly-queue-grid">'
-          +queues.map(function(q){
-            var pts=getWeeklySummary(_weeklyKpi,q);
-            if(!pts.length) return '';
-            var meta=KPI_META[_weeklyKpi]||{isKM:false,color:'#888'};
-            var points=pts.map(function(pt){return {week:pt.week,v:pt.value,rag:pt.rag,isSparse:pt.isSparse};});
-            var last=points[points.length-1];
-            return renderSimpleLineCard(q+' \u2013 '+_weeklyKpi,meta,points,weekLabel,last?last.v.toFixed(1)+'%':'',true);
-          }).filter(Boolean).join('')
-          +'</div>';
-        queueCards=combinedCard+indivCards;
-      }
-      content=kpiChips+queueCards+'<p class="mini-note">Showing top '+queues.length+' queue(s) by ticket volume for '+esc(_weeklyKpi)+'.</p>';
-    }
-  }
-  return '<div class="sc"><div class="sc-head"><h2>📅 Weekly Trends</h2><span class="badge">'+(state.activeMonth?monthLabel(state.activeMonth):'All periods')+'</span></div><div class="sc-body"><div class="weekly-section">'+viewBar+content+'</div></div></div>';
-}
+  var loadedCodes=KPI_ORDER.filter(function(c){return (state.slaData[c]||[]).length>0;});
+  if(!loadedCodes.length) return '<div class="empty-state-box"><div>No KPI data loaded yet.</div></div>';
 
-function setWeeklyView(v){_weeklyView=v;renderTab();}
-function setWeeklyKpi(k){_weeklyKpi=k;renderTab();}
+  var buttons='<div class="weekly-view-tabs">'+
+    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
+    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
+    '</div>';
 
-/* ─── renderKpiTab ──────────────────────────────────────────────────────── */
-function renderKpiTab(code){
-  var meta=KPI_META[code]||{isKM:false,color:'#888',what:''};
-  var rows=state.slaData[code]||[];
-  if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
-  if(!rows.length) return '<div class="sc"><div class="sc-head"><h2>'+esc(code)+'</h2></div><div class="sc-body"><div class="empty-state-box"><div class="es-icon">📭</div><p>No data for <strong>'+esc(code)+'</strong> in the selected period.<br>Try switching to <strong>All</strong> or a different month.</p></div></div></div>';
-  var total=rows.length,excluded=rows.filter(function(r){return r.isExcluded;}).length,breaches=rows.filter(function(r){return r.isBreach;}).length;
-  var t=calcTarget(total,breaches,meta.isKM,meta.target);
-  var qc={};
-  rows.forEach(function(r){var q=r.queue||'Unknown';if(!qc[q]) qc[q]={total:0,breaches:0,excluded:0};qc[q].total++;if(r.isBreach) qc[q].breaches++;if(r.isExcluded) qc[q].excluded++;});
-  var queues=Object.keys(qc).sort(function(a,b){return qc[b].total-qc[a].total;});
-  var maxQ=Math.max.apply(null,queues.map(function(q){return qc[q].total;}));
-  var bRows=(state.breachData[code]||[]).filter(function(r){return !r.excluded;});
-  if(state.activeMonth) bRows=bRows.filter(function(r){return r.month===state.activeMonth;});
-  var PAGE=20;
-  if(!_kpiPage[code]) _kpiPage[code]=0;
-  if(!_kpiQueue[code]) _kpiQueue[code]=null;
-  var selQ=_kpiQueue[code];
-  var filteredBRows=selQ?bRows.filter(function(r){return r.queue===selQ;}):bRows;
-  var totalPages=Math.ceil(filteredBRows.length/PAGE)||1;
-  if(_kpiPage[code]>=totalPages) _kpiPage[code]=0;
-  var pageRows=filteredBRows.slice(_kpiPage[code]*PAGE,(_kpiPage[code]+1)*PAGE);
-  var allQueuesForCode=Object.keys(qc).sort(function(a,b){return qc[b].total-qc[a].total;});
-  var qChips='<div class="filter-chips" style="margin-bottom:10px"><span style="font-size:11px;color:var(--muted);font-weight:600">Queue:</span>'
-    +'<button class="month-chip'+(selQ===null?' active':'')+'\" onclick="setKpiQueue(\''+esc(code)+'\',null)">All</button>'
-    +allQueuesForCode.map(function(q){return '<button class="month-chip'+(selQ===q?' active':'')+'\" onclick="setKpiQueue(\''+esc(code)+'\',\''+esc(q)+'\')">'+esc(q)+'</button>';}).join('')
-    +'</div>';
-  var hasBreach=bRows.length>0;
-  var breachSection='';
-  if(hasBreach){
-    var tHead='<tr><th>Ticket</th><th>Month</th><th>Week</th><th>Queue</th><th>Agent</th><th>Reason</th><th>AOS</th><th>Comment</th></tr>';
-    var tRows=pageRows.map(function(r){return '<tr><td style="font-weight:600">'+esc(r.ticket)+'</td><td>'+esc(r.month||'—')+'</td><td>'+esc(shortWeekLabel(r.week)||'—')+'</td><td>'+esc(r.queue||'—')+'</td><td>'+esc(r.agent||'—')+'</td><td>'+esc(r.reason||'—')+'</td><td>'+esc(r.aos||'—')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.comment||'—')+'</td></tr>';}).join('');
-    var pgBtns='';
-    if(totalPages>1){
-      pgBtns='<div class="pg"><button class="pg-btn" onclick="setKpiPage(\''+esc(code)+'\',-1)" '+((_kpiPage[code]===0)?'disabled':'')+'>&#8249;</button>';
-      for(var pi=0;pi<Math.min(totalPages,10);pi++){pgBtns+='<button class="pg-btn'+(pi===_kpiPage[code]?' on':'')+'\" onclick="setKpiPage(\''+esc(code)+'\','+pi+')">'+(pi+1)+'</button>';}
-      pgBtns+='<button class="pg-btn" onclick="setKpiPage(\''+esc(code)+'\',1)" '+(_kpiPage[code]===totalPages-1?'disabled':'')+'>&#8250;</button></div>';
-    }
-    breachSection='<div class="sc" style="margin-top:16px"><div class="sc-head"><h2>Breach Detail</h2><span class="badge">'+filteredBRows.length+' breach records</span></div><div class="sc-body">'+qChips+'<div style="overflow-x:auto"><table class="excl-tbl"><thead>'+tHead+'</thead><tbody>'+tRows+'</tbody></table></div>'+pgBtns+'</div></div>';
-  }
-  var weeklyPts=getWeeklySummary(code,null);
-  var weeklyCard='';
-  if(weeklyPts.length>=2){
-    var wPoints=weeklyPts.map(function(pt){return {week:pt.week,v:pt.value,rag:pt.rag,isSparse:pt.isSparse};});
-    var wLast=wPoints[wPoints.length-1];
-    weeklyCard='<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Weekly Trend</div>'+renderSimpleLineCard(code,meta,wPoints,weekLabel,wLast?wLast.v.toFixed(1)+'%':'',false)+'</div>';
-  }
-  var qBar='<div class="bar-chart">'+queues.map(function(q){var d=qc[q],br=d.breaches,tot=d.total,fill=tot?Math.round(tot/maxQ*100):0;var tgt=calcTarget(tot,br,meta.isKM,meta.target);return '<div class="bar-row"><span class="bar-lbl" title="'+esc(q)+'">'+esc(q)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+fill+'%;background:'+meta.color+'"></div></div><span class="bar-cnt">'+fmt(tot)+'</span><span class="bar-cnt rate-'+tgt.rag+'">'+tgt.display+'</span></div>';}).join('')+'</div>';
-  var rag=t.rag,col=rag==='red'?'#cc2222':rag==='amber'?'#d19900':'#437a22';
-  var header='<div class="sc"><div class="sc-head"><span style="width:10px;height:10px;border-radius:50%;background:'+meta.color+';display:inline-block;flex-shrink:0"></span><h2>'+esc(code)+'</h2><span style="font-size:11px;color:var(--muted)">'+esc(meta.what)+'</span><span class="badge">'+esc(meta.targetLabel||'')+'</span></div><div class="sc-body"><div class="two-col"><div>'+_sc('Total Tickets',fmt(total),'in period','none')+_sc('Excluded',fmt(excluded),'Excluded=1 in Breaches file','excl')+_sc('Net Breaches',fmt(breaches),'after exclusions','none')+'</div><div><div style="font-size:32px;font-weight:700;color:'+col+'">'+t.display+'</div><div style="font-size:11px;color:var(--muted);margin-top:4px">'+esc(t.targetLabel||'')+'</div><div style="margin-top:10px"><span class="rag-pill rag-'+rag+'">'+ragLabel(rag,meta.isKM)+'</span></div></div></div></div></div>';
-  return header+'<div class="sc" style="margin-top:16px"><div class="sc-head"><h2>Queue Breakdown</h2><span class="badge">'+queues.length+' queues</span></div><div class="sc-body">'+qBar+'</div></div>'+weeklyCard+breachSection;
-}
-
-function setKpiPage(code,p){
-  if(typeof p==='number'&&p>=0) _kpiPage[code]=p;
-  else if(p===-1&&_kpiPage[code]>0) _kpiPage[code]--;
-  else if(p===1){
-    var bRows=(state.breachData[code]||[]).filter(function(r){return !r.excluded;});
-    if(state.activeMonth) bRows=bRows.filter(function(r){return r.month===state.activeMonth;});
-    var selQ=_kpiQueue[code];
-    if(selQ) bRows=bRows.filter(function(r){return r.queue===selQ;});
-    var tp=Math.ceil(bRows.length/20)||1;
-    if(_kpiPage[code]<tp-1) _kpiPage[code]++;
-  }
-  renderTab();
-}
-function setKpiQueue(code,q){_kpiQueue[code]=q;_kpiPage[code]=0;renderTab();}
-
-/* ─── renderLanguage ────────────────────────────────────────────────────── */
-function renderLanguage(){
-  var targetMonth=state.activeLangMonth||state.activeMonth;
-  var allMonths=state.months;
-  if(!allMonths.length) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted)">No data loaded.</p></div></div>';
-  var langSet={},langKpi={};
-  KPI_ORDER.forEach(function(code){
-    var rows=state.slaData[code]||[];
-    if(targetMonth) rows=rows.filter(function(r){return r.month===targetMonth;});
-    rows.forEach(function(r){
-      var lang=r.language||'unknown';
-      if(!langSet[lang]) langSet[lang]=0;
-      langSet[lang]++;
-      if(!langKpi[lang]) langKpi[lang]={};
-      if(!langKpi[lang][code]) langKpi[lang][code]={total:0,breaches:0};
-      langKpi[lang][code].total++;
-      if(r.isBreach) langKpi[lang][code].breaches++;
-    });
-  });
-  var langs=Object.keys(langSet).sort(function(a,b){return langSet[b]-langSet[a];}).slice(0,20);
-  if(!langs.length) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted)">No language data found. Check ISO_Language or ISOLanguage column in your SLA files.</p></div></div>';
-  var activeCodes=KPI_ORDER.filter(function(c){return langs.some(function(l){return langKpi[l]&&langKpi[l][c]&&langKpi[l][c].total>0;});});
-  function heatStyle(rag){return rag==='red'?'background:#ffdcdc;color:#880000':rag==='amber'?'background:#fff3cc;color:#7a4200':rag==='green'?'background:#d4edda;color:#1a6b1a':'background:#f0eeea;color:#9ca3af';}
-  var thRow='<tr><th class="row-h">Lang</th><th>Tickets</th>'+activeCodes.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr>';
-  var tRows=langs.map(function(lang){
-    var tds=activeCodes.map(function(c){
-      var d=langKpi[lang]&&langKpi[lang][c];
-      if(!d||!d.total) return '<td style="background:#f8f8f8;color:#ccc">—</td>';
-      var meta=KPI_META[c]||{isKM:false};
-      var t=calcTarget(d.total,d.breaches,meta.isKM,meta.target);
-      return '<td style="'+heatStyle(t.rag)+'">'+t.display+'</td>';
+  if(_weeklyView==='queue'){
+    var queueCards=loadedCodes.map(function(code){
+      var meta=KPI_META[code];
+      var queues=getTopQueues(code);
+      if(!queues.length) return '';
+      return queues.map(function(q){
+        var pts=getWeeklySummary(code,q).map(function(p){
+          return {label:p.week,total:p.total,breaches:p.breaches,value:p.value,rag:p.rag};
+        });
+        if(!pts.length) return '';
+        return renderSimpleLineCard(code+' · '+q,meta,pts,weekLabel,'Queue view');
+      }).join('');
     }).join('');
-    return '<tr><td class="lang-lbl">'+esc(lang)+'</td><td style="font-weight:700">'+fmt(langSet[lang])+'</td>'+tds+'</tr>';
+    return buttons+'<div class="weekly-queue-grid">'+queueCards+'</div>';
+  }
+
+  var allCards=loadedCodes.map(function(code){
+    var meta=KPI_META[code];
+    var pts=getWeeklySummary(code).map(function(p){
+      return {label:p.week,total:p.total,breaches:p.breaches,value:p.value,rag:p.rag};
+    });
+    if(!pts.length) return '';
+    return renderSimpleLineCard(code,meta,pts,weekLabel,'Weekly');
   }).join('');
-  var period=targetMonth?monthLabel(targetMonth):'All periods';
-  return '<div class="sc"><div class="sc-head"><h2>🌐 Language Analysis</h2><span class="badge">'+esc(period)+'</span></div><div class="sc-body" style="overflow-x:auto"><table class="heatmap-tbl"><thead>'+thRow+'</thead><tbody>'+tRows+'</tbody></table></div></div>';
+
+  return buttons+'<div class="weekly-grid">'+allCards+'</div>';
 }
 
-/* ─── App plumbing ──────────────────────────────────────────────────────── */
-function resetApp(){
-  wbQueueA=[];wbQueueB=[];
-  state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:null,activeLangMonth:null};
-  _kpiPage={};_kpiQueue={};_weeklyQueue=null;_weeklyView='all';_weeklyKpi=null;
-  document.getElementById('dashboard-page').classList.remove('visible');
-  document.getElementById('upload-page').style.display='flex';
-  document.getElementById('list-a').innerHTML='';document.getElementById('list-b').innerHTML='';
-  document.getElementById('status-a').textContent='No files loaded';
-  document.getElementById('status-b').textContent='No files loaded (optional)';
-  document.getElementById('add-a').style.display='none';document.getElementById('add-b').style.display='none';
-  document.getElementById('run-btn').disabled=true;document.getElementById('run-btn').style.opacity='.5';
-  document.getElementById('run-error').style.display='none';
+function renderLanguage(){
+  return '<div class="sc"><div class="sc-head"><h2>Languages</h2></div><div class="sc-body"><p style="font-size:12px;color:var(--muted)">Language analysis remains available from SLA rows that contain language values.</p></div></div>';
+}
+
+function renderKpiTab(code){
+  var meta=KPI_META[code];
+  var rows=getFilteredRows(code);
+  if(!rows.length){
+    return '<div class="empty-state-box"><div>No data for '+esc(code)+' in the selected period.</div></div>';
+  }
+
+  var total=rows.length;
+  var breaches=rows.filter(function(r){return r.isBreach;}).length;
+  var t=calcTarget(total,breaches,meta.isKM,meta.target);
+
+  var weeklyPts=getWeeklySummary(code).map(function(p){
+    return {label:p.week,total:p.total,breaches:p.breaches,value:p.value,rag:p.rag};
+  });
+
+  var queueCounts={};
+  rows.forEach(function(r){queueCounts[r.queue||'Unknown']=(queueCounts[r.queue||'Unknown']||0)+1;});
+  var queueRows=Object.keys(queueCounts).sort(function(a,b){return queueCounts[b]-queueCounts[a];}).map(function(q){
+    return '<tr><td>'+esc(q)+'</td><td>'+fmt(queueCounts[q])+'</td></tr>';
+  }).join('');
+
+  var weeklyBlock=weeklyPts.length
+    ? renderSimpleLineCard(code+' Weekly',meta,weeklyPts,weekLabel,'Selected period')
+    : '<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">No weekly data available for this KPI.</p></div></div>';
+
+  return ''+
+    '<div class="summary-banner">'+
+      '<div class="s-card rag-'+t.rag+'"><div class="lbl">'+esc(code)+'</div><div class="val">'+t.display+'</div><div class="sub">'+esc(meta.what)+'</div></div>'+
+      '<div class="s-card"><div class="lbl">Tickets</div><div class="val">'+fmt(total)+'</div></div>'+
+      '<div class="s-card"><div class="lbl">Breaches</div><div class="val">'+fmt(breaches)+'</div></div>'+
+    '</div>'+
+    weeklyBlock+
+    '<div class="sc"><div class="sc-head"><h2>Queue distribution</h2></div><div class="sc-body"><table class="rag-table"><thead><tr><th>Queue</th><th>Tickets</th></tr></thead><tbody>'+queueRows+'</tbody></table></div></div>';
 }
 
 function runAnalysis(){
-  document.getElementById('run-error').style.display='none';
   try{
     buildStateFromQueues();
-    /* Debug: log what was detected */
-    var _dbgParsed=Object.keys(state.slaData).filter(function(c){return (state.slaData[c]||[]).length>0;});
-    console.log('[Analyzer v3.1] Loaded KPIs:',_dbgParsed,'| Months:',state.months,'| Weeks:',state.weeks.length);
-    wbQueueA.forEach(function(e){if(e.wb) console.log('[Analyzer v3.1] SLA file "'+e.name+'" sheets:',e.wb.SheetNames);});
-    if(!state.months.length&&!Object.keys(state.slaData).some(function(c){return (state.slaData[c]||[]).length>0;})){
-      var _sheetNames=[];wbQueueA.forEach(function(e){if(e.wb) _sheetNames=_sheetNames.concat(e.wb.SheetNames);});
-      throw new Error('No valid data found. Sheets detected: ['+_sheetNames.join(', ')+'] — expected: KSL-2a, KSL-2b, KSL-3, KM-1, KM-2, KM-3, KST-1, KST-2, KST-3 (fuzzy match applied). Also verify DATE_CLOSE column exists.');
-    }
-    state.activeTab='overview';state.activeMonth=null;state.activeLangMonth=null;
+    state.activeMonth=null;
+    state.activeTab='overview';
     document.getElementById('upload-page').style.display='none';
-    var dp=document.getElementById('dashboard-page');dp.classList.add('visible');
+    document.getElementById('dashboard-page').style.display='flex';
     buildMonthChips();
     refresh();
-  } catch(e){
-    var re=document.getElementById('run-error');re.textContent='Error: '+e.message;re.style.display='block';
-    console.error(e);
+  }catch(err){
+    var el=document.getElementById('run-error');
+    el.style.display='block';
+    el.textContent=err.message||String(err);
   }
 }
-
-/* ─── File upload handlers ──────────────────────────────────────────────── */
-function updateRunBtn(){
-  var ok=wbQueueA.filter(function(e){return e.wb&&!e.error;}).length>0;
-  document.getElementById('run-btn').disabled=!ok;
-  document.getElementById('run-btn').style.opacity=ok?'1':'.5';
+function resetApp(){
+  wbQueueA=[]; wbQueueB=[];
+  state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:'overview'};
+  document.getElementById('upload-page').style.display='flex';
+  document.getElementById('dashboard-page').style.display='none';
+  document.getElementById('run-error').style.display='none';
+  renderFileList('a');
+  renderFileList('b');
 }
 
-function renderFileList(listId,queue,addId,statusId){
-  var el=document.getElementById(listId);
-  el.innerHTML=queue.map(function(e,i){
-    var icon=e.loading?'⏳':e.error?'<span class="fi-err">✗</span>':'<span class="fi-ok">✓</span>';
-    return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(e.name)+'">'+esc(e.name)+'</span><span class="fi-remove" onclick="removeFile(\''+listId+'\','+i+')">×</span></div>';
-  }).join('');
-  var ok=queue.filter(function(e){return e.wb&&!e.error;}).length;
-  document.getElementById(statusId).textContent=queue.length?ok+' of '+queue.length+' file(s) ready':'No files loaded'+(listId==='list-b'?' (optional)':'');
-  document.getElementById(addId).style.display=queue.length?'block':'none';
-  updateRunBtn();
-}
-
-function removeFile(listId,idx){
-  if(listId==='list-a') wbQueueA.splice(idx,1);
-  else wbQueueB.splice(idx,1);
-  var isA=listId==='list-a';
-  renderFileList(listId,isA?wbQueueA:wbQueueB,isA?'add-a':'add-b',isA?'status-a':'status-b');
-}
-
-function loadFiles(files,queue,listId,addId,statusId){
-  Array.from(files).forEach(function(f){
-    var entry={name:f.name,wb:null,error:null,loading:true};
-    queue.push(entry);
-    renderFileList(listId,queue,addId,statusId);
-    var reader=new FileReader();
-    reader.onload=function(ev){
-      try{entry.wb=XLSX.read(ev.target.result,{type:'array'});entry.loading=false;}
-      catch(e){entry.error=e.message;entry.loading=false;}
-      renderFileList(listId,queue,addId,statusId);
-    };
-    reader.onerror=function(){entry.error='Read error';entry.loading=false;renderFileList(listId,queue,addId,statusId);};
-    reader.readAsArrayBuffer(f);
-  });
-}
-
-function setupDrop(dzId,inputId,queue,listId,addId,statusId){
-  var dz=document.getElementById(dzId),fi=document.getElementById(inputId);
-  dz.addEventListener('click',function(){fi.click();});
-  dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
-  dz.ad
+bindDropZone('dz-a','fi-a','a');
+bindDropZone('dz-b','fi-b','b');
+document.getElementById('run-btn').addEventListener('click',runAnalysis);
+</script>
+</body>
+</html>
