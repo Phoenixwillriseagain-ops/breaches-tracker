@@ -75,6 +75,20 @@
     .wv-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
     .diag-banner{background:#fff3cc;border:1px solid #f0cc50;border-radius:8px;padding:10px 14px;font-size:11px;color:#7a4200;line-height:1.6}
     .empty-state-box{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;color:var(--muted);gap:8px}
+    .chart-wrap{display:flex;flex-direction:column;gap:10px}
+    .chart-meta{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+    .chart-meta .mini{font-size:10px;color:var(--muted)}
+    .chart-svg{width:100%;height:auto;display:block;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,0));border:1px solid var(--border);border-radius:8px}
+    .chart-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--muted)}
+    .legend-item{display:flex;align-items:center;gap:5px}
+    .legend-line{width:16px;height:0;border-top:2px solid currentColor}
+    .legend-dash{width:16px;height:0;border-top:2px dashed currentColor}
+    .legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+    .point-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:8px}
+    .point-chip{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px}
+    .point-chip .p-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}
+    .point-chip .p-val{font-size:14px;font-weight:700}
+    .point-chip .p-sub{font-size:10px;color:var(--muted);margin-top:2px}
     @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -90,7 +104,7 @@
     <div style="text-align:center;max-width:640px">
       <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px">Data Tools</p>
       <h1 style="font-size:22px;font-weight:700;margin-bottom:8px">Combined Analyzer</h1>
-      <p style="font-size:13px;color:var(--muted);line-height:1.6">Upload your SLA export files and optional enriched breaches files to get KPI compliance analysis, breach drill-down, and weekly trend tracking.</p>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6">Upload your SLA export files and optional enriched breaches files to get KPI compliance analysis, breach drill-down, weekly trend tracking, and monthly visual trends.</p>
     </div>
 
     <div class="upload-grid">
@@ -419,6 +433,23 @@ function getFilteredRows(code){
   if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
   return rows;
 }
+function getMonthlySummary(code){
+  var meta=KPI_META[code]||{isKM:false,target:null};
+  var rows=(state.slaData[code]||[]).slice();
+  var grouped={};
+  rows.forEach(function(r){
+    if(!r.month||r.month==='unknown') return;
+    if(!grouped[r.month]) grouped[r.month]=[];
+    grouped[r.month].push(r);
+  });
+  return Object.keys(grouped).sort().map(function(m){
+    var mRows=grouped[m];
+    var total=mRows.length;
+    var breaches=mRows.filter(function(r){return r.isBreach;}).length;
+    var t=calcTarget(total,breaches,meta.isKM,meta.target);
+    return {label:m,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
+  });
+}
 function getWeeklySummary(code,queue){
   var meta=KPI_META[code]||{isKM:false,target:null};
   var rows=getFilteredRows(code).filter(function(r){return r.week&&r.week!=='No week';});
@@ -433,7 +464,7 @@ function getWeeklySummary(code,queue){
     var total=wRows.length;
     var breaches=wRows.filter(function(r){return r.isBreach;}).length;
     var t=calcTarget(total,breaches,meta.isKM,meta.target);
-    return {week:w,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
+    return {label:w,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
   });
 }
 function getTopQueues(code){
@@ -459,6 +490,103 @@ function setMonth(m){
 function setTab(id){
   state.activeTab=id;
   refresh();
+}
+
+function chartY(val,min,max,h,padT,padB){
+  if(max===min) return h/2;
+  var plotH=h-padT-padB;
+  return padT + ((max-val)/(max-min))*plotH;
+}
+function chartX(i,count,w,padL,padR){
+  if(count<=1) return w/2;
+  var plotW=w-padL-padR;
+  return padL + (i*(plotW/(count-1)));
+}
+function renderTrendChart(points,meta,labelFormatter){
+  if(!points||!points.length) return '<div class="empty-state-box"><div>No chart data.</div></div>';
+
+  var w=560,h=220,padL=36,padR=14,padT=18,padB=42;
+  var values=points.map(function(p){return Number(p.value||0);});
+  var maxVal=Math.max.apply(null, values.concat([meta.target||0,100]));
+  var minVal=Math.min.apply(null, values.concat([meta.isKM?0:80]));
+  if(!meta.isKM) minVal=Math.max(0,Math.min(minVal,80));
+  else minVal=0;
+  maxVal=Math.min(100,Math.max(maxVal, meta.isKM?15:100));
+  if(maxVal-minVal<10) maxVal=minVal+10;
+
+  var gridVals=[];
+  var steps=4;
+  for(var i=0;i<=steps;i++){
+    gridVals.push(minVal+((maxVal-minVal)/steps)*i);
+  }
+
+  var linePath='', areaPath='', dots='', labels='', bars='';
+  points.forEach(function(p,i){
+    var x=chartX(i,points.length,w,padL,padR);
+    var y=chartY(p.value,minVal,maxVal,h,padT,padB);
+    linePath+=(i?' L ':'M ')+x+' '+y;
+    if(i===0) areaPath='M '+x+' '+(h-padB)+' L '+x+' '+y;
+    else areaPath+=' L '+x+' '+y;
+    var col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#2a7a35';
+    dots+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="'+col+'" stroke="#fff" stroke-width="1.5"></circle>';
+    labels+='<text x="'+x+'" y="'+(h-16)+'" text-anchor="middle" font-size="10" fill="var(--muted)">'+esc(labelFormatter(p.label))+'</text>';
+    bars+='<text x="'+x+'" y="'+(y-8)+'" text-anchor="middle" font-size="10" fill="'+col+'">'+p.value.toFixed(1)+'%</text>';
+  });
+  areaPath+=' L '+chartX(points.length-1,points.length,w,padL,padR)+' '+(h-padB)+' Z';
+
+  var grid='';
+  gridVals.forEach(function(v){
+    var y=chartY(v,minVal,maxVal,h,padT,padB);
+    grid+='<line x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" y2="'+y+'" stroke="var(--border)" stroke-width="1"></line>';
+    grid+='<text x="'+(padL-6)+'" y="'+(y+3)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+Math.round(v)+'%</text>';
+  });
+
+  var targetLine='';
+  if(meta&&meta.target!=null){
+    var ty=chartY(meta.target,minVal,maxVal,h,padT,padB);
+    targetLine='<line x1="'+padL+'" y1="'+ty+'" x2="'+(w-padR)+'" y2="'+ty+'" stroke="'+(meta.color||'#01696f')+'" stroke-width="1.5" stroke-dasharray="5 4"></line>';
+  }
+
+  return ''+
+    '<div class="chart-wrap">'+
+      '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(meta.what||'Trend chart')+'">'+
+        grid+
+        targetLine+
+        '<path d="'+areaPath+'" fill="'+(meta.color||'#01696f')+'" opacity=".10"></path>'+
+        '<path d="'+linePath+'" fill="none" stroke="'+(meta.color||'#01696f')+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>'+
+        dots+
+        bars+
+        labels+
+      '</svg>'+
+      '<div class="chart-legend">'+
+        '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-line"></span> Compliance</span>'+
+        '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-dash"></span> Target '+esc(meta.targetLabel||'')+'</span>'+
+        '<span class="legend-item"><span class="legend-dot" style="background:#2a7a35"></span> Good</span>'+
+        '<span class="legend-item"><span class="legend-dot" style="background:#d19900"></span> Watch</span>'+
+        '<span class="legend-item"><span class="legend-dot" style="background:#cc2222"></span> Risk</span>'+
+      '</div>'+
+    '</div>';
+}
+function renderChartCard(title,meta,points,labelFormatter,badgeText){
+  if(!points.length) return '';
+  var last=points[points.length-1];
+  return ''+
+    '<div class="ktc">'+
+      '<div class="ktc-head"><h3>'+esc(title)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what)+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div>'+
+      '<div class="ktc-body">'+
+        '<div class="chart-meta">'+
+          '<div class="mini">Latest: <strong style="color:'+(last.rag==='red'?'#cc2222':last.rag==='amber'?'#d19900':'#2a7a35')+'">'+last.value.toFixed(1)+'%</strong></div>'+
+          '<div class="mini">'+fmt(last.total)+' tickets · '+fmt(last.breaches)+' breaches</div>'+
+        '</div>'+
+        renderTrendChart(points,meta,labelFormatter)+
+        '<div class="point-list">'+
+          points.map(function(p){
+            var col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#2a7a35';
+            return '<div class="point-chip"><div class="p-lbl">'+esc(labelFormatter(p.label))+'</div><div class="p-val" style="color:'+col+'">'+p.value.toFixed(1)+'%</div><div class="p-sub">'+fmt(p.total)+' tickets · '+fmt(p.breaches)+' breaches</div></div>';
+          }).join('')+
+        '</div>'+
+      '</div>'+
+    '</div>';
 }
 
 function refresh(){
@@ -553,48 +681,34 @@ function renderOverview(){
 function renderTrend(){
   var months=state.months.slice(-3);
   if(months.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">Need at least 2 months of data to show a trend.</p></div></div>';
+
   var rows=KPI_ORDER.map(function(code){
     var meta=KPI_META[code];
     var allRows=state.slaData[code]||[];
     if(!allRows.length) return '';
-    var cells=months.map(function(m){
-      var mRows=allRows.filter(function(r){return r.month===m;});
-      if(!mRows.length) return '<td>—</td>';
-      var total=mRows.length,breaches=mRows.filter(function(r){return r.isBreach;}).length;
-      var t=calcTarget(total,breaches,meta.isKM,meta.target);
-      return '<td style="background:'+ragColor(t.rag)+';color:'+ragText(t.rag)+'">'+t.display+'</td>';
-    }).join('');
-    return '<tr><td><strong>'+esc(code)+'</strong></td>'+cells+'</tr>';
-  }).filter(Boolean).join('');
-  var heads=months.map(function(m){return '<th>'+monthLabel(m)+'</th>';}).join('');
-  return '<div class="sc"><div class="sc-head"><h2>3-Month Trend</h2></div><div class="sc-body"><table class="trend-tbl"><thead><tr><th>KPI</th>'+heads+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
-}
-
-function renderSimpleLineCard(code,meta,points,labelFn,badgeText){
-  if(!points.length) return '';
-  var list=points.map(function(p){
-    var color=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#437a22';
-    return '<tr><td>'+esc(labelFn(p.label))+'</td><td>'+fmt(p.total||0)+'</td><td>'+fmt(p.breaches||0)+'</td><td style="color:'+color+';font-weight:700">'+p.value.toFixed(1)+'%</td></tr>';
-  }).join('');
-  return '<div class="ktc"><div class="ktc-head"><h3>'+esc(code)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what)+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div><div class="ktc-body"><table class="rag-table"><thead><tr><th>Period</th><th>Tickets</th><th>Breaches</th><th>Rate</th></tr></thead><tbody>'+list+'</tbody></table></div></div>';
-}
-
-function renderKpiTrends(){
-  var months=state.months;
-  if(months.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">Need at least 2 months of data.</p></div></div>';
-  var cards=KPI_ORDER.map(function(code){
-    var meta=KPI_META[code];
     var points=months.map(function(m){
-      var rows=(state.slaData[code]||[]).filter(function(r){return r.month===m;});
-      if(!rows.length) return null;
-      var total=rows.length;
-      var breaches=rows.filter(function(r){return r.isBreach;}).length;
+      var mRows=allRows.filter(function(r){return r.month===m;});
+      if(!mRows.length) return null;
+      var total=mRows.length;
+      var breaches=mRows.filter(function(r){return r.isBreach;}).length;
       var t=calcTarget(total,breaches,meta.isKM,meta.target);
       return {label:m,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
     }).filter(Boolean);
     if(!points.length) return '';
-    return renderSimpleLineCard(code,meta,points,monthLabel,state.activeMonth?monthLabel(state.activeMonth):'All periods');
+    return renderChartCard(code+' · Last 3 Months',meta,points,monthLabel,'3-month trend');
   }).filter(Boolean).join('');
+
+  return '<div class="kpi-trend-grid">'+rows+'</div>';
+}
+
+function renderKpiTrends(){
+  var cards=KPI_ORDER.map(function(code){
+    var meta=KPI_META[code];
+    var points=getMonthlySummary(code);
+    if(!points.length) return '';
+    return renderChartCard(code+' · Monthly Trend',meta,points,monthLabel,state.activeMonth?'Viewing '+monthLabel(state.activeMonth):'All months');
+  }).filter(Boolean).join('');
+  if(!cards) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">No monthly chart data available.</p></div></div>';
   return '<div class="kpi-trend-grid">'+cards+'</div>';
 }
 
@@ -613,11 +727,9 @@ function renderWeekly(){
       var queues=getTopQueues(code);
       if(!queues.length) return '';
       return queues.map(function(q){
-        var pts=getWeeklySummary(code,q).map(function(p){
-          return {label:p.week,total:p.total,breaches:p.breaches,value:p.value,rag:p.rag};
-        });
+        var pts=getWeeklySummary(code,q);
         if(!pts.length) return '';
-        return renderSimpleLineCard(code+' · '+q,meta,pts,weekLabel,'Queue view');
+        return renderChartCard(code+' · '+q,meta,pts,weekLabel,'Queue weekly view');
       }).join('');
     }).join('');
     return buttons+'<div class="weekly-queue-grid">'+queueCards+'</div>';
@@ -625,11 +737,9 @@ function renderWeekly(){
 
   var allCards=loadedCodes.map(function(code){
     var meta=KPI_META[code];
-    var pts=getWeeklySummary(code).map(function(p){
-      return {label:p.week,total:p.total,breaches:p.breaches,value:p.value,rag:p.rag};
-    });
+    var pts=getWeeklySummary(code);
     if(!pts.length) return '';
-    return renderSimpleLineCard(code,meta,pts,weekLabel,'Weekly');
+    return renderChartCard(code+' · Weekly Trend',meta,pts,weekLabel,state.activeMonth?'Filtered to '+monthLabel(state.activeMonth):'All weeks');
   }).join('');
 
   return buttons+'<div class="weekly-grid">'+allCards+'</div>';
@@ -650,9 +760,8 @@ function renderKpiTab(code){
   var breaches=rows.filter(function(r){return r.isBreach;}).length;
   var t=calcTarget(total,breaches,meta.isKM,meta.target);
 
-  var weeklyPts=getWeeklySummary(code).map(function(p){
-    return {label:p.week,total:p.total,breaches:p.breaches,value:p.value,rag:p.rag};
-  });
+  var weeklyPts=getWeeklySummary(code);
+  var monthlyPts=getMonthlySummary(code);
 
   var queueCounts={};
   rows.forEach(function(r){queueCounts[r.queue||'Unknown']=(queueCounts[r.queue||'Unknown']||0)+1;});
@@ -661,8 +770,12 @@ function renderKpiTab(code){
   }).join('');
 
   var weeklyBlock=weeklyPts.length
-    ? renderSimpleLineCard(code+' Weekly',meta,weeklyPts,weekLabel,'Selected period')
+    ? renderChartCard(code+' · Weekly',meta,weeklyPts,weekLabel,'Selected period')
     : '<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">No weekly data available for this KPI.</p></div></div>';
+
+  var monthlyBlock=monthlyPts.length
+    ? renderChartCard(code+' · Monthly',meta,monthlyPts,monthLabel,'All months')
+    : '';
 
   return ''+
     '<div class="summary-banner">'+
@@ -671,6 +784,7 @@ function renderKpiTab(code){
       '<div class="s-card"><div class="lbl">Breaches</div><div class="val">'+fmt(breaches)+'</div></div>'+
     '</div>'+
     weeklyBlock+
+    monthlyBlock+
     '<div class="sc"><div class="sc-head"><h2>Queue distribution</h2></div><div class="sc-body"><table class="rag-table"><thead><tr><th>Queue</th><th>Tickets</th></tr></thead><tbody>'+queueRows+'</tbody></table></div></div>';
 }
 
@@ -692,6 +806,7 @@ function runAnalysis(){
 function resetApp(){
   wbQueueA=[]; wbQueueB=[];
   state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:'overview'};
+  _weeklyView='all';
   document.getElementById('upload-page').style.display='flex';
   document.getElementById('dashboard-page').style.display='none';
   document.getElementById('run-error').style.display='none';
