@@ -140,17 +140,26 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-var KPI_ORDER=['KSL-2a','KSL-2b','KSL-3','KM-1','KM-2','KM-3','KST-1','KST-2','KST-3'];
+var KPI_ORDER=[
+  'KSL-1','KSL-2a','KSL-2b','KSL-2c','KSL-2d',
+  'KSL-3a','KSL-3b','KSL-4','KSL-5a','KSL-5b',
+  'KSL-6','KM-1','KM-2'
+];
+
 var KPI_META={
-  'KSL-2a':{what:'First Reply ≤8h',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#006494'},
-  'KSL-2b':{what:'First Reply ≤4h (Priority)',isKM:false,target:90,targetLabel:'Target ≥90%',color:'#437a22'},
-  'KSL-3': {what:'Resolution ≤24h',isKM:false,target:85,targetLabel:'Target ≥85%',color:'#7a39bb'},
-  'KM-1':  {what:'Missed contacts',isKM:true,target:5,targetLabel:'Target ≤5%',color:'#cc2222'},
-  'KM-2':  {what:'Re-open rate',isKM:true,target:8,targetLabel:'Target ≤8%',color:'#964219'},
-  'KM-3':  {what:'Transfer rate',isKM:true,target:10,targetLabel:'Target ≤10%',color:'#a12c7b'},
-  'KST-1': {what:'CSAT ≥4',isKM:false,target:80,targetLabel:'Target ≥80%',color:'#01696f'},
-  'KST-2': {what:'Quality score',isKM:false,target:90,targetLabel:'Target ≥90%',color:'#d19900'},
-  'KST-3': {what:'FCR rate',isKM:false,target:75,targetLabel:'Target ≥75%',color:'#da7101'}
+  'KSL-1':  {what:'KSL-1',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#005f73'},
+  'KSL-2a': {what:'KSL-2a',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#0a9396'},
+  'KSL-2b': {what:'KSL-2b',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#94d2bd'},
+  'KSL-2c': {what:'KSL-2c',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#e9d8a6'},
+  'KSL-2d': {what:'KSL-2d',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#ee9b00'},
+  'KSL-3a': {what:'KSL-3a',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#ca6702'},
+  'KSL-3b': {what:'KSL-3b',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#bb3e03'},
+  'KSL-4':  {what:'KSL-4',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#ae2012'},
+  'KSL-5a': {what:'KSL-5a',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#9b2226'},
+  'KSL-5b': {what:'KSL-5b',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#7b2cbf'},
+  'KSL-6':  {what:'KSL-6',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#3a86ff'},
+  'KM-1':   {what:'KM-1',isKM:true,target:5,targetLabel:'Target ≤5%',color:'#d00000'},
+  'KM-2':   {what:'KM-2',isKM:true,target:8,targetLabel:'Target ≤8%',color:'#9d0208'}
 };
 
 var wbQueueA=[],wbQueueB=[];
