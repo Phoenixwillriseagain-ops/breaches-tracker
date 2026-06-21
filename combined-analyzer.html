@@ -119,9 +119,21 @@
     .ktc-head .ktc-badge{margin-left:auto;font-size:10px;color:var(--muted)}
     .ktc-body{padding:12px 14px}
     .ktc svg{display:block;width:100%;overflow:visible}
+    /* Weekly tab layout */
+    .weekly-section{display:flex;flex-direction:column;gap:20px}
+    .weekly-view-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+    .wv-btn{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+    .wv-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .wv-btn:hover:not(.active){border-color:var(--primary);color:var(--primary)}
     .weekly-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(500px,1fr));gap:16px}
-    .mini-note{font-size:10px;color:var(--muted);margin-top:8px}
-    @media(max-width:640px){.weekly-grid,.kpi-trend-grid{grid-template-columns:1fr}.bar-lbl{width:110px}}
+    .weekly-queue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px}
+    .mini-note{font-size:10px;color:var(--muted);margin-top:8px;line-height:1.6}
+    .empty-state-box{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;color:var(--muted);gap:8px}
+    .empty-state-box .es-icon{font-size:32px;margin-bottom:4px}
+    .empty-state-box p{font-size:12px;max-width:38ch;line-height:1.6}
+    .sparse-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;background:#fff3cc;color:#7a4200;margin-left:6px;vertical-align:middle}
+    .weekly-kpi-selector{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 0 2px}
+    @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid{grid-template-columns:1fr}.bar-lbl{width:110px}}
   </style>
 </head>
 <body>
@@ -197,19 +209,24 @@ var KPI_ORDER=['KSL-1','KSL-2a','KSL-2b','KSL-2c','KSL-2d','KSL-3a','KSL-3b','KS
 var VALID_LANG=/^[a-z]{2,3}$/;
 var state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:null,activeLangMonth:null};
 var wbQueueA=[],wbQueueB=[];
-var _kpiPage={},_kpiQueue={},_weeklyQueue=null;
+var _kpiPage={},_kpiQueue={},_weeklyQueue=null,_weeklyView='all',_weeklyKpi=null;
+/* _weeklyView: 'all' = overall KPI trend | 'byqueue' = per-queue separated */
+/* _weeklyKpi: null = show all KPIs | 'KSL-2a' etc = single KPI focus     */
+
+var MAX_QUEUE_LINES=8; /* max queues rendered in per-queue view before capping */
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(n){return typeof n==='number'?n.toLocaleString():n;}
 function pct(n,d){return d?(n/d*100).toFixed(1):'0.0';}
 function isValidLang(v){return !!v&&VALID_LANG.test(String(v).trim());}
 function monthLabel(m){if(!m)return 'All Months';var p=m.split('-');if(p.length<2)return m;var mn=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return mn[parseInt(p[1],10)]+' '+p[0];}
-function weekLabel(w){if(!w)return 'No week';var m=w.match(/^(\d{4})-W(\d{2})$/);return m?('W'+m[2]+' '+m[1]):w;}
+function weekLabel(w){if(!w||w==='No week')return '—';var m=w.match(/^(\d{4})-W(\d{2})$/);return m?('W'+m[2]+' \''+m[1].slice(2)):w;}
+function shortWeekLabel(w){if(!w||w==='No week')return '—';var m=w.match(/^(\d{4})-W(\d{2})$/);return m?'W'+m[2]:w;}
 function ragLabel(r,isKM){if(isKM)return r==='red'?'🔴 Action Required':r==='amber'?'🟡 Monitor':'🟢 On Target';return r==='red'?'🔴 Below Target':r==='amber'?'🟡 Monitor':'🟢 On Target';}
 function _sc(lbl,val,sub,r){return '<div class="s-card rag-'+r+'"><div class="lbl">'+String(lbl)+'</div><div class="val">'+esc(String(val))+'</div><div class="sub">'+String(sub)+'</div></div>';}
 
 function calcTarget(totalWithExcl,breaches,isKM,targetPct){
-  if(!totalWithExcl) return {value:0,display:'0.0%',rag:'none',targetLabel:''};
+  if(!totalWithExcl) return {value:0,display:'—',rag:'none',targetLabel:''};
   var tgt=(targetPct!==undefined&&targetPct!==null)?targetPct:(isKM?5:95);
   if(isKM){
     var rate=parseFloat((breaches/totalWithExcl*100).toFixed(1));
@@ -268,7 +285,7 @@ function _parseBreachWb(wb,outData,outExclSet,weeksSet,monthsSet){
       var month=toMonth(r['DATECLOSE']||r['DATE_CLOSE']);
       var week=String(r['Week']||'').trim()||toWeek(r['DATECLOSE']||r['DATE_CLOSE']);
       if(month) monthsSet[month]=1;
-      if(week) weeksSet[week]=1;
+      if(week&&week!=='No week') weeksSet[week]=1;
       if(isExcl) outExclSet[name].add(ticket);
       outData[name].push({
         ticket,excluded:isExcl,unique:_isUnique(r['Unique']),reason:String(r['Reason']||''),agent:String(r['Agent']||''),
@@ -292,7 +309,8 @@ function _parseSlaWb(wb,outData,monthSet,weeksSet){
     });
     if(!outData[name]) outData[name]=[];
     Object.keys(seen).forEach(function(ticket){
-      var r=seen[ticket],dc=r['DATE_CLOSE']||r['DATECLOSE'],month=toMonth(dc),week=toWeek(dc),hasBreach=!!(r['DATE_TIME_Breach']&&String(r['DATE_TIME_Breach']).trim()&&String(r['DATE_TIME_Breach']).trim()!=='0');
+      var r=seen[ticket],dc=r['DATE_CLOSE']||r['DATECLOSE'],month=toMonth(dc),week=toWeek(dc);
+      var hasBreach=!!(r['DATE_TIME_Breach']&&String(r['DATE_TIME_Breach']).trim()&&String(r['DATE_TIME_Breach']).trim()!=='0');
       var rawLang=r['ISO_Language']||r['ISOLanguage']||r['iso_language']||'';
       outData[name].push({ticket:ticket,month:month,week:week,isBreach:hasBreach,isExcluded:false,queue:String(r['Queue']||''),priority:String(r['Priority']||''),tool:String(r['Tool']||''),language:isValidLang(rawLang)?String(rawLang).trim():'',status:String(r['Status']||''),breachDesc:String(r['Breach_Description']||r['BreachDescription']||''),dateClose:dc});
       if(month) monthSet[month]=1;
@@ -306,7 +324,9 @@ function buildStateFromQueues(){
   wbQueueA.forEach(function(e){if(e.wb&&!e.error)_parseSlaWb(e.wb,slaData,monthSet,weekSet);});
   wbQueueB.forEach(function(e){if(e.wb&&!e.error)_parseBreachWb(e.wb,breachData,excludedSet,weekSet,monthSet);});
   _applyExclusions(slaData,excludedSet);
-  state.slaData=slaData;state.breachData=breachData;state.months=Object.keys(monthSet).sort();state.weeks=Object.keys(weekSet).sort();
+  state.slaData=slaData;state.breachData=breachData;state.months=Object.keys(monthSet).sort();
+  /* Only store real ISO-week strings, drop 'No week' placeholder */
+  state.weeks=Object.keys(weekSet).filter(function(w){return w&&w!=='No week';}).sort();
 }
 
 function getSummary(month){
@@ -319,17 +339,42 @@ function getSummary(month){
   });
 }
 
+/* ─── Weekly aggregation helpers ─────────────────────────────────────── */
 function getWeeklySummary(code,queue){
   var rows=(state.slaData[code]||[]).slice();
   if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
   if(queue) rows=rows.filter(function(r){return (r.queue||'Unknown')===queue;});
+  /* Only include rows with a valid ISO week */
+  rows=rows.filter(function(r){return r.week&&r.week!=='No week';});
   var grouped={};
-  rows.forEach(function(r){var w=r.week||'No week';if(!grouped[w]) grouped[w]=[];grouped[w].push(r);});
+  rows.forEach(function(r){var w=r.week;if(!grouped[w]) grouped[w]=[];grouped[w].push(r);});
   return Object.keys(grouped).sort().map(function(w){
     var rs=grouped[w],meta=KPI_META[code]||{isKM:false},tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length,ex=rs.filter(function(r){return r.isExcluded;}).length,t=calcTarget(tot,br,meta.isKM,meta.target);
-    return {week:w,total:tot,breaches:br,excluded:ex,value:t.value,display:t.display,rag:t.rag};
+    var isSparse=tot<5; /* flag weeks with very few tickets */
+    return {week:w,total:tot,breaches:br,excluded:ex,value:t.value,display:t.display,rag:t.rag,isSparse:isSparse};
   });
 }
+
+/* Returns sorted queues by total ticket count (capped at MAX_QUEUE_LINES) */
+function getTopQueues(code){
+  var rows=(state.slaData[code]||[]).slice();
+  if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
+  var qc={};
+  rows.forEach(function(r){var q=r.queue||'Unknown';qc[q]=(qc[q]||0)+1;});
+  return Object.keys(qc).sort(function(a,b){return qc[b]-qc[a];}).slice(0,MAX_QUEUE_LINES);
+}
+
+/* All queues across all KPIs for the period filter chips */
+function getAllQueues(){
+  var qc={};
+  KPI_ORDER.forEach(function(code){
+    var rows=state.slaData[code]||[];
+    if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
+    rows.forEach(function(r){var q=r.queue||'Unknown';qc[q]=(qc[q]||0)+1;});
+  });
+  return Object.keys(qc).sort(function(a,b){return qc[b]-qc[a];});
+}
+/* ─────────────────────────────────────────────────────────────────────── */
 
 function buildBanner(summary){
   var gTotal=summary.reduce(function(a,s){return a+s.total;},0),gBreaches=summary.reduce(function(a,s){return a+s.breaches;},0),gRawBreaches=summary.reduce(function(a,s){return a+s.rawBreaches;},0),gExcl=summary.reduce(function(a,s){return a+s.excluded;},0),exclPct=gTotal?parseFloat((gExcl/gTotal*100).toFixed(1)):0,reds=summary.filter(function(s){return s.target.rag==='red';}).length,ambers=summary.filter(function(s){return s.target.rag==='amber';}).length,hasB=Object.keys(state.breachData).length>0;
@@ -347,15 +392,15 @@ function buildBanner(summary){
 
 function buildTabBar(summary){
   var tb=document.getElementById('tab-bar'),h='';
-  ['overview','trend','kpitrends','weekly','language'].forEach(function(t){var labels={overview:'📊 Overview',trend:'📈 3-Month Trend',kpitrends:'📈 KPI Trends',weekly:'🗓️ Weekly Trends',language:'🌐 Language Analysis'};h+='<button class="tab-btn'+(state.activeTab===t?' active':'')+'" data-tab="'+t+'">'+labels[t]+'</button>';});
-  summary.forEach(function(s){if(!s.total)return;h+='<button class="tab-btn'+(state.activeTab===s.code?' active':'')+'" data-tab="'+s.code+'"><span class="tab-dot dot-'+s.target.rag+'"></span>'+esc(s.code)+'</button>';});
+  ['overview','trend','kpitrends','weekly','language'].forEach(function(t){var labels={overview:'📊 Overview',trend:'📈 3-Month Trend',kpitrends:'📈 KPI Trends',weekly:'🗓️ Weekly Trends',language:'🌐 Language Analysis'};h+='<button class="tab-btn'+(state.activeTab===t?' active':'')+'\" data-tab="'+t+'">'+labels[t]+'</button>';});
+  summary.forEach(function(s){if(!s.total)return;h+='<button class="tab-btn'+(state.activeTab===s.code?' active':'')+'\" data-tab="'+s.code+'"><span class="tab-dot dot-'+s.target.rag+'"></span>'+esc(s.code)+'</button>';});
   tb.innerHTML=h;
   tb.querySelectorAll('.tab-btn').forEach(function(btn){btn.addEventListener('click',function(){state.activeTab=btn.dataset.tab;tb.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderTab();});});
 }
 function buildMonthChips(){
   var chips=document.getElementById('month-chips'),months=state.months,h='<span style="font-size:11px;color:var(--muted);font-weight:600">Period:</span>';
-  h+='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" data-month="">All ('+(months.length>1?months.length+' months':'1 month')+')</button>';
-  months.forEach(function(m){h+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" data-month="'+m+'">'+monthLabel(m)+'</button>';});
+  h+='<button class="month-chip'+(state.activeMonth===null?' active':'')+'\" data-month="">All ('+(months.length>1?months.length+' months':'1 month')+')</button>';
+  months.forEach(function(m){h+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'\" data-month="'+m+'">'+monthLabel(m)+'</button>';});
   chips.innerHTML=h;
   chips.querySelectorAll('.month-chip').forEach(function(btn){btn.addEventListener('click',function(){state.activeMonth=btn.dataset.month||null;state.activeLangMonth=btn.dataset.month||null;chips.querySelectorAll('.month-chip').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');refresh();});});
 }
@@ -380,71 +425,70 @@ function renderTrend(){
 
 function renderKpiTrends(){
   var months=state.months;if(months.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">⚠️ Load at least 2 months of data to see trends.</p></div></div>';
-  var cards=KPI_ORDER.map(function(code){var meta=KPI_META[code]||{isKM:false,color:'#888'};var points=months.map(function(m){var rs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});if(!rs.length)return null;var t=calcTarget(rs.length,rs.filter(function(r){return r.isBreach;}).length,meta.isKM,meta.target);return {m:m,v:t.value,rag:t.rag};}).filter(Boolean);if(!points.length)return '';return renderSimpleLineCard(code,meta,points,monthLabel,'latest: ' + points[points.length-1].v + '%');}).filter(Boolean).join('');
+  var cards=KPI_ORDER.map(function(code){var meta=KPI_META[code]||{isKM:false,color:'#888'};var points=months.map(function(m){var rs=(state.slaData[code]||[]).filter(function(r){return r.month===m;});if(!rs.length)return null;var t=calcTarget(rs.length,rs.filter(function(r){return r.isBreach;}).length,meta.isKM,meta.target);return {m:m,v:t.value,rag:t.rag};}).filter(Boolean);if(!points.length)return '';return renderSimpleLineCard(code,meta,points,monthLabel,'latest: '+points[points.length-1].v+'%');}).filter(Boolean).join('');
   return '<div class="sc"><div class="sc-head"><h2>📈 KPI Monthly Trends</h2><span class="badge">Monthly compliance / occurrence</span></div><div class="sc-body"><div class="kpi-trend-grid">'+cards+'</div></div></div>';
 }
 
-function renderSimpleLineCard(code,meta,points,labelFn,badgeText){
-  var W=500,H=180,PL=36,PR=12,PT=10,PB=28,cW=W-PL-PR,cH=H-PT-PB,minV=meta.isKM?0:Math.max(0,Math.min.apply(null,points.map(function(p){return p.v;}))-10),maxV=meta.isKM?Math.min(100,Math.max.apply(null,points.map(function(p){return p.v;}))+10):100;if(maxV===minV)maxV=minV+10;
-  function xPos(i){return PL+i/(points.length-1||1)*cW;} function yPos(v){return PT+cH-(v-minV)/(maxV-minV)*cH;}
-  var targetV=(meta.target!==null&&meta.target!==undefined)?meta.target:(meta.isKM?5:95),ty=yPos(targetV),targetLine=(targetV>=minV&&targetV<=maxV)?'<line x1="'+PL+'" y1="'+ty+'" x2="'+(PL+cW)+'" y2="'+ty+'" stroke="#d19900" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>':'';
+/* ─── SVG line chart card ──────────────────────────────────────────────── */
+function renderSimpleLineCard(code,meta,points,labelFn,badgeText,compact){
+  if(!points||points.length===0) return '<div class="ktc"><div class="ktc-head"><h3>'+esc(code)+'</h3><span class="ktc-badge">No data</span></div><div class="empty-state-box"><p>No weekly data available for this KPI in the selected period.</p></div></div>';
+  if(points.length===1){
+    /* Single-point: render as a stat card instead of a broken line chart */
+    var p=points[0],col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#437a22';
+    return '<div class="ktc"><div class="ktc-head"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+meta.color+';flex-shrink:0"></span><h3>'+esc(code)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what)+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div><div class="ktc-body" style="display:flex;align-items:center;gap:14px;padding:18px 14px"><span style="font-size:28px;font-weight:700;color:'+col+'">'+p.v+'%</span><span style="font-size:11px;color:var(--muted)">'+esc(labelFn(p.m||p.week))+'<br>Only 1 data point – need 2+ to draw a trend line.</span></div></div>';
+  }
+  var W=compact?400:500,H=compact?150:180,PL=38,PR=14,PT=12,PB=30,cW=W-PL-PR,cH=H-PT-PB;
+  var vals=points.map(function(p){return p.v;});
+  var minV=meta.isKM?0:Math.max(0,Math.min.apply(null,vals)-10);
+  var maxV=meta.isKM?Math.min(100,Math.max.apply(null,vals)+10):100;
+  if(maxV<=minV) maxV=minV+10;
+  function xPos(i){return PL+i/(points.length-1)*cW;}
+  function yPos(v){return PT+cH-(v-minV)/(maxV-minV)*cH;}
+  var targetV=(meta.target!==null&&meta.target!==undefined)?meta.target:(meta.isKM?5:95);
+  var ty=yPos(targetV),targetLine=(targetV>=minV&&targetV<=maxV)?'<line x1="'+PL+'" y1="'+ty+'" x2="'+(PL+cW)+'" y2="'+ty+'" stroke="#d19900" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/><text x="'+(PL+cW+2)+'" y="'+(ty+3)+'" font-size="8" fill="#b07a00">T</text>':'';
+  var ySteps=4,yLabels='';
+  for(var s=0;s<=ySteps;s++){var lv=minV+(maxV-minV)*s/ySteps,ly=yPos(lv);yLabels+='<text x="'+(PL-4)+'" y="'+(ly+3)+'" font-size="8" fill="#9ca3af" text-anchor="end">'+Math.round(lv)+'%</text><line x1="'+PL+'" y1="'+ly+'" x2="'+(PL+cW)+'" y2="'+ly+'" stroke="#e5e7eb" stroke-width="0.5"/>';}
   var areaPoints=points.map(function(p,i){return xPos(i)+','+yPos(p.v);});
   var areaPath='M '+xPos(0)+','+(PT+cH)+' L '+areaPoints.join(' L ')+' L '+xPos(points.length-1)+','+(PT+cH)+' Z';
-  var yLabels='';for(var s=0;s<=3;s++){var lv=minV+(maxV-minV)*s/3,ly=yPos(lv);yLabels+='<text x="'+(PL-3)+'" y="'+(ly+3)+'" font-size="8" fill="#9ca3af" text-anchor="end">'+Math.round(lv)+'%</text><line x1="'+PL+'" y1="'+ly+'" x2="'+(PL+cW)+'" y2="'+ly+'" stroke="#e5e7eb" stroke-width="0.5"/>';}
-  var dots=points.map(function(p,i){var cx=xPos(i),cy=yPos(p.v),col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#437a22';return '<circle cx="'+cx+'" cy="'+cy+'" r="3.5" fill="'+col+'" stroke="#fff" stroke-width="1.5"/><text x="'+cx+'" y="'+(cy-7)+'" font-size="8" font-weight="700" fill="'+col+'" text-anchor="middle">'+p.v+'%</text>';}).join('');
-  var xLabels=points.map(function(p,i){return '<text x="'+xPos(i)+'" y="'+(H-4)+'" font-size="8" fill="#9ca3af" text-anchor="middle">'+labelFn(p.m||p.week)+'</text>';}).join('');
-  return '<div class="ktc"><div class="ktc-head"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+meta.color+';flex-shrink:0"></span><h3>'+esc(code)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what)+'</span><span class="ktc-badge">'+esc(badgeText)+'</span></div><div class="ktc-body"><svg viewBox="0 0 '+W+' '+H+'" height="'+H+'">'+yLabels+targetLine+'<polyline points="'+areaPoints.join(' ')+'" fill="none" stroke="'+meta.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="'+areaPath+'" fill="'+meta.color+'" opacity="0.08"/>'+dots+xLabels+'</svg></div></div>';
+  /* Dots: hollow circle for sparse weeks, solid for normal */
+  var dots=points.map(function(p,i){
+    var cx=xPos(i),cy=yPos(p.v),col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#437a22';
+    var circle=p.isSparse?'<circle cx="'+cx+'" cy="'+cy+'" r="3.5" fill="#fff" stroke="'+col+'" stroke-width="2"/>':'<circle cx="'+cx+'" cy="'+cy+'" r="3.5" fill="'+col+'" stroke="#fff" stroke-width="1.5"/>';
+    return circle+'<text x="'+cx+'" y="'+(cy-8)+'" font-size="8" font-weight="700" fill="'+col+'" text-anchor="middle">'+p.v+'%</text>';
+  }).join('');
+  /* X-axis labels: show every label if ≤8 points, else every other */
+  var step=points.length>8?2:1;
+  var xLabels=points.map(function(p,i){if(i%step!==0&&i!==points.length-1)return '';return '<text x="'+xPos(i)+'" y="'+(H-4)+'" font-size="8" fill="#9ca3af" text-anchor="middle">'+shortWeekLabel(p.m||p.week)+'</text>';}).join('');
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" height="'+H+'">'+yLabels+targetLine+'<polyline points="'+areaPoints.join(' ')+'" fill="none" stroke="'+meta.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="'+areaPath+'" fill="'+meta.color+'" opacity="0.08"/>'+dots+xLabels+'</svg>';
+  return '<div class="ktc"><div class="ktc-head"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+meta.color+';flex-shrink:0"></span><h3>'+esc(code)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what)+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div><div class="ktc-body">'+svg+'</div></div>';
 }
 
-function renderWeekly(){
-  if(state.weeks.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">⚠️ Need at least 2 weeks of dated SLA data to display weekly trends.</p></div></div>';
-  var allQueues={};
-  KPI_ORDER.forEach(function(code){(state.slaData[code]||[]).forEach(function(r){if(state.activeMonth&&r.month!==state.activeMonth)return;allQueues[r.queue||'Unknown']=1;});});
-  var queueList=Object.keys(allQueues).sort();
-  var chipHtml='<div class="filter-chips" style="margin-bottom:14px"><span style="font-size:11px;color:var(--muted);font-weight:700">Queue split:</span><button class="month-chip'+(_weeklyQueue===null?' active':'')+'" onclick="setWeeklyQueue(null)">All Queues</button>'+queueList.map(function(q){return '<button class="month-chip'+(_weeklyQueue===q?' active':'')+'" onclick="setWeeklyQueue(\''+q.replace(/'/g,"\\'")+'\')">'+esc(q)+'</button>';}).join('')+'</div>';
-  var cards=KPI_ORDER.map(function(code){var meta=KPI_META[code]||{isKM:false,color:'#888'};var pts=getWeeklySummary(code,_weeklyQueue);if(!pts.length)return '';return renderSimpleLineCard(code,meta,pts,weekLabel,(_weeklyQueue?_weeklyQueue+' · ':'')+'latest: '+pts[pts.length-1].v+'%');}).filter(Boolean).join('');
-  return '<div class="sc"><div class="sc-head"><h2>🗓️ Weekly KPI Trends</h2><span class="badge">Week-by-week KPI movement'+(_weeklyQueue?' · filtered to '+esc(_weeklyQueue):'')+'</span></div><div class="sc-body">'+chipHtml+'<div class="weekly-grid">'+cards+'</div><p class="mini-note">Weekly values are now derived from SLA ticket close dates, then exclusions from the Breaches file are applied on top. This makes weekly totals and weekly KPI rates consistent.</p></div></div>';
-}
-window.setWeeklyQueue=function(q){_weeklyQueue=q||null;if(state.activeTab==='weekly')document.getElementById('analyzer-main').innerHTML=renderWeekly();};
-
-function renderLanguage(){
-  var month=state.activeLangMonth||state.activeMonth,allRows=[];KPI_ORDER.forEach(function(code){var rows=state.slaData[code]||[];if(month)rows=rows.filter(function(r){return r.month===month;});rows.forEach(function(r){allRows.push({code:code,language:r.language,isBreach:r.isBreach,isExcluded:r.isExcluded,month:r.month});});});
-  var srcRows=allRows.filter(function(r){return isValidLang(r.language);}),langs=[].concat(srcRows.map(function(r){return r.language;})).filter(function(v,i,a){return a.indexOf(v)===i;}).sort(),codes=[].concat(srcRows.map(function(r){return r.code;})).filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(a,b){return KPI_ORDER.indexOf(a)-KPI_ORDER.indexOf(b);});
-  if(!langs.length) return '<div class="sc"><div class="sc-head"><h2>🌐 Language Breach Heatmap</h2></div><div class="sc-body"><p style="font-size:12px;color:var(--muted)">No language data found in the loaded files.</p></div></div>';
-  var header='<thead><tr><th class="row-h">Language</th>'+codes.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr></thead>';
-  var tbody=langs.map(function(lang){var tds=codes.map(function(code){var rs=srcRows.filter(function(r){return r.language===lang&&r.code===code;}),tot=rs.length,br=rs.filter(function(r){return r.isBreach;}).length;if(!tot)return '<td style="background:var(--divider);color:var(--faint)">-</td>';var rate=br/tot*100,intensity=Math.min(rate/30,1),bg='rgba(161,44,75,'+(intensity*0.75).toFixed(2)+')',fg=intensity>0.5?'#fff':'inherit';return '<td style="background:'+bg+';color:'+fg+'">'+rate.toFixed(1)+'%</td>';}).join('');return '<tr><td class="lang-lbl"><strong>'+esc(lang)+'</strong></td>'+tds+'</tr>';}).join('');
-  return '<div class="sc"><div class="sc-head"><h2>🌐 Language Breach Heatmap</h2><span class="badge">Breach rate per language × KPI</span></div><div class="sc-body"><div style="overflow-x:auto"><table class="heatmap-tbl">'+header+'<tbody>'+tbody+'</tbody></table></div></div></div>';
-}
-
-function renderKpiTab(code){
-  var meta=KPI_META[code]||{color:'#888',what:'',isKM:false},allSlaRows=state.slaData[code]||[],allBRows=state.breachData[code]||[],month=state.activeMonth,selQueue=_kpiQueue[code]||null;
-  var queueCounts={},srcForQueues=month?allSlaRows.filter(function(r){return r.month===month;}):allSlaRows;srcForQueues.forEach(function(r){var q=r.queue||'Unknown';queueCounts[q]=(queueCounts[q]||0)+1;});var queues=Object.keys(queueCounts).sort();
-  var rows=allSlaRows.slice();if(month)rows=rows.filter(function(r){return r.month===month;});if(selQueue)rows=rows.filter(function(r){return (r.queue||'Unknown')===selQueue;});
-  var bRows=allBRows.slice();if(month)bRows=bRows.filter(function(r){return r.month===month;});if(selQueue)bRows=bRows.filter(function(r){return (r.queue||'Unknown')===selQueue;});
-  var total=rows.length,excluded=rows.filter(function(r){return r.isExcluded;}).length,breaches=rows.filter(function(r){return r.isBreach;}).length,rawBreaches=breaches+excluded,t=calcTarget(total,breaches,meta.isKM,meta.target),tRaw=calcTarget(total,rawBreaches,meta.isKM,meta.target);
-  var queueChipsHtml='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--divider)"><span style="font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0">Queue:</span><button class="month-chip'+(selQueue===null?' active':'')+'" onclick="_setKpiQueue(\''+code+'\',null)">All Queues <span style="opacity:.6">('+srcForQueues.length+')</span></button>'+queues.map(function(q){var cnt=queueCounts[q]||0;return '<button class="month-chip'+(selQueue===q?' active':'')+'" onclick="_setKpiQueue(\''+code+'\',\''+q.replace(/'/g,"\\'")+'\')">'+esc(q)+' <span style="opacity:.6">('+cnt+')</span></button>';}).join('')+'</div>';
-  var header='<div class="sc"><div class="sc-head"><h2>'+esc(code)+'</h2><span class="badge rag-'+t.rag+'">'+t.display+' · '+ragLabel(t.rag,meta.isKM)+'</span>'+(selQueue?'<span style="font-size:11px;background:var(--primary);color:#fff;padding:2px 10px;border-radius:20px;margin-left:6px">📌 '+esc(selQueue)+'</span>':'')+'<span style="font-size:11px;color:var(--muted);margin-left:8px">'+esc(meta.what)+'</span></div>'+queueChipsHtml+'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)">'+_sc('Total',fmt(total),'tickets in scope','none')+_sc('Net Breaches',fmt(breaches),'after exclusions','none')+_sc('Excluded',fmt(excluded),(total?parseFloat((excluded/total*100).toFixed(1)):0)+'%','excl')+_sc(meta.isKM?'Occurrence':'Compliance',t.display,meta.isKM?'Target ≤ '+meta.target+'%':'Target ≥ '+meta.target+'%',''+t.rag)+'</div></div>';
-  var weeklyPts=getWeeklySummary(code,selQueue),weeklyCard=weeklyPts.length>=2?'<div class="sc"><div class="sc-head"><h2>🗓️ Weekly Trend</h2><span class="badge">'+(selQueue?esc(selQueue)+' · ':'')+(meta.isKM?'Occurrence':'Compliance')+' by week</span></div><div class="sc-body">'+renderSimpleLineCard(code,meta,weeklyPts,weekLabel,'latest: '+weeklyPts[weeklyPts.length-1].v+'%').replace('class="ktc"','class="ktc" style="border:none"')+'</div></div>':'';
-  var breachRows=rows.filter(function(r){return r.isBreach;}),queueHtml='';
-  if(breachRows.length){var queuesB={};breachRows.forEach(function(r){var k=r.queue||'Unknown';queuesB[k]=(queuesB[k]||0)+1;});var sortedQ=Object.keys(queuesB).map(function(k){return[k,queuesB[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,15),maxQ=sortedQ[0][1],qBars=sortedQ.map(function(e){var w=Math.round(e[1]/maxQ*100);return '<div class="bar-row"><div class="bar-lbl">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:#006494"></div></div><div class="bar-cnt">'+e[1]+'</div></div>';}).join('');queueHtml='<div class="sc"><div class="sc-head"><h2>Top Queues (Breaches)</h2><span class="badge">By breach count</span></div><div class="sc-body"><div class="bar-chart">'+qBars+'</div></div></div>';}
-  var breachTableRows=breachRows.slice(0,50).map(function(r){return '<tr><td style="font-weight:600;font-size:11px">'+esc(r.ticket)+'</td><td style="font-size:11px">'+esc(r.queue||'—')+'</td><td style="font-size:11px">'+esc(r.priority||'—')+'</td><td style="font-size:11px">'+esc(r.language||'—')+'</td><td style="font-size:11px">'+esc(r.month||'—')+'</td></tr>';}).join('');
-  return header+weeklyCard+'<div class="two-col">'+queueHtml+'</div><div class="sc"><div class="sc-head"><h2>Breach Ticket List</h2><span class="badge">Showing first 50 breach tickets</span></div><div class="sc-body"><table class="dt"><thead><tr><th>Ticket</th><th>Queue</th><th>Priority</th><th>Lang</th><th>Month</th></tr></thead><tbody>'+breachTableRows+'</tbody></table></div></div>';
-}
-window._setKpiQueue=function(code,q){_kpiQueue[code]=q||null;renderTab();};
-
-function setupDropZone(dzId,fiId,queue,listId,statusId,addId){
-  var dz=document.getElementById(dzId),fi=document.getElementById(fiId),list=document.getElementById(listId),status=document.getElementById(statusId),addMore=document.getElementById(addId),queueId=queue===wbQueueA?'A':'B';
-  function renderList(){var html=queue.map(function(e,i){var icon=e.error?'<span class="fi-err">✗</span>':e.wb?'<span class="fi-ok">✓</span>':'<span style="color:var(--muted)">…</span>';return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(e.name)+'">'+esc(e.name)+'</span><span class="fi-remove" onclick="removeFile(\''+queueId+'\','+i+')">×</span></div>';}).join('');list.innerHTML=html;var loaded=queue.filter(function(e){return e.wb;}).length;status.textContent=queue.length?loaded+' of '+queue.length+' file'+(queue.length>1?'s':'')+' loaded':'No files loaded'+(queueId==='B'?' (optional)':'');addMore.style.display=queue.length?'block':'none';}
-  function processFiles(files){Array.from(files).forEach(function(file){if(!file.name.endsWith('.xlsx'))return;var entry={name:file.name,wb:null,error:null};queue.push(entry);renderList();var reader=new FileReader();reader.onload=function(e){try{entry.wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});}catch(err){entry.error=err.message;}renderList();checkRunBtn();};reader.readAsArrayBuffer(file);});checkRunBtn();}
-  dz.addEventListener('click',function(){fi.click();});dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag-over');processFiles(e.dataTransfer.files);});fi.addEventListener('change',function(){processFiles(fi.files);fi.value='';});
-}
-window.removeFile=function(qId,idx){var q=qId==='A'?wbQueueA:wbQueueB;q.splice(idx,1);var statusId=qId==='A'?'status-a':'status-b',addId=qId==='A'?'add-a':'add-b',listId=qId==='A'?'list-a':'list-b';var html=q.map(function(e,i){var icon=e.error?'<span class="fi-err">✗</span>':e.wb?'<span class="fi-ok">✓</span>':'<span style="color:var(--muted)">…</span>';return '<div class="file-item">'+icon+'<span class="fi-name" title="'+esc(e.name)+'">'+esc(e.name)+'</span><span class="fi-remove" onclick="removeFile(\''+qId+'\','+i+')">×</span></div>';}).join('');document.getElementById(listId).innerHTML=html;var loaded=q.filter(function(e){return e.wb;}).length;document.getElementById(statusId).textContent=q.length?loaded+' of '+q.length+' file'+(q.length>1?'s':'')+' loaded':'No files loaded'+(qId==='B'?' (optional)':'');document.getElementById(addId).style.display=q.length?'block':'none';checkRunBtn();};
-function checkRunBtn(){var btn=document.getElementById('run-btn'),ready=wbQueueA.some(function(e){return e.wb&&!e.error;});btn.disabled=!ready;btn.style.opacity=ready?'1':'0.5';}
-
-document.getElementById('run-btn').addEventListener('click',function(){var err=document.getElementById('run-error');err.style.display='none';try{buildStateFromQueues();if(!state.months.length&&!state.weeks.length){err.textContent='No valid date data found. Check your files.';err.style.display='block';return;}state.activeMonth=null;state.activeTab='overview';state.activeLangMonth=null;_kpiPage={};document.getElementById('upload-page').style.display='none';document.getElementById('dashboard-page').classList.add('visible');buildMonthChips();refresh();}catch(e){err.textContent='Error processing files: '+e.message;err.style.display='block';console.error(e);}});
-window.resetApp=function(){wbQueueA=[];wbQueueB=[];state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:null,activeLangMonth:null};_kpiPage={};_kpiQueue={};_weeklyQueue=null;document.getElementById('upload-page').style.display='flex';document.getElementById('dashboard-page').classList.remove('visible');['list-a','list-b'].forEach(function(id){document.getElementById(id).innerHTML='';});document.getElementById('status-a').textContent='No files loaded';document.getElementById('status-b').textContent='No files loaded (optional)';['add-a','add-b'].forEach(function(id){document.getElementById(id).style.display='none';});document.getElementById('run-btn').disabled=true;document.getElementById('run-btn').style.opacity='0.5';};
-setupDropZone('dz-a','fi-a',wbQueueA,'list-a','status-a','add-a');
-setupDropZone('dz-b','fi-b',wbQueueB,'list-b','status-b','add-b');
-</script>
-</body>
-</html>
+/* ─── Per-queue multi-line chart for a single KPI ─────────────────────── */
+function renderQueueWeeklyCard(code,queues){
+  var meta=KPI_META[code]||{isKM:false,color:'#888'};
+  /* Gather all weeks that appear across any queue */
+  var weekSet={};
+  queues.forEach(function(q){getWeeklySummary(code,q).forEach(function(pt){weekSet[pt.week]=1;});});
+  var allWeeks=Object.keys(weekSet).sort();
+  if(allWeeks.length<2) return '<div class="ktc"><div class="ktc-head"><h3>'+esc(code)+'</h3></div><div class="empty-state-box"><p>Need at least 2 weeks to draw a trend.</p></div></div>';
+  var QUEUE_COLORS=['#006494','#437a22','#7a39bb','#d19900','#964219','#a12c7b','#01696f','#cc2222'];
+  var W=480,H=180,PL=38,PR=14,PT=12,PB=30,cW=W-PL-PR,cH=H-PT-PB;
+  var allVals=[];
+  var seriesData=queues.map(function(q,qi){var pts=getWeeklySummary(code,q);var map={};pts.forEach(function(pt){map[pt.week]=pt;});var series=allWeeks.map(function(w){return map[w]||null;});series.forEach(function(pt){if(pt) allVals.push(pt.v);});return {queue:q,series:series,color:QUEUE_COLORS[qi%QUEUE_COLORS.length]};});
+  if(!allVals.length) return '<div class="ktc"><div class="ktc-head"><h3>'+esc(code)+'</h3></div><div class="empty-state-box"><p>No weekly data.</p></div></div>';
+  var minV=meta.isKM?0:Math.max(0,Math.min.apply(null,allVals)-10);
+  var maxV=meta.isKM?Math.min(100,Math.max.apply(null,allVals)+10):100;
+  if(maxV<=minV) maxV=minV+10;
+  function xPos(i){return PL+i/(allWeeks.length-1||1)*cW;}
+  function yPos(v){return PT+cH-(v-minV)/(maxV-minV)*cH;}
+  var yLabels='';
+  for(var s=0;s<=4;s++){var lv=minV+(maxV-minV)*s/4,ly=yPos(lv);yLabels+='<text x="'+(PL-4)+'" y="'+(ly+3)+'" font-size="8" fill="#9ca3af" text-anchor="end">'+Math.round(lv)+'%</text><line x1="'+PL+'" y1="'+ly+'" x2="'+(PL+cW)+'" y2="'+ly+'" stroke="#e5e7eb" stroke-width="0.5"/>';}
+  var targetV=(meta.target!==null&&meta.target!==undefined)?meta.target:(meta.isKM?5:95);
+  var ty=yPos(targetV),targetLine=(targetV>=minV&&targetV<=maxV)?'<line x1="'+PL+'" y1="'+ty+'" x2="'+(PL+cW)+'" y2="'+ty+'" stroke="#d19900" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>':'';
+  var lines=seriesData.map(function(sd){
+    var validPts=sd.series.map(function(pt,i){return pt?{i:i,v:pt.v}:null;}).filter(Boolean);
+    if(validPts.length<2) return '';
+    /* Draw connected segments, skipping gaps where data is null */
+    var pathParts=[],inPath=false;
+    sd.series.forEach(function(pt,i){
+      i
