@@ -164,26 +164,35 @@ var KPI_ORDER=[
   'KSL-6','KM-1','KM-2'
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KPI_META — single source of truth for targets, labels, and chart colours.
+//
+// TARGETS (as shown in the Combined Analyzer screenshot):
+//   KSL-1  : Rating L1 4.00  (special: not a %, handled by isRating flag)
+//   KSL-2a : >=90%   KSL-2b : >=95%   KSL-2c : >=90%   KSL-2d : >=95%
+//   KSL-3a : >=95%   KSL-3b : >=95%
+//   KSL-4  : >=70%   (Without Related Incident)
+//   KSL-5a : >=90%   KSL-5b : >=90%
+//   KSL-6  : >=95%
+//   KM-1   : <=5%    KM-2   : <=5%
+// ─────────────────────────────────────────────────────────────────────────────
 var KPI_META={
-  'KSL-1':  {what:'KSL-1 · Dealer Satisfaction Rating L1',        isKM:false, target:4,   targetLabel:'KSL-1 Rating L1 (4.00)',                    color:'#005f73'},
-  'KSL-2a': {what:'KSL-2a · Handling Time Low <=180min',           isKM:false, target:90,  targetLabel:'KSL-2a Low <=180min (>=90%)',               color:'#0a9396'},
-  'KSL-2b': {what:'KSL-2b · Handling Time Low <=300min',           isKM:false, target:95,  targetLabel:'KSL-2b Low <=300min (>=95%)',               color:'#94d2bd'},
-  'KSL-2c': {what:'KSL-2c · Handling Time Medium <=150min',        isKM:false, target:90,  targetLabel:'KSL-2c Medium <=150min (>=90%)',            color:'#e9d8a6'},
-  'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',        isKM:false, target:95,  targetLabel:'KSL-2d Medium <=180min (>=95%)',            color:'#ee9b00'},
-  'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',         isKM:false, target:95,  targetLabel:'KSL-3a Ticket <=30min (>=95%)',             color:'#ca6702'},
-  'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',           isKM:false, target:95,  targetLabel:'KSL-3b Chat <=60sec (>=95%)',               color:'#f4a261'},
-  // KSL-4 target is 75% — do NOT change back to 70%
-  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident', isKM:false, target:75,  targetLabel:'KSL-4 Without Related Incident (>=75%)',    color:'#ae2012'},
-  'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',         isKM:false, target:90,  targetLabel:'KSL-5a Automatic (>=90%)',                  color:'#9b2226'},
-  'KSL-5b': {what:'KSL-5b · Process Conformity Manual',            isKM:false, target:90,  targetLabel:'KSL-5b Manual (>=90%)',                     color:'#7b2cbf'},
-  'KSL-6':  {what:'KSL-6 · Linking to Compass',                    isKM:false, target:95,  targetLabel:'KSL-6 Linked to Compass (>=95%)',           color:'#3a86ff'},
-  'KM-1':   {what:'KM-1 · With Reopen',                            isKM:true,  target:5,   targetLabel:'KM-1 With Reopen (<=5%)',                   color:'#d00000'},
-  'KM-2':   {what:'KM-2 · With Assigned Back',                     isKM:true,  target:5,   targetLabel:'KM-2 With Assigned Back (<=5%)',            color:'#9d0208'}
+  'KSL-1':  {what:'KSL-1 · Dealer Satisfaction Rating L1',        isKM:false, isRating:true,  target:4,   targetLabel:'KSL-1 Rating L1 (4.00)',              color:'#005f73'},
+  'KSL-2a': {what:'KSL-2a · Handling Time Low <=180min',          isKM:false, isRating:false, target:90,  targetLabel:'KSL-2a Low <=180min (>=90%)',          color:'#0a9396'},
+  'KSL-2b': {what:'KSL-2b · Handling Time Low <=300min',          isKM:false, isRating:false, target:95,  targetLabel:'KSL-2b Low <=300min (>=95%)',          color:'#94d2bd'},
+  'KSL-2c': {what:'KSL-2c · Handling Time Medium <=150min',       isKM:false, isRating:false, target:90,  targetLabel:'KSL-2c Medium <=150min (>=90%)',       color:'#e9d8a6'},
+  'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',       isKM:false, isRating:false, target:95,  targetLabel:'KSL-2d Medium <=180min (>=95%)',       color:'#ee9b00'},
+  'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',        isKM:false, isRating:false, target:95,  targetLabel:'KSL-3a Ticket <=30min (>=95%)',        color:'#ca6702'},
+  'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',          isKM:false, isRating:false, target:95,  targetLabel:'KSL-3b Chat <=60sec (>=95%)',          color:'#f4a261'},
+  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false, isRating:false, target:70,  targetLabel:'KSL-4 Without Related Incident (>=70%)',color:'#ae2012'},
+  'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',        isKM:false, isRating:false, target:90,  targetLabel:'KSL-5a Automatic (>=90%)',             color:'#9b2226'},
+  'KSL-5b': {what:'KSL-5b · Process Conformity Manual',           isKM:false, isRating:false, target:90,  targetLabel:'KSL-5b Manual (>=90%)',                color:'#7b2cbf'},
+  'KSL-6':  {what:'KSL-6 · Linking to Compass',                   isKM:false, isRating:false, target:95,  targetLabel:'KSL-6 Linked to Compass (>=95%)',      color:'#3a86ff'},
+  'KM-1':   {what:'KM-1 · With Reopen',                           isKM:true,  isRating:false, target:5,   targetLabel:'KM-1 With Reopen (<=5%)',              color:'#d00000'},
+  'KM-2':   {what:'KM-2 · With Assigned Back',                    isKM:true,  isRating:false, target:5,   targetLabel:'KM-2 With Assigned Back (<=5%)',       color:'#9d0208'}
 };
 
 // Number of recent weeks shown in all weekly trend views.
-// Uses the full dataset (ignores the month filter) so you always see
-// the last WEEKLY_WINDOW consecutive weeks regardless of which month chip is active.
 var WEEKLY_WINDOW=6;
 
 var wbQueueA=[],wbQueueB=[];
@@ -428,7 +437,6 @@ function buildStateFromQueues(){
 
   var mSet={},wSet={};
   KPI_ORDER.forEach(function(code){
-    // Only count non-excluded rows when building the month/week index
     (state.slaData[code]||[]).filter(function(r){return !r.isExcluded;}).forEach(function(r){
       if(r.month&&r.month!=='unknown') mSet[r.month]=1;
       if(r.week&&r.week!=='No week') wSet[r.week]=1;
@@ -439,9 +447,6 @@ function buildStateFromQueues(){
   state.weeks=Object.keys(wSet).sort();
 }
 
-// Returns rows for a KPI filtered by exclusion status and (optionally) active month.
-// Exclusions are applied FIRST so every downstream compliance calculation
-// is based only on eligible tickets.
 function getFilteredRows(code){
   var rows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
   if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
@@ -450,7 +455,6 @@ function getFilteredRows(code){
 
 function getMonthlySummary(code){
   var meta=KPI_META[code]||{isKM:false,target:null};
-  // Exclude ineligible rows before grouping by month
   var rows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
   var grouped={};
   rows.forEach(function(r){
@@ -467,13 +471,8 @@ function getMonthlySummary(code){
   });
 }
 
-// Returns the last WEEKLY_WINDOW weeks of compliance data for a given KPI and optional queue.
-// IMPORTANT: always reads from the FULL dataset (state.slaData[code]), NOT getFilteredRows(),
-// so the weekly window is never artificially narrowed by an active month filter.
-// Excluded rows are stripped out here before any compliance math.
 function getWeeklySummary(code,queue){
   var meta=KPI_META[code]||{isKM:false,target:null};
-  // Strip excluded rows and rows with no week, then optionally filter by queue
   var rows=(state.slaData[code]||[]).filter(function(r){
     return !r.isExcluded && r.week && r.week!=='No week';
   });
@@ -483,7 +482,6 @@ function getWeeklySummary(code,queue){
     if(!grouped[r.week]) grouped[r.week]=[];
     grouped[r.week].push(r);
   });
-  // Sort all available weeks and keep only the most recent WEEKLY_WINDOW weeks
   var allWeeks=Object.keys(grouped).sort().slice(-WEEKLY_WINDOW);
   return allWeeks.map(function(w){
     var wRows=grouped[w];
@@ -528,17 +526,48 @@ function chartX(i,count,w,padL,padR){
   var plotW=w-padL-padR;
   return padL + (i*(plotW/(count-1)));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// renderTrendChart
+//
+// FIX: The previous version used a hard-coded minVal floor of 80 for all
+// non-KM KPIs. This caused the dashed target line to be drawn OUTSIDE the
+// visible SVG area whenever target < 80 (e.g. KSL-4 at 70%).
+//
+// New logic:
+//   • Compute the floor from actual data values AND the KPI target so the
+//     target line is ALWAYS inside the plot area.
+//   • Give a comfortable padding of 5 percentage-points below the lowest
+//     of (min data value, target) so the line never sits on the very edge.
+//   • KSL-1 is a rating (0-5 scale), not a percentage, so it uses its own
+//     dedicated scale instead of the 0-100% range.
+// ─────────────────────────────────────────────────────────────────────────────
 function renderTrendChart(points,meta,labelFormatter){
   if(!points||!points.length) return '<div class="empty-state-box"><div>No chart data.</div></div>';
 
   var w=560,h=220,padL=36,padR=14,padT=18,padB=42;
   var values=points.map(function(p){return Number(p.value||0);});
-  var maxVal=Math.max.apply(null, values.concat([meta.target||0,100]));
-  var minVal=Math.min.apply(null, values.concat([meta.isKM?0:80]));
-  if(!meta.isKM) minVal=Math.max(0,Math.min(minVal,80));
-  else minVal=0;
-  maxVal=Math.min(100,Math.max(maxVal, meta.isKM?15:100));
-  if(maxVal-minVal<10) maxVal=minVal+10;
+  var tgt=meta.target!=null?meta.target:(meta.isKM?5:95);
+
+  var maxVal, minVal;
+
+  if(meta.isRating){
+    // KSL-1: rating on a 0–5 scale
+    maxVal=5;
+    minVal=0;
+  } else if(meta.isKM){
+    // KM KPIs: lower is better; show 0 to max(values, target*2, 15)
+    maxVal=Math.max.apply(null, values.concat([tgt*2, 15]));
+    minVal=0;
+  } else {
+    // Standard %-based KPIs — ensure target is always inside the viewport
+    var dataMin=Math.min.apply(null, values);
+    var dataMax=Math.max.apply(null, values);
+    // Floor: 5 pp below the lower of (data min, target), snapped to 0 minimum
+    minVal=Math.max(0, Math.min(dataMin, tgt) - 5);
+    maxVal=Math.min(100, Math.max(dataMax, tgt) + 5);
+    if(maxVal-minVal < 10) maxVal=Math.min(100, minVal+10);
+  }
 
   var gridVals=[];
   var steps=4;
@@ -556,7 +585,7 @@ function renderTrendChart(points,meta,labelFormatter){
     var col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#2a7a35';
     dots+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="'+col+'" stroke="#fff" stroke-width="1.5"></circle>';
     labels+='<text x="'+x+'" y="'+(h-16)+'" text-anchor="middle" font-size="10" fill="var(--muted)">'+esc(labelFormatter(p.label))+'</text>';
-    bars+='<text x="'+x+'" y="'+(y-8)+'" text-anchor="middle" font-size="10" fill="'+col+'">'+p.value.toFixed(1)+'%</text>';
+    bars+='<text x="'+x+'" y="'+(y-8)+'" text-anchor="middle" font-size="10" fill="'+col+'">'+p.value.toFixed(1)+(meta.isRating?'':'%')+'</text>';
   });
   areaPath+=' L '+chartX(points.length-1,points.length,w,padL,padR)+' '+(h-padB)+' Z';
 
@@ -564,13 +593,16 @@ function renderTrendChart(points,meta,labelFormatter){
   gridVals.forEach(function(v){
     var y=chartY(v,minVal,maxVal,h,padT,padB);
     grid+='<line x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" y2="'+y+'" stroke="var(--border)" stroke-width="1"></line>';
-    grid+='<text x="'+(padL-6)+'" y="'+(y+3)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+Math.round(v)+'%</text>';
+    grid+='<text x="'+(padL-6)+'" y="'+(y+3)+'" text-anchor="end" font-size="10" fill="var(--muted)">'+Math.round(v)+(meta.isRating?'':'%')+'</text>';
   });
 
+  // Target line — always rendered inside the viewport thanks to the scale fix above
   var targetLine='';
   if(meta&&meta.target!=null){
-    var ty=chartY(meta.target,minVal,maxVal,h,padT,padB);
+    var ty=chartY(tgt,minVal,maxVal,h,padT,padB);
     targetLine='<line x1="'+padL+'" y1="'+ty+'" x2="'+(w-padR)+'" y2="'+ty+'" stroke="'+(meta.color||'#01696f')+'" stroke-width="1.5" stroke-dasharray="5 4"></line>';
+    // Label the target value on the right edge
+    targetLine+='<text x="'+(w-padR+2)+'" y="'+(ty+3)+'" font-size="9" fill="'+(meta.color||'#01696f')+'">'+tgt+(meta.isRating?'':'%')+'</text>';
   }
 
   return ''+
@@ -601,14 +633,14 @@ function renderChartCard(title,meta,points,labelFormatter,badgeText){
       '<div class="ktc-head"><h3>'+esc(title)+'</h3><span style="font-size:10px;color:var(--muted)">'+esc(meta.what)+'</span><span class="ktc-badge">'+esc(badgeText||'')+'</span></div>'+
       '<div class="ktc-body">'+
         '<div class="chart-meta">'+
-          '<div class="mini">Latest: <strong style="color:'+(last.rag==='red'?'#cc2222':last.rag==='amber'?'#d19900':'#2a7a35')+'">'+last.value.toFixed(1)+'%</strong></div>'+
+          '<div class="mini">Latest: <strong style="color:'+(last.rag==='red'?'#cc2222':last.rag==='amber'?'#d19900':'#2a7a35')+'">'+last.value.toFixed(1)+(meta.isRating?'':'%')+'</strong></div>'+
           '<div class="mini">'+fmt(last.total)+' tickets \u00b7 '+fmt(last.breaches)+' breaches</div>'+
         '</div>'+
         renderTrendChart(points,meta,labelFormatter)+
         '<div class="point-list">'+
           points.map(function(p){
             var col=p.rag==='red'?'#cc2222':p.rag==='amber'?'#d19900':'#2a7a35';
-            return '<div class="point-chip"><div class="p-lbl">'+esc(labelFormatter(p.label))+'</div><div class="p-val" style="color:'+col+'">'+p.value.toFixed(1)+'%</div><div class="p-sub">'+fmt(p.total)+' tickets \u00b7 '+fmt(p.breaches)+' breaches</div></div>';
+            return '<div class="point-chip"><div class="p-lbl">'+esc(labelFormatter(p.label))+'</div><div class="p-val" style="color:'+col+'">'+p.value.toFixed(1)+(meta.isRating?'':'%')+'</div><div class="p-sub">'+fmt(p.total)+' tickets \u00b7 '+fmt(p.breaches)+' breaches</div></div>';
           }).join('')+
         '</div>'+
       '</div>'+
@@ -653,7 +685,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'\')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
@@ -710,7 +742,6 @@ function renderTrend(){
 
   var rows=KPI_ORDER.map(function(code){
     var meta=KPI_META[code];
-    // Use only non-excluded rows for trend charts
     var allRows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
     if(!allRows.length) return '';
     var points=months.map(function(m){
