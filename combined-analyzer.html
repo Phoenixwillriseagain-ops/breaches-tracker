@@ -167,29 +167,29 @@ var KPI_ORDER=[
 // ─────────────────────────────────────────────────────────────────────────────
 // KPI_META — single source of truth for targets, labels, and chart colours.
 //
-// TARGETS:
+// TARGETS (verified against specification):
 //   KSL-1  : Rating L1 4.00  (special: not a %, handled by isRating flag)
 //   KSL-2a : >=90%   KSL-2b : >=95%   KSL-2c : >=90%   KSL-2d : >=95%
 //   KSL-3a : >=95%   KSL-3b : >=95%
-//   KSL-4  : >=75%   (Without Related Incident)
+//   KSL-4  : >=70%   (Without Related Incident)
 //   KSL-5a : >=90%   KSL-5b : >=90%
 //   KSL-6  : >=95%
 //   KM-1   : <=5%    KM-2   : <=5%
 // ─────────────────────────────────────────────────────────────────────────────
 var KPI_META={
-  'KSL-1':  {what:'KSL-1 · Dealer Satisfaction Rating L1',        isKM:false, isRating:true,  target:4,   targetLabel:'KSL-1 Rating L1 (4.00)',              color:'#005f73'},
-  'KSL-2a': {what:'KSL-2a · Handling Time Low <=180min',          isKM:false, isRating:false, target:90,  targetLabel:'KSL-2a Low <=180min (>=90%)',          color:'#0a9396'},
-  'KSL-2b': {what:'KSL-2b · Handling Time Low <=300min',          isKM:false, isRating:false, target:95,  targetLabel:'KSL-2b Low <=300min (>=95%)',          color:'#94d2bd'},
-  'KSL-2c': {what:'KSL-2c · Handling Time Medium <=150min',       isKM:false, isRating:false, target:90,  targetLabel:'KSL-2c Medium <=150min (>=90%)',       color:'#e9d8a6'},
-  'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',       isKM:false, isRating:false, target:95,  targetLabel:'KSL-2d Medium <=180min (>=95%)',       color:'#ee9b00'},
-  'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',        isKM:false, isRating:false, target:95,  targetLabel:'KSL-3a Ticket <=30min (>=95%)',        color:'#ca6702'},
-  'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',          isKM:false, isRating:false, target:95,  targetLabel:'KSL-3b Chat <=60sec (>=95%)',          color:'#f4a261'},
-  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false, isRating:false, target:75,  targetLabel:'KSL-4 Without Related Incident (>=75%)',color:'#ae2012'},
-  'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',        isKM:false, isRating:false, target:90,  targetLabel:'KSL-5a Automatic (>=90%)',             color:'#9b2226'},
-  'KSL-5b': {what:'KSL-5b · Process Conformity Manual',           isKM:false, isRating:false, target:90,  targetLabel:'KSL-5b Manual (>=90%)',                color:'#7b2cbf'},
-  'KSL-6':  {what:'KSL-6 · Linking to Compass',                   isKM:false, isRating:false, target:95,  targetLabel:'KSL-6 Linked to Compass (>=95%)',      color:'#3a86ff'},
-  'KM-1':   {what:'KM-1 · With Reopen',                           isKM:true,  isRating:false, target:5,   targetLabel:'KM-1 With Reopen (<=5%)',              color:'#d00000'},
-  'KM-2':   {what:'KM-2 · With Assigned Back',                    isKM:true,  isRating:false, target:5,   targetLabel:'KM-2 With Assigned Back (<=5%)',       color:'#9d0208'}
+  'KSL-1':  {what:'KSL-1 · Dealer Satisfaction Rating L1',        isKM:false, isRating:true,  target:4,   targetLabel:'KSL -1 Rating L1 (4.00)',                color:'#005f73'},
+  'KSL-2a': {what:'KSL-2a · Handling Time Low <=180min',          isKM:false, isRating:false, target:90,  targetLabel:'KSL - 2a Low <=180min (>=90%)',          color:'#0a9396'},
+  'KSL-2b': {what:'KSL-2b · Handling Time Low <=300min',          isKM:false, isRating:false, target:95,  targetLabel:'KSL - 2b Low <=300min (>=95%)',          color:'#94d2bd'},
+  'KSL-2c': {what:'KSL-2c · Handling Time Medium <=150min',       isKM:false, isRating:false, target:90,  targetLabel:'KSL - 2c Medium <=150min (>=90%)',       color:'#e9d8a6'},
+  'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',       isKM:false, isRating:false, target:95,  targetLabel:'KSL - 2d Medium <=180min (>=95%)',       color:'#ee9b00'},
+  'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',        isKM:false, isRating:false, target:95,  targetLabel:'KSL - 3a Ticket <=30min (>=95%)',        color:'#ca6702'},
+  'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',          isKM:false, isRating:false, target:95,  targetLabel:'KSL - 3b Chat <=60sec (>=95%)',          color:'#f4a261'},
+  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false, isRating:false, target:70,  targetLabel:'KSL - 4 Without Related Incident (>=70%)',color:'#ae2012'},
+  'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',        isKM:false, isRating:false, target:90,  targetLabel:'KSL - 5a Automatic (>=90%)',             color:'#9b2226'},
+  'KSL-5b': {what:'KSL-5b · Process Conformity Manual',           isKM:false, isRating:false, target:90,  targetLabel:'KSL - 5b Manual (>=90%)',                color:'#7b2cbf'},
+  'KSL-6':  {what:'KSL-6 · Linking to Compass',                   isKM:false, isRating:false, target:95,  targetLabel:'KSL - 6 Linked to Compass (>=95%)',      color:'#3a86ff'},
+  'KM-1':   {what:'KM-1 · With Reopen',                           isKM:true,  isRating:false, target:5,   targetLabel:'KM - 1 With Reopen (<=5%)',              color:'#d00000'},
+  'KM-2':   {what:'KM-2 · With Assigned Back',                    isKM:true,  isRating:false, target:5,   targetLabel:'KM - 2 With Assigned Back (<=5%)',       color:'#9d0208'}
 };
 
 // Number of recent weeks shown in all weekly trend views.
@@ -511,7 +511,7 @@ function buildMonthChips(){
   var el=document.getElementById('month-chips');
   var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
   state.months.forEach(function(m){
-    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">' +monthLabel(m)+'</button>';
+    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
   });
   el.innerHTML=html;
 }
@@ -541,7 +541,7 @@ function chartX(i,count,w,padL,padR){
 //
 // FIX: The previous version used a hard-coded minVal floor of 80 for all
 // non-KM KPIs. This caused the dashed target line to be drawn OUTSIDE the
-// visible SVG area whenever target < 80 (e.g. KSL-4 at 75%).
+// visible SVG area whenever target < 80 (e.g. KSL-4 at 70%).
 //
 // New logic:
 //   • Compute the floor from actual data values AND the KPI target so the
@@ -561,7 +561,7 @@ function renderTrendChart(points,meta,labelFormatter){
   var maxVal, minVal;
 
   if(meta.isRating){
-    // KSL-1: rating on a 0–5 scale
+    // KSL-1: rating on a 0-5 scale
     maxVal=5;
     minVal=0;
   } else if(meta.isKM){
@@ -694,7 +694,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">' +dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'\"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
@@ -854,58 +854,78 @@ function renderKpiTab(code){
   var queueCounts={};
   rows.forEach(function(r){queueCounts[r.queue||'Unknown']=(queueCounts[r.queue||'Unknown']||0)+1;});
   var queueRows=Object.keys(queueCounts).sort(function(a,b){return queueCounts[b]-queueCounts[a];}).map(function(q){
-    return '<tr><td>'+esc(q)+'</td><td>'+fmt(queueCounts[q])+'</td></tr>';
+    var qRows=rows.filter(function(r){return r.queue===q;});
+    var qTotal=qRows.length;
+    var qBreaches=qRows.filter(function(r){return r.isBreach;}).length;
+    var qt=calcTarget(qTotal,qBreaches,meta.isKM,meta.target);
+    return '<tr><td>'+esc(q)+'</td><td>'+fmt(qTotal)+'</td><td>'+fmt(qBreaches)+'</td><td class="rate-cell rate-'+qt.rag+'">'+qt.display+'</td><td><span class="rag-pill rag-'+qt.rag+'">'+ragLabel(qt.rag,meta.isKM)+'</span></td></tr>';
   }).join('');
 
-  var weeklyBlock=weeklyPts.length
-    ? renderChartCard(code+' \u00b7 Weekly Trend',meta,weeklyPts,weekLabel,'Last '+WEEKLY_WINDOW+' weeks')
-    : '<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">No weekly data available for this KPI.</p></div></div>';
+  var breachRows=(state.breachData[code]||[]).filter(function(r){
+    if(state.activeMonth && r.month!==state.activeMonth) return false;
+    return true;
+  });
 
-  var monthlyBlock=monthlyPts.length
-    ? renderChartCard(code+' \u00b7 Monthly',meta,monthlyPts,monthLabel,'All months')
-    : '';
+  var breachTable='';
+  if(breachRows.length){
+    breachTable='<div class="sc"><div class="sc-head"><h2>Breach Detail</h2><span class="badge">'+fmt(breachRows.length)+' records</span></div><div class="sc-body"><table class="rag-table"><thead><tr><th>Ticket</th><th>Week</th><th>Queue</th><th>Agent</th><th>Reason</th><th>AOS</th><th>Comment</th></tr></thead><tbody>'+
+      breachRows.slice(0,200).map(function(r){
+        return '<tr><td>'+esc(r.ticket)+'</td><td>'+esc(weekLabel(r.week))+'</td><td>'+esc(r.queue)+'</td><td>'+esc(r.agent)+'</td><td>'+esc(r.reason)+'</td><td>'+esc(r.aos)+'</td><td>'+esc(r.comment)+'</td></tr>';
+      }).join('')+
+      '</tbody></table>'+(breachRows.length>200?'<p style="font-size:11px;color:var(--muted);padding:8px 0">Showing first 200 of '+fmt(breachRows.length)+' breach records.</p>':'')+
+    '</div></div>';
+  }
 
   return ''+
-    '<div class="summary-banner">'+
-      '<div class="s-card rag-'+t.rag+'"><div class="lbl">'+esc(code)+'</div><div class="val">'+t.display+'</div><div class="sub">'+esc(meta.what)+'</div></div>'+
-      '<div class="s-card"><div class="lbl">Tickets</div><div class="val">'+fmt(total)+'</div></div>'+
-      '<div class="s-card"><div class="lbl">Breaches</div><div class="val">'+fmt(breaches)+'</div></div>'+
-    '</div>'+
-    weeklyBlock+
-    monthlyBlock+
+    '<div class="sc"><div class="sc-head"><h2>'+esc(meta.what)+'</h2><span class="badge">'+esc(state.activeMonth?monthLabel(state.activeMonth):'All periods')+'</span></div>'+
+    '<div class="sc-body">'+
+      '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">'+
+        '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Compliance Rate</div><div class="rate-cell rate-'+t.rag+'" style="font-size:28px">'+t.display+'</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Target</div><div style="font-size:16px;font-weight:700">'+esc(meta.targetLabel)+'</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Total Tickets</div><div style="font-size:16px;font-weight:700">'+fmt(total)+'</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Breaches</div><div style="font-size:16px;font-weight:700">'+fmt(breaches)+'</div></div>'+
+        '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Status</div><div><span class="rag-pill rag-'+t.rag+'">'+ragLabel(t.rag,meta.isKM)+'</span></div></div>'+
+      '</div>'+
+      (queueRows?'<div class="section-title">By Queue</div><table class="rag-table"><thead><tr><th>Queue</th><th>Tickets</th><th>Breaches</th><th>Rate</th><th>Status</th></tr></thead><tbody>'+queueRows+'</tbody></table>':'')+
+    '</div></div>'+
+    (weeklyPts.length?'<div class="sc"><div class="sc-head"><h2>Weekly Trend</h2><span class="badge">Last '+WEEKLY_WINDOW+' weeks</span></div><div class="sc-body">'+renderTrendChart(weeklyPts,meta,weekLabel)+'</div></div>':'')+
+    (monthlyPts.length>1?'<div class="sc"><div class="sc-head"><h2>Monthly Trend</h2></div><div class="sc-body">'+renderTrendChart(monthlyPts,meta,monthLabel)+'</div></div>':'')+
     queueTrendBlock+
-    '<div class="sc"><div class="sc-head"><h2>Queue distribution</h2></div><div class="sc-body"><table class="rag-table"><thead><tr><th>Queue</th><th>Tickets</th></tr></thead><tbody>'+queueRows+'</tbody></table></div></div>';
+    breachTable;
 }
 
-function runAnalysis(){
-  try{
-    buildStateFromQueues();
-    state.activeMonth=null;
-    state.activeTab='overview';
-    document.getElementById('upload-page').style.display='none';
-    document.getElementById('dashboard-page').style.display='flex';
-    buildMonthChips();
-    refresh();
-  }catch(err){
-    var el=document.getElementById('run-error');
-    el.style.display='block';
-    el.textContent=err.message||String(err);
-  }
-}
 function resetApp(){
-  wbQueueA=[]; wbQueueB=[];
+  wbQueueA=[];wbQueueB=[];
   state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:'overview'};
   _weeklyView='all';
-  document.getElementById('upload-page').style.display='flex';
+  document.getElementById('upload-page').style.display='';
   document.getElementById('dashboard-page').style.display='none';
-  document.getElementById('run-error').style.display='none';
-  renderFileList('a');
-  renderFileList('b');
+  renderFileList('a');renderFileList('b');
 }
+
+document.getElementById('run-btn').addEventListener('click',function(){
+  var errEl=document.getElementById('run-error');
+  errEl.style.display='none';
+  try{
+    buildStateFromQueues();
+    if(!Object.keys(state.slaData).length){
+      errEl.textContent='No KPI data found. Check that your sheet names match KPI codes (e.g. KSL-2a, KM-1).';
+      errEl.style.display='block';
+      return;
+    }
+    document.getElementById('upload-page').style.display='none';
+    var dp=document.getElementById('dashboard-page');
+    dp.style.display='flex';
+    buildMonthChips();
+    refresh();
+  }catch(e){
+    errEl.textContent='Error processing files: '+(e.message||String(e));
+    errEl.style.display='block';
+  }
+});
 
 bindDropZone('dz-a','fi-a','a');
 bindDropZone('dz-b','fi-b','b');
-document.getElementById('run-btn').addEventListener('click',runAnalysis);
 </script>
 </body>
 </html>
