@@ -90,6 +90,9 @@
     .point-chip .p-val{font-size:14px;font-weight:700}
     .point-chip .p-sub{font-size:10px;color:var(--muted);margin-top:2px}
     .section-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 0 2px}
+    .queue-trend-kpi-group{display:flex;flex-direction:column;gap:12px}
+    .queue-trend-kpi-header{font-size:13px;font-weight:700;color:var(--text);padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px}
+    .queue-trend-kpi-header .kpi-tag{background:var(--primary);color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700}
     @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid,.queue-trend-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -168,7 +171,7 @@ var KPI_META={
   'KSL-2c': {what:'KSL-2c · Handling Time Medium ≤150min',isKM:false,target:90, targetLabel:'Target ≥90%',          color:'#e9d8a6'},
   'KSL-2d': {what:'KSL-2d · Handling Time Medium ≤180min',isKM:false,target:95, targetLabel:'Target ≥95%',          color:'#ee9b00'},
   'KSL-3a': {what:'KSL-3a · Reaction Time Ticket ≤30min', isKM:false,target:95, targetLabel:'Target ≥95%',          color:'#ca6702'},
-  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false,target:70,targetLabel:'Target ≥70%',   color:'#ae2012'},
+  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false,target:75,targetLabel:'Target ≥75%',   color:'#ae2012'},
   'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',isKM:false,target:90, targetLabel:'Target ≥90%',          color:'#9b2226'},
   'KSL-5b': {what:'KSL-5b · Process Conformity Manual',   isKM:false,target:90, targetLabel:'Target ≥90%',          color:'#7b2cbf'},
   'KSL-6':  {what:'KSL-6 · Linking to Compass',           isKM:false,target:95, targetLabel:'Target ≥95%',          color:'#3a86ff'},
@@ -459,7 +462,6 @@ function getWeeklySummary(code,queue){
     if(!grouped[r.week]) grouped[r.week]=[];
     grouped[r.week].push(r);
   });
-  // Return ALL weeks (no artificial cap)
   var allWeeks=Object.keys(grouped).sort();
   return allWeeks.map(function(w){
     var wRows=grouped[w];
@@ -469,7 +471,6 @@ function getWeeklySummary(code,queue){
     return {label:w,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
   });
 }
-// Returns ALL queues sorted by ticket count (no slice limit)
 function getAllQueues(code){
   var rows=getFilteredRows(code);
   var counts={};
@@ -630,7 +631,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'\"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
@@ -725,18 +726,23 @@ function renderWeekly(){
     '</div>';
 
   if(_weeklyView==='queue'){
-    // Show ALL queues for every KPI
-    var queueCards=loadedCodes.map(function(code){
+    // Each KPI gets its own group header, then one chart card per queue
+    var queueGroups=loadedCodes.map(function(code){
       var meta=KPI_META[code];
       var queues=getAllQueues(code);
       if(!queues.length) return '';
-      return queues.map(function(q){
+      var queueCards=queues.map(function(q){
         var pts=getWeeklySummary(code,q);
         if(!pts.length) return '';
-        return renderChartCard(code+' · '+q,meta,pts,weekLabel,'All weeks');
-      }).join('');
-    }).join('');
-    return buttons+'<div class="weekly-queue-grid">'+queueCards+'</div>';
+        return renderChartCard(q,meta,pts,weekLabel,'All weeks · '+esc(code));
+      }).filter(Boolean).join('');
+      if(!queueCards) return '';
+      return '<div class="queue-trend-kpi-group">'+
+        '<div class="queue-trend-kpi-header"><span class="kpi-tag">'+esc(code)+'</span>'+esc(meta.what)+'</div>'+
+        '<div class="queue-trend-grid">'+queueCards+'</div>'+
+      '</div>';
+    }).filter(Boolean).join('');
+    return buttons+'<div style="display:flex;flex-direction:column;gap:24px">'+queueGroups+'</div>';
   }
 
   var allCards=loadedCodes.map(function(code){
@@ -767,13 +773,21 @@ function renderKpiTab(code){
   var weeklyPts=getWeeklySummary(code);
   var monthlyPts=getMonthlySummary(code);
 
-  // Queue-level weekly trend graphs — ALL queues
+  // Queue Trends: one chart card per queue, each clearly labelled [KPI] · [Queue]
   var allQueues=getAllQueues(code);
-  var queueTrendCards=allQueues.map(function(q){
-    var pts=getWeeklySummary(code,q);
-    if(!pts.length) return '';
-    return renderChartCard(code+' · '+q,meta,pts,weekLabel,'All weeks');
-  }).filter(Boolean).join('');
+  var queueTrendBlock='';
+  if(allQueues.length){
+    var queueCards=allQueues.map(function(q){
+      var pts=getWeeklySummary(code,q);
+      if(!pts.length) return '';
+      return renderChartCard(esc(code)+' · '+esc(q),meta,pts,weekLabel,'Weekly · '+esc(q));
+    }).filter(Boolean).join('');
+    if(queueCards){
+      queueTrendBlock=
+        '<div class="queue-trend-kpi-header" style="margin-top:8px"><span class="kpi-tag">'+esc(code)+'</span>Queue Trends — one chart per queue (weekly compliance)</div>'+
+        '<div class="queue-trend-grid">'+queueCards+'</div>';
+    }
+  }
 
   var queueCounts={};
   rows.forEach(function(r){queueCounts[r.queue||'Unknown']=(queueCounts[r.queue||'Unknown']||0)+1;});
@@ -787,10 +801,6 @@ function renderKpiTab(code){
 
   var monthlyBlock=monthlyPts.length
     ? renderChartCard(code+' · Monthly',meta,monthlyPts,monthLabel,'All months')
-    : '';
-
-  var queueTrendBlock=queueTrendCards
-    ? '<div class="section-title">Queue Trends – All Queues</div><div class="queue-trend-grid">'+queueTrendCards+'</div>'
     : '';
 
   return ''+
