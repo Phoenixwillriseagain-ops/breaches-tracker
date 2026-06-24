@@ -161,21 +161,19 @@ var KPI_ORDER=[
   'KSL-6','KM-1','KM-2'
 ];
 
-// target = the numeric threshold used for the dashed line on charts and RAG evaluation
-// targetLabel = the human-readable label shown in the chart legend
 var KPI_META={
-  'KSL-1':  {what:'KSL-1',isKM:false,target:4,   targetLabel:'Target ≥4.00 (Rating)',color:'#005f73'},
-  'KSL-2a': {what:'KSL-2a',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#0a9396'},
-  'KSL-2b': {what:'KSL-2b',isKM:false,target:95,  targetLabel:'Target ≥95%',          color:'#94d2bd'},
-  'KSL-2c': {what:'KSL-2c',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#e9d8a6'},
-  'KSL-2d': {what:'KSL-2d',isKM:false,target:95,  targetLabel:'Target ≥95%',          color:'#ee9b00'},
-  'KSL-3a': {what:'KSL-3a',isKM:false,target:95,  targetLabel:'Target ≥95%',          color:'#ca6702'},
-  'KSL-4':  {what:'KSL-4',isKM:false,target:75,   targetLabel:'Target ≥75%',          color:'#ae2012'},
-  'KSL-5a': {what:'KSL-5a',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#9b2226'},
-  'KSL-5b': {what:'KSL-5b',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#7b2cbf'},
-  'KSL-6':  {what:'KSL-6',isKM:false,target:95,   targetLabel:'Target ≥95%',          color:'#3a86ff'},
-  'KM-1':   {what:'KM-1',isKM:true, target:5,    targetLabel:'Target ≤5%',           color:'#d00000'},
-  'KM-2':   {what:'KM-2',isKM:true, target:5,    targetLabel:'Target ≤5%',           color:'#9d0208'}
+  'KSL-1':  {what:'KSL-1 · Dealer Satisfaction Rating L1',isKM:false,target:4,   targetLabel:'Target ≥4.00 (Rating)',color:'#005f73'},
+  'KSL-2a': {what:'KSL-2a · Handling Time Low ≤180min',  isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#0a9396'},
+  'KSL-2b': {what:'KSL-2b · Handling Time Low ≤300min',  isKM:false,target:95,  targetLabel:'Target ≥95%',          color:'#94d2bd'},
+  'KSL-2c': {what:'KSL-2c · Handling Time Medium ≤150min',isKM:false,target:90, targetLabel:'Target ≥90%',          color:'#e9d8a6'},
+  'KSL-2d': {what:'KSL-2d · Handling Time Medium ≤180min',isKM:false,target:95, targetLabel:'Target ≥95%',          color:'#ee9b00'},
+  'KSL-3a': {what:'KSL-3a · Reaction Time Ticket ≤30min', isKM:false,target:95, targetLabel:'Target ≥95%',          color:'#ca6702'},
+  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false,target:70,targetLabel:'Target ≥70%',   color:'#ae2012'},
+  'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',isKM:false,target:90, targetLabel:'Target ≥90%',          color:'#9b2226'},
+  'KSL-5b': {what:'KSL-5b · Process Conformity Manual',   isKM:false,target:90, targetLabel:'Target ≥90%',          color:'#7b2cbf'},
+  'KSL-6':  {what:'KSL-6 · Linking to Compass',           isKM:false,target:95, targetLabel:'Target ≥95%',          color:'#3a86ff'},
+  'KM-1':   {what:'KM-1 · With Reopen',                   isKM:true, target:5,  targetLabel:'Target ≤5%',           color:'#d00000'},
+  'KM-2':   {what:'KM-2 · With Assigned Back',            isKM:true, target:5,  targetLabel:'Target ≤5%',           color:'#9d0208'}
 };
 
 var wbQueueA=[],wbQueueB=[];
@@ -461,10 +459,9 @@ function getWeeklySummary(code,queue){
     if(!grouped[r.week]) grouped[r.week]=[];
     grouped[r.week].push(r);
   });
-  // Return only the last 6 weeks
+  // Return ALL weeks (no artificial cap)
   var allWeeks=Object.keys(grouped).sort();
-  var last6=allWeeks.slice(-6);
-  return last6.map(function(w){
+  return allWeeks.map(function(w){
     var wRows=grouped[w];
     var total=wRows.length;
     var breaches=wRows.filter(function(r){return r.isBreach;}).length;
@@ -472,11 +469,12 @@ function getWeeklySummary(code,queue){
     return {label:w,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
   });
 }
-function getTopQueues(code){
+// Returns ALL queues sorted by ticket count (no slice limit)
+function getAllQueues(code){
   var rows=getFilteredRows(code);
   var counts={};
   rows.forEach(function(r){counts[r.queue||'Unknown']=(counts[r.queue||'Unknown']||0)+1;});
-  return Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).slice(0,6);
+  return Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
 }
 
 function buildMonthChips(){
@@ -632,7 +630,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'\"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
@@ -684,7 +682,6 @@ function renderOverview(){
 }
 
 function renderTrend(){
-  // Show last 6 months
   var months=state.months.slice(-6);
   if(months.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">Need at least 2 months of data to show a trend.</p></div></div>';
 
@@ -723,19 +720,20 @@ function renderWeekly(){
   if(!loadedCodes.length) return '<div class="empty-state-box"><div>No KPI data loaded yet.</div></div>';
 
   var buttons='<div class="weekly-view-tabs">'+
-    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'\" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
-    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'\" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
+    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
+    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
     '</div>';
 
   if(_weeklyView==='queue'){
+    // Show ALL queues for every KPI
     var queueCards=loadedCodes.map(function(code){
       var meta=KPI_META[code];
-      var queues=getTopQueues(code);
+      var queues=getAllQueues(code);
       if(!queues.length) return '';
       return queues.map(function(q){
         var pts=getWeeklySummary(code,q);
         if(!pts.length) return '';
-        return renderChartCard(code+' · '+q,meta,pts,weekLabel,'Last 6 weeks');
+        return renderChartCard(code+' · '+q,meta,pts,weekLabel,'All weeks');
       }).join('');
     }).join('');
     return buttons+'<div class="weekly-queue-grid">'+queueCards+'</div>';
@@ -745,7 +743,7 @@ function renderWeekly(){
     var meta=KPI_META[code];
     var pts=getWeeklySummary(code);
     if(!pts.length) return '';
-    return renderChartCard(code+' · Weekly Trend (Last 6 Weeks)',meta,pts,weekLabel,state.activeMonth?'Filtered to '+monthLabel(state.activeMonth):'Last 6 weeks');
+    return renderChartCard(code+' · Weekly Trend',meta,pts,weekLabel,state.activeMonth?'Filtered to '+monthLabel(state.activeMonth):'All weeks');
   }).join('');
 
   return buttons+'<div class="weekly-grid">'+allCards+'</div>';
@@ -769,12 +767,12 @@ function renderKpiTab(code){
   var weeklyPts=getWeeklySummary(code);
   var monthlyPts=getMonthlySummary(code);
 
-  // Queue-level weekly trend graphs (last 6 weeks per queue)
-  var topQueues=getTopQueues(code);
-  var queueTrendCards=topQueues.map(function(q){
+  // Queue-level weekly trend graphs — ALL queues
+  var allQueues=getAllQueues(code);
+  var queueTrendCards=allQueues.map(function(q){
     var pts=getWeeklySummary(code,q);
     if(!pts.length) return '';
-    return renderChartCard(code+' · '+q,meta,pts,weekLabel,'Last 6 weeks');
+    return renderChartCard(code+' · '+q,meta,pts,weekLabel,'All weeks');
   }).filter(Boolean).join('');
 
   var queueCounts={};
@@ -784,7 +782,7 @@ function renderKpiTab(code){
   }).join('');
 
   var weeklyBlock=weeklyPts.length
-    ? renderChartCard(code+' · Weekly (Last 6 Weeks)',meta,weeklyPts,weekLabel,'Selected period')
+    ? renderChartCard(code+' · Weekly Trend',meta,weeklyPts,weekLabel,'Selected period')
     : '<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">No weekly data available for this KPI.</p></div></div>';
 
   var monthlyBlock=monthlyPts.length
@@ -792,7 +790,7 @@ function renderKpiTab(code){
     : '';
 
   var queueTrendBlock=queueTrendCards
-    ? '<div class="section-title">Queue Trends (Last 6 Weeks)</div><div class="queue-trend-grid">'+queueTrendCards+'</div>'
+    ? '<div class="section-title">Queue Trends – All Queues</div><div class="queue-trend-grid">'+queueTrendCards+'</div>'
     : '';
 
   return ''+
