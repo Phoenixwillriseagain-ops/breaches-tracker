@@ -283,6 +283,13 @@ function matchKpi(rawName){
 function ragColor(rag){return rag==='red'?'#ffdcdc':rag==='amber'?'#fff3cc':'#d4edda';}
 function ragText(rag){return rag==='red'?'#880000':rag==='amber'?'#7a4200':'#1a6b1a';}
 function ragLabel(rag,isKM){if(isKM)return rag==='green'?'PASS':rag==='amber'?'WATCH':'FAIL';return rag==='green'?'ON TARGET':rag==='amber'?'WATCH':'BELOW TARGET';}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// calcTarget — computes compliance rate and RAG.
+// NOTE: targetLabel is always taken from KPI_META, not built here.
+//       The returned targetLabel is kept for backwards compatibility but
+//       callers should prefer meta.targetLabel directly for display.
+// ─────────────────────────────────────────────────────────────────────────────
 function calcTarget(total,breaches,isKM,target){
   if(!total) return {display:'N/A',rag:'none',targetLabel:''};
   var rate=isKM?(breaches/total*100):((total-breaches)/total*100);
@@ -629,9 +636,9 @@ function getAllQueues(code){
 
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'\" onclick="setMonth(null)">All</button>';
   state.months.forEach(function(m){
-    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
+    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'\" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
   });
   el.innerHTML=html;
 }
@@ -713,6 +720,9 @@ function renderTrendChart(points,meta,labelFormatter){
     targetLine+='<text x="'+(w-padR+2)+'" y="'+(ty+3)+'" font-size="9" fill="'+(meta.color||'#01696f')+'">'+tgt+(meta.isRating?'':'%')+'</text>';
   }
 
+  // Use the full targetLabel from KPI_META for the chart legend
+  var legendTargetLabel=meta.targetLabel||(meta.isKM?'<=':'>=')+(meta.target!=null?meta.target:(meta.isKM?5:95))+'%';
+
   return ''+
     '<div class="chart-wrap">'+
       '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(meta.what||'Trend chart')+'">'+
@@ -726,7 +736,7 @@ function renderTrendChart(points,meta,labelFormatter){
       '</svg>'+
       '<div class="chart-legend">'+
         '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-line"></span> Compliance</span>'+
-        '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-dash"></span> '+esc(meta.targetLabel||'')+'</span>'+
+        '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-dash"></span> '+esc(legendTargetLabel)+'</span>'+
         '<span class="legend-item"><span class="legend-dot" style="background:#2a7a35"></span> Good</span>'+
         '<span class="legend-item"><span class="legend-dot" style="background:#d19900"></span> Watch</span>'+
         '<span class="legend-item"><span class="legend-dot" style="background:#cc2222"></span> Risk</span>'+
@@ -963,6 +973,7 @@ function renderOverview(){
     return '<div class="s-card rag-'+t.rag+'"><div class="lbl">'+esc(code)+exclHint+'</div><div class="val">'+t.display+'</div><div class="sub">'+fmt(total)+' tickets \u00b7 '+fmt(breaches)+' breaches</div><div class="sub">'+esc(meta.what)+'</div></div>';
   }).filter(Boolean).join('');
 
+  // Overview table: Target column uses meta.targetLabel (full label from KPI_META)
   var tableRows=KPI_ORDER.map(function(code){
     var meta=KPI_META[code];
     var rows=getFilteredRows(code);
@@ -971,7 +982,7 @@ function renderOverview(){
     var breaches=rows.filter(function(r){return r.isBreach;}).length;
     var t=calcTarget(total,breaches,meta.isKM,meta.target);
     var exclCount=(state.exclData[code]||[]).length;
-    var exclCell=exclCount?'<span class="excl-badge">'+fmt(exclCount)+'</span>':'<span style="color:var(--muted)">—</span>';
+    var exclCell=exclCount?'<span class="excl-badge">'+fmt(exclCount)+'</span>':'<span style="color:var(--muted)">\u2014</span>';
     return '<tr><td><strong>'+esc(code)+'</strong></td><td>'+esc(meta.what)+'</td><td>'+esc(meta.targetLabel)+'</td><td>'+fmt(total)+'</td><td>'+fmt(breaches)+'</td><td>'+exclCell+'</td><td class="rate-cell rate-'+t.rag+'">'+t.display+'</td><td><span class="rag-pill rag-'+t.rag+'">'+ragLabel(t.rag,meta.isKM)+'</span></td></tr>';
   }).filter(Boolean).join('');
 
@@ -1026,8 +1037,8 @@ function renderWeekly(){
   if(!loadedCodes.length) return '<div class="empty-state-box"><div>No KPI data loaded yet.</div></div>';
 
   var buttons='<div class="weekly-view-tabs">'+
-    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
-    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
+    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'\" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
+    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'\" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
     '</div>';
 
   if(_weeklyView==='queue'){
@@ -1135,6 +1146,7 @@ function renderKpiTab(code){
       exclBlock+
       '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">'+
         '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Compliance Rate</div><div class="rate-cell rate-'+t.rag+'" style="font-size:28px">'+t.display+'</div></div>'+
+        // Target display: always uses meta.targetLabel from KPI_META
         '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Target</div><div style="font-size:16px;font-weight:700">'+esc(meta.targetLabel)+'</div></div>'+
         '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Total Tickets</div><div style="font-size:16px;font-weight:700">'+fmt(total)+'</div></div>'+
         '<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Breaches</div><div style="font-size:16px;font-weight:700">'+fmt(breaches)+'</div></div>'+
