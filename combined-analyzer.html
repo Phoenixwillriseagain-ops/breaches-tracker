@@ -172,7 +172,7 @@ var KPI_META={
   'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',        isKM:false, target:95,  targetLabel:'KSL-2d Medium <=180min (>=95%)',            color:'#ee9b00'},
   'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',         isKM:false, target:95,  targetLabel:'KSL-3a Ticket <=30min (>=95%)',             color:'#ca6702'},
   'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',           isKM:false, target:95,  targetLabel:'KSL-3b Chat <=60sec (>=95%)',               color:'#f4a261'},
-  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident', isKM:false, target:70,  targetLabel:'KSL-4 Without Related Incident (>=75%)',    color:'#ae2012'},
+  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident', isKM:false, target:70,  targetLabel:'KSL-4 Without Related Incident (>=70%)',    color:'#ae2012'},
   'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',         isKM:false, target:90,  targetLabel:'KSL-5a Automatic (>=90%)',                  color:'#9b2226'},
   'KSL-5b': {what:'KSL-5b · Process Conformity Manual',            isKM:false, target:90,  targetLabel:'KSL-5b Manual (>=90%)',                     color:'#7b2cbf'},
   'KSL-6':  {what:'KSL-6 · Linking to Compass',                    isKM:false, target:95,  targetLabel:'KSL-6 Linked to Compass (>=95%)',           color:'#3a86ff'},
@@ -427,7 +427,8 @@ function buildStateFromQueues(){
 
   var mSet={},wSet={};
   KPI_ORDER.forEach(function(code){
-    (state.slaData[code]||[]).forEach(function(r){
+    // Only count non-excluded rows when building the month/week index
+    (state.slaData[code]||[]).filter(function(r){return !r.isExcluded;}).forEach(function(r){
       if(r.month&&r.month!=='unknown') mSet[r.month]=1;
       if(r.week&&r.week!=='No week') wSet[r.week]=1;
     });
@@ -437,14 +438,19 @@ function buildStateFromQueues(){
   state.weeks=Object.keys(wSet).sort();
 }
 
+// Returns rows for a KPI filtered by exclusion status and (optionally) active month.
+// Exclusions are applied FIRST so every downstream compliance calculation
+// is based only on eligible tickets.
 function getFilteredRows(code){
-  var rows=(state.slaData[code]||[]).slice();
+  var rows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
   if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
   return rows;
 }
+
 function getMonthlySummary(code){
   var meta=KPI_META[code]||{isKM:false,target:null};
-  var rows=(state.slaData[code]||[]).slice();
+  // Exclude ineligible rows before grouping by month
+  var rows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
   var grouped={};
   rows.forEach(function(r){
     if(!r.month||r.month==='unknown') return;
@@ -461,12 +467,15 @@ function getMonthlySummary(code){
 }
 
 // Returns the last WEEKLY_WINDOW weeks of compliance data for a given KPI and optional queue.
-// IMPORTANT: always reads from the FULL dataset (state.slaData[code]), NOT getFilteredRows().
-// This means the weekly window is never artificially narrowed by an active month filter.
+// IMPORTANT: always reads from the FULL dataset (state.slaData[code]), NOT getFilteredRows(),
+// so the weekly window is never artificially narrowed by an active month filter.
+// Excluded rows are stripped out here before any compliance math.
 function getWeeklySummary(code,queue){
   var meta=KPI_META[code]||{isKM:false,target:null};
-  // Use the full dataset so the window is based on all available weeks, not the month filter
-  var rows=(state.slaData[code]||[]).filter(function(r){return r.week&&r.week!=='No week';});
+  // Strip excluded rows and rows with no week, then optionally filter by queue
+  var rows=(state.slaData[code]||[]).filter(function(r){
+    return !r.isExcluded && r.week && r.week!=='No week';
+  });
   if(queue) rows=rows.filter(function(r){return r.queue===queue;});
   var grouped={};
   rows.forEach(function(r){
@@ -614,7 +623,7 @@ function refresh(){
   ];
 
   KPI_ORDER.forEach(function(code){
-    var allRows=state.slaData[code]||[];
+    var allRows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
     if(!allRows.length) return;
 
     var filteredRows=state.activeMonth
@@ -700,7 +709,8 @@ function renderTrend(){
 
   var rows=KPI_ORDER.map(function(code){
     var meta=KPI_META[code];
-    var allRows=state.slaData[code]||[];
+    // Use only non-excluded rows for trend charts
+    var allRows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
     if(!allRows.length) return '';
     var points=months.map(function(m){
       var mRows=allRows.filter(function(r){return r.month===m;});
