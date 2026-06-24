@@ -167,11 +167,11 @@ var KPI_ORDER=[
 // ─────────────────────────────────────────────────────────────────────────────
 // KPI_META — single source of truth for targets, labels, and chart colours.
 //
-// TARGETS (as shown in the Combined Analyzer screenshot):
+// TARGETS:
 //   KSL-1  : Rating L1 4.00  (special: not a %, handled by isRating flag)
 //   KSL-2a : >=90%   KSL-2b : >=95%   KSL-2c : >=90%   KSL-2d : >=95%
 //   KSL-3a : >=95%   KSL-3b : >=95%
-//   KSL-4  : >=70%   (Without Related Incident)
+//   KSL-4  : >=75%   (Without Related Incident)
 //   KSL-5a : >=90%   KSL-5b : >=90%
 //   KSL-6  : >=95%
 //   KM-1   : <=5%    KM-2   : <=5%
@@ -184,7 +184,7 @@ var KPI_META={
   'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',       isKM:false, isRating:false, target:95,  targetLabel:'KSL-2d Medium <=180min (>=95%)',       color:'#ee9b00'},
   'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',        isKM:false, isRating:false, target:95,  targetLabel:'KSL-3a Ticket <=30min (>=95%)',        color:'#ca6702'},
   'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',          isKM:false, isRating:false, target:95,  targetLabel:'KSL-3b Chat <=60sec (>=95%)',          color:'#f4a261'},
-  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false, isRating:false, target:70,  targetLabel:'KSL-4 Without Related Incident (>=70%)',color:'#ae2012'},
+  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident',isKM:false, isRating:false, target:75,  targetLabel:'KSL-4 Without Related Incident (>=75%)',color:'#ae2012'},
   'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',        isKM:false, isRating:false, target:90,  targetLabel:'KSL-5a Automatic (>=90%)',             color:'#9b2226'},
   'KSL-5b': {what:'KSL-5b · Process Conformity Manual',           isKM:false, isRating:false, target:90,  targetLabel:'KSL-5b Manual (>=90%)',                color:'#7b2cbf'},
   'KSL-6':  {what:'KSL-6 · Linking to Compass',                   isKM:false, isRating:false, target:95,  targetLabel:'KSL-6 Linked to Compass (>=95%)',      color:'#3a86ff'},
@@ -500,7 +500,7 @@ function getAllQueues(code){
 
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'\"')+'" onclick="setMonth(null)">All</button>';
   state.months.forEach(function(m){
     html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
   });
@@ -532,7 +532,7 @@ function chartX(i,count,w,padL,padR){
 //
 // FIX: The previous version used a hard-coded minVal floor of 80 for all
 // non-KM KPIs. This caused the dashed target line to be drawn OUTSIDE the
-// visible SVG area whenever target < 80 (e.g. KSL-4 at 70%).
+// visible SVG area whenever target < 80 (e.g. KSL-4 at 75%).
 //
 // New logic:
 //   • Compute the floor from actual data values AND the KPI target so the
@@ -685,7 +685,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'\')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
