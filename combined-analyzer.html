@@ -460,7 +460,10 @@ function getWeeklySummary(code,queue){
     if(!grouped[r.week]) grouped[r.week]=[];
     grouped[r.week].push(r);
   });
-  return Object.keys(grouped).sort().map(function(w){
+  // Return only the last 6 weeks
+  var allWeeks=Object.keys(grouped).sort();
+  var last6=allWeeks.slice(-6);
+  return last6.map(function(w){
     var wRows=grouped[w];
     var total=wRows.length;
     var breaches=wRows.filter(function(r){return r.isBreach;}).length;
@@ -593,7 +596,7 @@ function renderChartCard(title,meta,points,labelFormatter,badgeText){
 function refresh(){
   var tabs=[
     {id:'overview',label:'Overview'},
-    {id:'trend',label:'3-Month Trend'},
+    {id:'trend',label:'6-Month Trend'},
     {id:'kpitrends',label:'KPI Trends'},
     {id:'weekly',label:'📅 Weekly Trends'}
   ];
@@ -680,7 +683,8 @@ function renderOverview(){
 }
 
 function renderTrend(){
-  var months=state.months.slice(-3);
+  // Show last 6 months
+  var months=state.months.slice(-6);
   if(months.length<2) return '<div class="sc"><div class="sc-body"><p style="color:var(--muted);font-size:13px">Need at least 2 months of data to show a trend.</p></div></div>';
 
   var rows=KPI_ORDER.map(function(code){
@@ -696,7 +700,7 @@ function renderTrend(){
       return {label:m,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
     }).filter(Boolean);
     if(!points.length) return '';
-    return renderChartCard(code+' · Last 3 Months',meta,points,monthLabel,'3-month trend');
+    return renderChartCard(code+' · Last 6 Months',meta,points,monthLabel,'6-month trend');
   }).filter(Boolean).join('');
 
   return '<div class="kpi-trend-grid">'+rows+'</div>';
@@ -730,7 +734,7 @@ function renderWeekly(){
       return queues.map(function(q){
         var pts=getWeeklySummary(code,q);
         if(!pts.length) return '';
-        return renderChartCard(code+' · '+q,meta,pts,weekLabel,'Queue weekly view');
+        return renderChartCard(code+' · '+q,meta,pts,weekLabel,'Last 6 weeks');
       }).join('');
     }).join('');
     return buttons+'<div class="weekly-queue-grid">'+queueCards+'</div>';
@@ -740,7 +744,7 @@ function renderWeekly(){
     var meta=KPI_META[code];
     var pts=getWeeklySummary(code);
     if(!pts.length) return '';
-    return renderChartCard(code+' · Weekly Trend',meta,pts,weekLabel,state.activeMonth?'Filtered to '+monthLabel(state.activeMonth):'All weeks');
+    return renderChartCard(code+' · Weekly Trend (Last 6 Weeks)',meta,pts,weekLabel,state.activeMonth?'Filtered to '+monthLabel(state.activeMonth):'Last 6 weeks');
   }).join('');
 
   return buttons+'<div class="weekly-grid">'+allCards+'</div>';
@@ -771,7 +775,7 @@ function renderKpiTab(code){
   }).join('');
 
   var weeklyBlock=weeklyPts.length
-    ? renderChartCard(code+' · Weekly',meta,weeklyPts,weekLabel,'Selected period')
+    ? renderChartCard(code+' · Weekly (Last 6 Weeks)',meta,weeklyPts,weekLabel,'Selected period')
     : '<div class="sc"><div class="sc-body"><p style="font-size:12px;color:var(--muted)">No weekly data available for this KPI.</p></div></div>';
 
   var monthlyBlock=monthlyPts.length
