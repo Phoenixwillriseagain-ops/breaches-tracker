@@ -165,22 +165,25 @@ var KPI_ORDER=[
 ];
 
 var KPI_META={
-  'KSL-1':  {what:'KSL-1 · Dealer Satisfaction Rating L1',        isKM:false, target:4,   targetLabel:'Target >= 4.00 (Rating)',  color:'#005f73'},
-  'KSL-2a': {what:'KSL-2a · Handling Time Low <=180min',           isKM:false, target:90,  targetLabel:'Target >= 90%',            color:'#0a9396'},
-  'KSL-2b': {what:'KSL-2b · Handling Time Low <=300min',           isKM:false, target:95,  targetLabel:'Target >= 95%',            color:'#94d2bd'},
-  'KSL-2c': {what:'KSL-2c · Handling Time Medium <=150min',        isKM:false, target:90,  targetLabel:'Target >= 90%',            color:'#e9d8a6'},
-  'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',        isKM:false, target:95,  targetLabel:'Target >= 95%',            color:'#ee9b00'},
-  'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',         isKM:false, target:95,  targetLabel:'Target >= 95%',            color:'#ca6702'},
-  'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',           isKM:false, target:95,  targetLabel:'Target >= 95%',            color:'#f4a261'},
-  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident', isKM:false, target:70,  targetLabel:'Target >= 70%',            color:'#ae2012'},
-  'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',         isKM:false, target:90,  targetLabel:'Target >= 90%',            color:'#9b2226'},
-  'KSL-5b': {what:'KSL-5b · Process Conformity Manual',            isKM:false, target:90,  targetLabel:'Target >= 90%',            color:'#7b2cbf'},
-  'KSL-6':  {what:'KSL-6 · Linking to Compass',                    isKM:false, target:95,  targetLabel:'Target >= 95%',            color:'#3a86ff'},
-  'KM-1':   {what:'KM-1 · With Reopen',                            isKM:true,  target:5,   targetLabel:'Target <= 5%',             color:'#d00000'},
-  'KM-2':   {what:'KM-2 · With Assigned Back',                     isKM:true,  target:5,   targetLabel:'Target <= 5%',             color:'#9d0208'}
+  'KSL-1':  {what:'KSL-1 · Dealer Satisfaction Rating L1',        isKM:false, target:4,   targetLabel:'KSL-1 Rating L1 (4.00)',                    color:'#005f73'},
+  'KSL-2a': {what:'KSL-2a · Handling Time Low <=180min',           isKM:false, target:90,  targetLabel:'KSL-2a Low <=180min (>=90%)',               color:'#0a9396'},
+  'KSL-2b': {what:'KSL-2b · Handling Time Low <=300min',           isKM:false, target:95,  targetLabel:'KSL-2b Low <=300min (>=95%)',               color:'#94d2bd'},
+  'KSL-2c': {what:'KSL-2c · Handling Time Medium <=150min',        isKM:false, target:90,  targetLabel:'KSL-2c Medium <=150min (>=90%)',            color:'#e9d8a6'},
+  'KSL-2d': {what:'KSL-2d · Handling Time Medium <=180min',        isKM:false, target:95,  targetLabel:'KSL-2d Medium <=180min (>=95%)',            color:'#ee9b00'},
+  'KSL-3a': {what:'KSL-3a · Reaction Time Ticket <=30min',         isKM:false, target:95,  targetLabel:'KSL-3a Ticket <=30min (>=95%)',             color:'#ca6702'},
+  'KSL-3b': {what:'KSL-3b · Reaction Time Chat <=60sec',           isKM:false, target:95,  targetLabel:'KSL-3b Chat <=60sec (>=95%)',               color:'#f4a261'},
+  'KSL-4':  {what:'KSL-4 · Solution Quality w/o Related Incident', isKM:false, target:70,  targetLabel:'KSL-4 Without Related Incident (>=70%)',    color:'#ae2012'},
+  'KSL-5a': {what:'KSL-5a · Process Conformity Automatic',         isKM:false, target:90,  targetLabel:'KSL-5a Automatic (>=90%)',                  color:'#9b2226'},
+  'KSL-5b': {what:'KSL-5b · Process Conformity Manual',            isKM:false, target:90,  targetLabel:'KSL-5b Manual (>=90%)',                     color:'#7b2cbf'},
+  'KSL-6':  {what:'KSL-6 · Linking to Compass',                    isKM:false, target:95,  targetLabel:'KSL-6 Linked to Compass (>=95%)',           color:'#3a86ff'},
+  'KM-1':   {what:'KM-1 · With Reopen',                            isKM:true,  target:5,   targetLabel:'KM-1 With Reopen (<=5%)',                   color:'#d00000'},
+  'KM-2':   {what:'KM-2 · With Assigned Back',                     isKM:true,  target:5,   targetLabel:'KM-2 With Assigned Back (<=5%)',            color:'#9d0208'}
 };
 
-var WEEKLY_WINDOW=6; // number of recent weeks to display in all weekly trend views
+// Number of recent weeks shown in all weekly trend views.
+// Uses the full dataset (ignores the month filter) so you always see
+// the last WEEKLY_WINDOW consecutive weeks regardless of which month chip is active.
+var WEEKLY_WINDOW=8;
 
 var wbQueueA=[],wbQueueB=[];
 var state={slaData:{},breachData:{},months:[],weeks:[],activeMonth:null,activeTab:'overview'};
@@ -456,10 +459,14 @@ function getMonthlySummary(code){
     return {label:m,total:total,breaches:breaches,value:parseFloat(t.value||0),rag:t.rag};
   });
 }
-// Returns the last WEEKLY_WINDOW (6) weeks of compliance data for a given KPI and optional queue.
+
+// Returns the last WEEKLY_WINDOW weeks of compliance data for a given KPI and optional queue.
+// IMPORTANT: always reads from the FULL dataset (state.slaData[code]), NOT getFilteredRows().
+// This means the weekly window is never artificially narrowed by an active month filter.
 function getWeeklySummary(code,queue){
   var meta=KPI_META[code]||{isKM:false,target:null};
-  var rows=getFilteredRows(code).filter(function(r){return r.week&&r.week!=='No week';});
+  // Use the full dataset so the window is based on all available weeks, not the month filter
+  var rows=(state.slaData[code]||[]).filter(function(r){return r.week&&r.week!=='No week';});
   if(queue) rows=rows.filter(function(r){return r.queue===queue;});
   var grouped={};
   rows.forEach(function(r){
@@ -485,9 +492,9 @@ function getAllQueues(code){
 
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'\" onclick="setMonth(null)">All</button>';
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
   state.months.forEach(function(m){
-    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'\" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
+    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
   });
   el.innerHTML=html;
 }
@@ -636,7 +643,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'\"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
@@ -726,8 +733,8 @@ function renderWeekly(){
   if(!loadedCodes.length) return '<div class="empty-state-box"><div>No KPI data loaded yet.</div></div>';
 
   var buttons='<div class="weekly-view-tabs">'+
-    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'\" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
-    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'\" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
+    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
+    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
     '</div>';
 
   if(_weeklyView==='queue'){
@@ -736,7 +743,7 @@ function renderWeekly(){
       var queues=getAllQueues(code);
       if(!queues.length) return '';
       var queueCards=queues.map(function(q){
-        var pts=getWeeklySummary(code,q); // already sliced to last 6 weeks
+        var pts=getWeeklySummary(code,q);
         if(!pts.length) return '';
         return renderChartCard(q,meta,pts,weekLabel,'Last '+WEEKLY_WINDOW+' weeks \u00b7 '+esc(code));
       }).filter(Boolean).join('');
@@ -751,7 +758,7 @@ function renderWeekly(){
 
   var allCards=loadedCodes.map(function(code){
     var meta=KPI_META[code];
-    var pts=getWeeklySummary(code); // already sliced to last 6 weeks
+    var pts=getWeeklySummary(code);
     if(!pts.length) return '';
     return renderChartCard(code+' \u00b7 Weekly Trend',meta,pts,weekLabel,state.activeMonth?'Filtered to '+monthLabel(state.activeMonth)+' \u00b7 last '+WEEKLY_WINDOW+' wks':'Last '+WEEKLY_WINDOW+' weeks');
   }).join('');
@@ -774,14 +781,14 @@ function renderKpiTab(code){
   var breaches=rows.filter(function(r){return r.isBreach;}).length;
   var t=calcTarget(total,breaches,meta.isKM,meta.target);
 
-  var weeklyPts=getWeeklySummary(code); // sliced to last 6 weeks
+  var weeklyPts=getWeeklySummary(code);
   var monthlyPts=getMonthlySummary(code);
 
   var allQueues=getAllQueues(code);
   var queueTrendBlock='';
   if(allQueues.length){
     var queueCards=allQueues.map(function(q){
-      var pts=getWeeklySummary(code,q); // sliced to last 6 weeks
+      var pts=getWeeklySummary(code,q);
       if(!pts.length) return '';
       return renderChartCard(esc(code)+' \u00b7 '+esc(q),meta,pts,weekLabel,'Last '+WEEKLY_WINDOW+' wks \u00b7 '+esc(q));
     }).filter(Boolean).join('');
