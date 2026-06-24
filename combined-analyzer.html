@@ -435,6 +435,7 @@ function buildStateFromQueues(){
     });
   });
 
+  // Only non-excluded rows contribute to the month/week index
   var mSet={},wSet={};
   KPI_ORDER.forEach(function(code){
     (state.slaData[code]||[]).filter(function(r){return !r.isExcluded;}).forEach(function(r){
@@ -447,6 +448,8 @@ function buildStateFromQueues(){
   state.weeks=Object.keys(wSet).sort();
 }
 
+// Exclusions are stripped FIRST so every downstream compliance calculation
+// is based only on eligible tickets.
 function getFilteredRows(code){
   var rows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
   if(state.activeMonth) rows=rows.filter(function(r){return r.month===state.activeMonth;});
@@ -455,6 +458,7 @@ function getFilteredRows(code){
 
 function getMonthlySummary(code){
   var meta=KPI_META[code]||{isKM:false,target:null};
+  // Exclude ineligible rows before grouping by month
   var rows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
   var grouped={};
   rows.forEach(function(r){
@@ -471,8 +475,13 @@ function getMonthlySummary(code){
   });
 }
 
+// Returns the last WEEKLY_WINDOW weeks of compliance data for a given KPI and optional queue.
+// IMPORTANT: always reads from the FULL dataset (state.slaData[code]), NOT getFilteredRows(),
+// so the weekly window is never artificially narrowed by an active month filter.
+// Excluded rows are stripped out here before any compliance math.
 function getWeeklySummary(code,queue){
   var meta=KPI_META[code]||{isKM:false,target:null};
+  // Strip excluded rows and rows with no week, then optionally filter by queue
   var rows=(state.slaData[code]||[]).filter(function(r){
     return !r.isExcluded && r.week && r.week!=='No week';
   });
@@ -500,9 +509,9 @@ function getAllQueues(code){
 
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'\"')+'" onclick="setMonth(null)">All</button>';
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
   state.months.forEach(function(m){
-    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
+    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">' +monthLabel(m)+'</button>';
   });
   el.innerHTML=html;
 }
@@ -601,7 +610,6 @@ function renderTrendChart(points,meta,labelFormatter){
   if(meta&&meta.target!=null){
     var ty=chartY(tgt,minVal,maxVal,h,padT,padB);
     targetLine='<line x1="'+padL+'" y1="'+ty+'" x2="'+(w-padR)+'" y2="'+ty+'" stroke="'+(meta.color||'#01696f')+'" stroke-width="1.5" stroke-dasharray="5 4"></line>';
-    // Label the target value on the right edge
     targetLine+='<text x="'+(w-padR+2)+'" y="'+(ty+3)+'" font-size="9" fill="'+(meta.color||'#01696f')+'">'+tgt+(meta.isRating?'':'%')+'</text>';
   }
 
@@ -656,6 +664,7 @@ function refresh(){
   ];
 
   KPI_ORDER.forEach(function(code){
+    // Use only non-excluded rows for RAG dot calculation on tabs
     var allRows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
     if(!allRows.length) return;
 
@@ -685,7 +694,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">' +dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
@@ -742,6 +751,7 @@ function renderTrend(){
 
   var rows=KPI_ORDER.map(function(code){
     var meta=KPI_META[code];
+    // Use only non-excluded rows for trend charts
     var allRows=(state.slaData[code]||[]).filter(function(r){return !r.isExcluded;});
     if(!allRows.length) return '';
     var points=months.map(function(m){
