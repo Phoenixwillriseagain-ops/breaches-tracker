@@ -160,19 +160,21 @@ var KPI_ORDER=[
   'KSL-6','KM-1','KM-2'
 ];
 
+// target = the numeric threshold used for the dashed line on charts and RAG evaluation
+// targetLabel = the human-readable label shown in the chart legend
 var KPI_META={
-  'KSL-1':  {what:'KSL-1',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#005f73'},
-  'KSL-2a': {what:'KSL-2a',isKM:false,target:95,targetLabel:'Target ≥90%',color:'#0a9396'},
-  'KSL-2b': {what:'KSL-2b',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#94d2bd'},
-  'KSL-2c': {what:'KSL-2c',isKM:false,target:95,targetLabel:'Target ≥90%',color:'#e9d8a6'},
-  'KSL-2d': {what:'KSL-2d',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#ee9b00'},
-  'KSL-3a': {what:'KSL-3a',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#ca6702'},
-  'KSL-4':  {what:'KSL-4',isKM:false,target:95,targetLabel:'Target ≥75%',color:'#ae2012'},
-  'KSL-5a': {what:'KSL-5a',isKM:false,target:95,targetLabel:'Target ≥90%',color:'#9b2226'},
-  'KSL-5b': {what:'KSL-5b',isKM:false,target:95,targetLabel:'Target ≥90%',color:'#7b2cbf'},
-  'KSL-6':  {what:'KSL-6',isKM:false,target:95,targetLabel:'Target ≥95%',color:'#3a86ff'},
-  'KM-1':   {what:'KM-1',isKM:true,target:5,targetLabel:'Target ≤5%',color:'#d00000'},
-  'KM-2':   {what:'KM-2',isKM:true,target:8,targetLabel:'Target ≤5%',color:'#9d0208'}
+  'KSL-1':  {what:'KSL-1',isKM:false,target:4,   targetLabel:'Target ≥4.00 (Rating)',color:'#005f73'},
+  'KSL-2a': {what:'KSL-2a',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#0a9396'},
+  'KSL-2b': {what:'KSL-2b',isKM:false,target:95,  targetLabel:'Target ≥95%',          color:'#94d2bd'},
+  'KSL-2c': {what:'KSL-2c',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#e9d8a6'},
+  'KSL-2d': {what:'KSL-2d',isKM:false,target:95,  targetLabel:'Target ≥95%',          color:'#ee9b00'},
+  'KSL-3a': {what:'KSL-3a',isKM:false,target:95,  targetLabel:'Target ≥95%',          color:'#ca6702'},
+  'KSL-4':  {what:'KSL-4',isKM:false,target:75,   targetLabel:'Target ≥75%',          color:'#ae2012'},
+  'KSL-5a': {what:'KSL-5a',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#9b2226'},
+  'KSL-5b': {what:'KSL-5b',isKM:false,target:90,  targetLabel:'Target ≥90%',          color:'#7b2cbf'},
+  'KSL-6':  {what:'KSL-6',isKM:false,target:95,   targetLabel:'Target ≥95%',          color:'#3a86ff'},
+  'KM-1':   {what:'KM-1',isKM:true, target:5,    targetLabel:'Target ≤5%',           color:'#d00000'},
+  'KM-2':   {what:'KM-2',isKM:true, target:5,    targetLabel:'Target ≤5%',           color:'#9d0208'}
 };
 
 var wbQueueA=[],wbQueueB=[];
@@ -475,9 +477,9 @@ function getTopQueues(code){
 
 function buildMonthChips(){
   var el=document.getElementById('month-chips');
-  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'" onclick="setMonth(null)">All</button>';
+  var html='<button class="month-chip'+(state.activeMonth===null?' active':'')+'\" onclick="setMonth(null)">All</button>';
   state.months.forEach(function(m){
-    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
+    html+='<button class="month-chip'+(state.activeMonth===m?' active':'')+'\" onclick="setMonth(\''+m+'\')">'+monthLabel(m)+'</button>';
   });
   el.innerHTML=html;
 }
@@ -559,7 +561,7 @@ function renderTrendChart(points,meta,labelFormatter){
       '</svg>'+
       '<div class="chart-legend">'+
         '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-line"></span> Compliance</span>'+
-        '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-dash"></span> Target '+esc(meta.targetLabel||'')+'</span>'+
+        '<span class="legend-item" style="color:'+(meta.color||'#01696f')+'"><span class="legend-dash"></span> '+esc(meta.targetLabel||'')+'</span>'+
         '<span class="legend-item"><span class="legend-dot" style="background:#2a7a35"></span> Good</span>'+
         '<span class="legend-item"><span class="legend-dot" style="background:#d19900"></span> Watch</span>'+
         '<span class="legend-item"><span class="legend-dot" style="background:#cc2222"></span> Risk</span>'+
@@ -626,7 +628,7 @@ function refresh(){
     var dot=t.rag&&t.rag!=='none'?'<span class="tab-dot dot-'+t.rag+'"></span>':'';
     var dimClass=t.noDataForPeriod?' no-data-period':'';
     var title=t.noDataForPeriod?' title="No data for selected period"':'';
-    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
+    return '<button class="tab-btn'+dimClass+(state.activeTab===t.id?' active':'')+'\"'+title+' onclick="setTab(\''+t.id+'\')">'+dot+esc(t.label)+'</button>';
   }).join('');
 
   renderTab();
@@ -716,8 +718,8 @@ function renderWeekly(){
   if(!loadedCodes.length) return '<div class="empty-state-box"><div>No KPI data loaded yet.</div></div>';
 
   var buttons='<div class="weekly-view-tabs">'+
-    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
-    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
+    '<button class="wv-btn'+(_weeklyView==='all'?' active':'')+'\" onclick="_weeklyView=\'all\';refresh()">All KPIs</button>'+
+    '<button class="wv-btn'+(_weeklyView==='queue'?' active':'')+'\" onclick="_weeklyView=\'queue\';refresh()">By Queue</button>'+
     '</div>';
 
   if(_weeklyView==='queue'){
