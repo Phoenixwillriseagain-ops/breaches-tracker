@@ -64,7 +64,7 @@
     .month-chip{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
     .month-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
     .month-chip:hover:not(.active){border-color:var(--primary);color:var(--primary)}
-    .kpi-trend-grid,.weekly-grid,.weekly-queue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px}
+    .kpi-trend-grid,.weekly-grid,.weekly-queue-grid,.queue-trend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px}
     .ktc{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .ktc-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .ktc-head h3{font-size:12px;font-weight:700;margin:0}
@@ -89,7 +89,8 @@
     .point-chip .p-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}
     .point-chip .p-val{font-size:14px;font-weight:700}
     .point-chip .p-sub{font-size:10px;color:var(--muted);margin-top:2px}
-    @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid{grid-template-columns:1fr}}
+    .section-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 0 2px}
+    @media(max-width:640px){.weekly-grid,.kpi-trend-grid,.weekly-queue-grid,.queue-trend-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -768,6 +769,14 @@ function renderKpiTab(code){
   var weeklyPts=getWeeklySummary(code);
   var monthlyPts=getMonthlySummary(code);
 
+  // Queue-level weekly trend graphs (last 6 weeks per queue)
+  var topQueues=getTopQueues(code);
+  var queueTrendCards=topQueues.map(function(q){
+    var pts=getWeeklySummary(code,q);
+    if(!pts.length) return '';
+    return renderChartCard(code+' · '+q,meta,pts,weekLabel,'Last 6 weeks');
+  }).filter(Boolean).join('');
+
   var queueCounts={};
   rows.forEach(function(r){queueCounts[r.queue||'Unknown']=(queueCounts[r.queue||'Unknown']||0)+1;});
   var queueRows=Object.keys(queueCounts).sort(function(a,b){return queueCounts[b]-queueCounts[a];}).map(function(q){
@@ -782,6 +791,10 @@ function renderKpiTab(code){
     ? renderChartCard(code+' · Monthly',meta,monthlyPts,monthLabel,'All months')
     : '';
 
+  var queueTrendBlock=queueTrendCards
+    ? '<div class="section-title">Queue Trends (Last 6 Weeks)</div><div class="queue-trend-grid">'+queueTrendCards+'</div>'
+    : '';
+
   return ''+
     '<div class="summary-banner">'+
       '<div class="s-card rag-'+t.rag+'"><div class="lbl">'+esc(code)+'</div><div class="val">'+t.display+'</div><div class="sub">'+esc(meta.what)+'</div></div>'+
@@ -790,6 +803,7 @@ function renderKpiTab(code){
     '</div>'+
     weeklyBlock+
     monthlyBlock+
+    queueTrendBlock+
     '<div class="sc"><div class="sc-head"><h2>Queue distribution</h2></div><div class="sc-body"><table class="rag-table"><thead><tr><th>Queue</th><th>Tickets</th></tr></thead><tbody>'+queueRows+'</tbody></table></div></div>';
 }
 
